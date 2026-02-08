@@ -10,19 +10,15 @@ class CatalogController extends Controller
 {
     public function categories()
     {
-        $categories = Category::where('status', 'active')
-            ->with(['products' => function ($query) {
-                $query->where('status', 'active');
-            }])
-            ->get();
+        $categories = Category::with('products')->get();
 
         return response()->json($categories);
     }
 
     public function categoryProducts(string $id)
     {
-        $category = Category::where('status', 'active')->findOrFail($id);
-        $products = $category->products()->where('status', 'active')->get();
+        $category = Category::findOrFail($id);
+        $products = $category->products()->get();
 
         return response()->json($products);
     }

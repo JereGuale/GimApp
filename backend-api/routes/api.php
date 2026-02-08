@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\Api\OfferController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Api\PromotionController;
+use App\Http\Controllers\Api\BannerController;
 use App\Http\Controllers\Api\SettingController;
 use App\Http\Controllers\Api\SubscriptionController;
 use App\Http\Controllers\Api\SubscriptionPlanController;
@@ -27,6 +28,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/subscription/my', [SubscriptionController::class, 'my']);
     Route::post('/checkins', [CheckinController::class, 'store']);
     Route::get('/offers/active', [OfferController::class, 'active']);
+
+    // Banner routes
+    Route::get('/banners/active', [BannerController::class, 'getActiveBanners']);
+    Route::get('/admin/banners', [BannerController::class, 'getAllBanners']);
+    Route::post('/admin/banners', [BannerController::class, 'createBanner']);
+    Route::put('/admin/banners/{id}', [BannerController::class, 'updateBanner']);
+    Route::post('/admin/banners/{id}/image', [BannerController::class, 'uploadBannerImage']);
+    Route::delete('/admin/banners/{id}/image', [BannerController::class, 'deleteBannerImage']);
+    Route::delete('/admin/banners/{id}', [BannerController::class, 'deleteBanner']);
 
     // Admin routes - In development mode, all authenticated users can access these
     Route::apiResource('admin/categories', CategoryController::class);

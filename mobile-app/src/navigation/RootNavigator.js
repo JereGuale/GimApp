@@ -10,6 +10,7 @@ import UserTabs from './UserTabs';
 import AdminTabs from './AdminTabs';
 import SuperAdminTabs from './SuperAdminTabs';
 import ProductDetailScreen from '../screens/user/ProductDetailScreen';
+import CartScreen from '../screens/user/CartScreen';
 import { useAuth } from '../context/AuthContext';
 
 const Stack = createStackNavigator();
@@ -49,6 +50,7 @@ export default function RootNavigator() {
             <Stack.Screen name="UserTabs" component={UserTabs} />
           )}
           <Stack.Screen name="ProductDetail" component={ProductDetailScreen} />
+          <Stack.Screen name="Cart" component={CartScreen} />
         </>
       ) : (
         <>

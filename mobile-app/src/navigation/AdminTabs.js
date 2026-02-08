@@ -123,6 +123,7 @@ export default function AdminTabs() {
           component={AdminProfileScreen}
           options={{
             title: 'Perfil',
+            tabBarButton: () => null,
             tabBarIcon: ({ color, size }) => <Ionicons name="person" size={size} color={color} />
           }}
         />

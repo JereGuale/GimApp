@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, TextInput, Image, FlatList, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, TextInput, Image, FlatList, Alert, Switch } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../../context/AuthContext';
@@ -20,6 +20,7 @@ export default function AdminProducts({ route }) {
   const [selectedImages, setSelectedImages] = useState([]);
   const [editingProduct, setEditingProduct] = useState(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState(null);
+  const [isFeatured, setIsFeatured] = useState(false);
 
   const loadCategories = async () => {
     try {
@@ -79,6 +80,12 @@ export default function AdminProducts({ route }) {
       setShowProductModal(true);
     }
   }, [route?.params?.openModal]);
+
+  useEffect(() => {
+    if (route?.params?.editProduct) {
+      openEditProduct(route.params.editProduct);
+    }
+  }, [route?.params?.editProduct]);
 
   const pickImages = async () => {
     try {
@@ -174,7 +181,7 @@ export default function AdminProducts({ route }) {
           price: parseFloat(productPrice),
           description: productDesc,
           category_id: selectedCategory,
-          is_featured: true,
+          is_featured: isFeatured,
           images: images
         });
       } else {
@@ -183,7 +190,7 @@ export default function AdminProducts({ route }) {
           price: parseFloat(productPrice),
           description: productDesc,
           category_id: selectedCategory,
-          is_featured: true,
+          is_featured: isFeatured,
           condition: 'nuevo',
           images: images
         });
@@ -195,6 +202,7 @@ export default function AdminProducts({ route }) {
       setSelectedCategory(null);
       setSelectedImages([]);
       setEditingProduct(null);
+      setIsFeatured(false);
       setShowProductModal(false);
       loadProducts();
       Alert.alert('Éxito', editingProduct ? 'Producto actualizado correctamente' : 'Producto publicado correctamente');
@@ -211,7 +219,17 @@ export default function AdminProducts({ route }) {
     setProductPrice(product.price ? String(product.price) : '');
     setProductDesc(product.description || '');
     setSelectedCategory(product.category_id || product.category?.id || null);
-    setSelectedImages([]);
+    setIsFeatured(!!product.is_featured);
+    // Pre-load ALL existing images
+    const existingImages = [];
+    if (product.images && Array.isArray(product.images) && product.images.length > 0) {
+      product.images.forEach((uri, idx) => {
+        existingImages.push({ uri, id: `existing_${idx}` });
+      });
+    } else if (product.image) {
+      existingImages.push({ uri: product.image, id: 'existing_main' });
+    }
+    setSelectedImages(existingImages);
     setShowProductModal(true);
   };
 
@@ -235,7 +253,12 @@ export default function AdminProducts({ route }) {
               </View>
             )}
             <View style={styles.productInfo}>
-              <Text style={[styles.productName, { color: theme.colors.text }]}>{product.name}</Text>
+              <View style={styles.productNameRow}>
+                <Text style={[styles.productName, { color: theme.colors.text }]}>{product.name}</Text>
+                {product.is_featured ? (
+                  <Ionicons name="star" size={16} color="#FFC107" style={{ marginLeft: 6 }} />
+                ) : null}
+              </View>
               <Text style={[styles.productCategory, { color: theme.colors.textSecondary }]}>{product.category?.name}</Text>
               <Text style={styles.productPrice}>${Number(product.price || 0).toFixed(2)}</Text>
             </View>
@@ -273,7 +296,7 @@ export default function AdminProducts({ route }) {
             showsVerticalScrollIndicator={false}
           >
             <View style={[styles.modalContent, { backgroundColor: theme.colors.background }]}>
-              {/* Header con botón de volver */}
+              {/* Header */}
               <View style={styles.modalHeader}>
                 <TouchableOpacity
                   style={styles.backButton}
@@ -285,137 +308,176 @@ export default function AdminProducts({ route }) {
                     setSelectedCategory(null);
                     setSelectedImages([]);
                     setEditingProduct(null);
+                    setIsFeatured(false);
                   }}
                 >
-                  <Ionicons name="arrow-back" size={24} color="#22D3EE" />
+                  <Ionicons name="arrow-back" size={24} color={theme.colors.text} />
                 </TouchableOpacity>
-                <Text style={styles.modalTitle}>Fitness Hub</Text>
+                <Text style={[styles.modalTitle, { color: theme.colors.text }]}>
+                  {editingProduct ? 'Editar Producto' : 'Añadir Nuevo Producto'}
+                </Text>
               </View>
 
-              <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Vender Producto</Text>
+              {/* ── Two-column layout ── */}
+              <View style={styles.formRow}>
+                {/* Left Column: Fotos */}
+                <View style={styles.formColLeft}>
+                  <Text style={[styles.label, { color: theme.colors.text }]}>Fotos</Text>
 
-              {/* Sección de Fotos */}
-              <Text style={[styles.label, { color: theme.colors.text }]}>Fotos</Text>
-              <TouchableOpacity
-                style={styles.imagePickerBox}
-                onPress={pickImages}
-              >
-                <View style={styles.cameraIconContainer}>
-                  <Ionicons name="camera" size={48} color="#22D3EE" />
-                </View>
-                <Text style={styles.imagePickerLabel}>Añadir imagen</Text>
-              </TouchableOpacity>
-
-              {selectedImages.length > 0 && (
-                <View style={styles.imagePreviewContainer}>
-                  <FlatList
-                    horizontal
-                    data={selectedImages}
-                    renderItem={({ item }) => (
-                      <View style={styles.imagePreviewWrapper}>
-                        <Image source={{ uri: item.uri }} style={styles.imagePreview} />
+                  {selectedImages.length === 0 ? (
+                    /* No images yet — show picker box */
+                    <TouchableOpacity
+                      style={[styles.imagePickerBox, { borderColor: theme.colors.border, backgroundColor: theme.isDark ? '#111827' : '#F3F4F6' }]}
+                      onPress={pickImages}
+                      activeOpacity={0.8}
+                    >
+                      <Ionicons name="camera" size={36} color={theme.colors.textSecondary} />
+                      <Text style={[styles.imagePickerLabel, { color: theme.colors.textSecondary }]}>Añadir Imágenes</Text>
+                      <Text style={[styles.imagePickerSub, { color: theme.colors.textSecondary }]}>Toca para seleccionar</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    /* Has images — show main image + thumbnails + add button */
+                    <View>
+                      {/* Main image preview */}
+                      <View style={[styles.mainImageBox, { backgroundColor: theme.isDark ? '#111827' : '#F3F4F6', borderColor: theme.colors.border }]}> 
+                        <Image source={{ uri: selectedImages[0].uri }} style={styles.mainImagePreview} />
                         <TouchableOpacity
-                          style={styles.removeImageBtn}
-                          onPress={() => removeImage(item.id)}
+                          style={styles.removeMainImageBtn}
+                          onPress={() => removeImage(selectedImages[0].id)}
                         >
-                          <Ionicons name="close-circle" size={24} color="#ff3333" />
+                          <Ionicons name="close-circle" size={24} color="#EF4444" />
                         </TouchableOpacity>
                       </View>
-                    )}
-                    keyExtractor={item => item.id}
-                    showsHorizontalScrollIndicator={false}
+
+                      {/* Thumbnail row + add more button */}
+                      <View style={styles.thumbRow}>
+                        {selectedImages.slice(1).map((item) => (
+                          <View key={item.id} style={styles.imagePreviewWrapper}>
+                            <Image source={{ uri: item.uri }} style={[styles.imagePreview, { borderColor: theme.colors.border }]} />
+                            <TouchableOpacity
+                              style={styles.removeImageBtn}
+                              onPress={() => removeImage(item.id)}
+                            >
+                              <Ionicons name="close-circle" size={20} color="#EF4444" />
+                            </TouchableOpacity>
+                          </View>
+                        ))}
+                        <TouchableOpacity
+                          style={[styles.addMoreImageBtn, { borderColor: theme.colors.border, backgroundColor: theme.isDark ? '#111827' : '#F3F4F6' }]}
+                          onPress={pickImages}
+                          activeOpacity={0.7}
+                        >
+                          <Ionicons name="add" size={28} color="#FB923C" />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  )}
+                </View>
+
+                {/* Right Column: Name, Category, Description */}
+                <View style={styles.formColRight}>
+                  <Text style={[styles.label, { color: theme.colors.text }]}>Nombre del producto</Text>
+                  <TextInput
+                    style={[styles.formInput, { color: theme.colors.text, backgroundColor: theme.isDark ? '#111827' : '#F3F4F6', borderColor: theme.colors.border }]}
+                    placeholder="Nombre del producto"
+                    placeholderTextColor={theme.colors.textSecondary}
+                    value={productName}
+                    onChangeText={setProductName}
+                  />
+
+                  <Text style={[styles.label, { color: theme.colors.text }]}>Categoría</Text>
+                  {categories.length === 0 ? (
+                    <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
+                      No hay categorías disponibles
+                    </Text>
+                  ) : (
+                    <View style={styles.categoryButtons}>
+                      {categories.map((cat) => {
+                        const categoryId = cat.id ?? cat.category_id;
+                        const isSelected = selectedCategory === categoryId;
+                        return (
+                          <TouchableOpacity
+                            key={categoryId ?? cat.name}
+                            style={[
+                              styles.categoryButton,
+                              { borderColor: theme.colors.border, backgroundColor: theme.isDark ? '#111827' : '#F3F4F6' },
+                              isSelected && styles.categoryButtonSelected
+                            ]}
+                            onPress={() => setSelectedCategory(categoryId)}
+                            activeOpacity={0.7}
+                          >
+                            <MaterialCommunityIcons
+                              name={getCategoryIcon(cat.name)}
+                              size={18}
+                              color={isSelected ? '#fff' : '#FB923C'}
+                            />
+                            <Text style={[
+                              styles.categoryButtonText,
+                              { color: theme.colors.text },
+                              isSelected && styles.categoryButtonTextSelected
+                            ]}>
+                              {cat.name}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  )}
+
+                  <Text style={[styles.label, { color: theme.colors.text }]}>Descripción</Text>
+                  <TextInput
+                    style={[styles.formInput, styles.textArea, { color: theme.colors.text, backgroundColor: theme.isDark ? '#111827' : '#F3F4F6', borderColor: theme.colors.border }]}
+                    placeholder="Descripción del producto..."
+                    placeholderTextColor={theme.colors.textSecondary}
+                    multiline
+                    numberOfLines={4}
+                    value={productDesc}
+                    onChangeText={setProductDesc}
+                    textAlignVertical="top"
                   />
                 </View>
-              )}
+              </View>
 
-              {/* Nombre del producto */}
-              <Text style={[styles.label, { color: theme.colors.text }]}>Nombre del producto</Text>
-              <TextInput
-                style={[styles.neonInput, { color: theme.colors.text }]}
-                placeholder="Nombre del producto"
-                placeholderTextColor="rgba(255,255,255,0.3)"
-                value={productName}
-                onChangeText={setProductName}
-              />
-
-              {/* Categoría */}
-              <Text style={[styles.label, { color: theme.colors.text }]}>Categoría</Text>
-              {categories.length === 0 ? (
-                <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
-                  No hay categorías disponibles
-                </Text>
-              ) : (
-                <View style={styles.categoryButtons}>
-                  {categories.map((cat) => {
-                    const categoryId = cat.id ?? cat.category_id;
-                    const isSelected = selectedCategory === categoryId;
-                    return (
-                      <TouchableOpacity
-                        key={categoryId ?? cat.name}
-                        style={[
-                          styles.categoryButton,
-                          isSelected && styles.categoryButtonSelected
-                        ]}
-                        onPress={() => setSelectedCategory(categoryId)}
-                      >
-                        <MaterialCommunityIcons
-                          name={getCategoryIcon(cat.name)}
-                          size={20}
-                          color={isSelected ? '#0B1320' : '#22D3EE'}
-                        />
-                        <Text
-                          style={[
-                            styles.categoryButtonText,
-                            isSelected && styles.categoryButtonTextSelected
-                          ]}
-                        >
-                          {cat.name}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              )}
-
-              {/* Detalles */}
-              <Text style={[styles.label, { color: theme.colors.text }]}>Detalles</Text>
-              <TextInput
-                style={[styles.neonInput, styles.textArea, { color: theme.colors.text }]}
-                placeholder="Detalles"
-                placeholderTextColor="rgba(255,255,255,0.3)"
-                multiline
-                numberOfLines={4}
-                value={productDesc}
-                onChangeText={setProductDesc}
-                textAlignVertical="top"
-              />
-
-              {/* Precio */}
+              {/* Precio - full width */}
               <Text style={[styles.label, { color: theme.colors.text }]}>Precio</Text>
-              <View style={styles.priceInputContainer}>
-                <Text style={styles.currencySymbol}>$</Text>
+              <View style={[styles.priceInputContainer, { backgroundColor: theme.isDark ? '#111827' : '#F3F4F6', borderColor: theme.colors.border }]}>
+                <Text style={[styles.currencySymbol, { color: theme.colors.textSecondary }]}>$</Text>
                 <TextInput
-                  style={[styles.neonInput, styles.priceInput, { color: theme.colors.text }]}
-                  placeholder=""
-                  placeholderTextColor="rgba(255,255,255,0.3)"
+                  style={[styles.priceInput, { color: theme.colors.text }]}
+                  placeholder="0.00"
+                  placeholderTextColor={theme.colors.textSecondary}
                   keyboardType="decimal-pad"
                   value={productPrice}
                   onChangeText={setProductPrice}
                 />
               </View>
 
-              {/* Botón Publicar */}
+              {/* Featured Toggle */}
+              <View style={[styles.featuredRow, { borderColor: theme.colors.border }]}>
+                <View style={styles.featuredLabelRow}>
+                  <Ionicons name="star" size={20} color="#FFC107" />
+                  <Text style={[styles.featuredLabel, { color: theme.colors.text }]}>Producto Destacado</Text>
+                </View>
+                <Switch
+                  value={isFeatured}
+                  onValueChange={setIsFeatured}
+                  trackColor={{ false: '#374151', true: '#22D3EE55' }}
+                  thumbColor={isFeatured ? '#22D3EE' : '#9CA3AF'}
+                />
+              </View>
+
+              {/* Publish Button */}
               <TouchableOpacity
                 style={styles.publishButton}
                 onPress={() => {
                   console.log('[AdminProducts] publish button pressed');
                   handleSaveProduct();
                 }}
+                activeOpacity={0.85}
               >
                 <Text style={styles.publishButtonText}>
                   {editingProduct ? 'Guardar Cambios' : 'Publicar Producto'}
                 </Text>
-                <Ionicons name="checkmark-circle" size={24} color="#22D3EE" />
               </TouchableOpacity>
             </View>
           </ScrollView>
@@ -486,6 +548,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center'
   },
   productInfo: { flex: 1 },
+  productNameRow: { flexDirection: 'row', alignItems: 'center' },
   productName: { fontSize: 14, fontWeight: '600' },
   productCategory: { fontSize: 12, marginTop: 4 },
   productPrice: { fontSize: 14, fontWeight: '700', marginTop: 6, color: '#22D3EE' },
@@ -525,7 +588,7 @@ const styles = StyleSheet.create({
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 28,
     position: 'relative',
     justifyContent: 'center',
   },
@@ -536,164 +599,196 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 22,
-    fontWeight: '700',
-    color: '#22D3EE',
+    fontWeight: '800',
     textAlign: 'center',
-    textShadowColor: 'rgba(34, 211, 238, 0.8)',
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 10,
   },
-  sectionTitle: {
-    fontSize: 28,
-    fontWeight: '700',
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 12,
-    marginTop: 8,
-  },
-  imagePickerBox: {
-    width: 120,
-    height: 120,
-    borderWidth: 3,
-    borderColor: '#22D3EE',
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-    backgroundColor: 'rgba(34, 211, 238, 0.05)',
-    shadowColor: '#22D3EE',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  cameraIconContainer: {
+  formRow: {
+    flexDirection: 'row',
+    gap: 16,
     marginBottom: 8,
   },
+  formColLeft: {
+    flex: 1,
+  },
+  formColRight: {
+    flex: 1.2,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 8,
+    marginTop: 4,
+  },
+  imagePickerBox: {
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 28,
+    marginBottom: 12,
+  },
   imagePickerLabel: {
-    color: '#22D3EE',
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
+    marginTop: 8,
+  },
+  imagePickerSub: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+  mainImageBox: {
+    borderWidth: 1.5,
+    borderRadius: 14,
+    overflow: 'hidden',
+    marginBottom: 10,
+    position: 'relative',
+  },
+  mainImagePreview: {
+    width: '100%',
+    height: 160,
+    borderRadius: 12,
+  },
+  removeMainImageBtn: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 12,
+  },
+  thumbRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
+  addMoreImageBtn: {
+    width: 64,
+    height: 64,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   imagePreviewContainer: {
-    marginBottom: 16,
-    maxHeight: 100,
+    marginBottom: 12,
+    maxHeight: 90,
   },
   imagePreviewWrapper: {
     position: 'relative',
-    marginRight: 12,
   },
   imagePreview: {
-    width: 80,
-    height: 80,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#22D3EE',
+    width: 64,
+    height: 64,
+    borderRadius: 10,
+    borderWidth: 1.5,
   },
   removeImageBtn: {
     position: 'absolute',
-    top: -8,
-    right: -8,
+    top: -6,
+    right: -6,
     backgroundColor: '#1a1a1a',
-    borderRadius: 12,
+    borderRadius: 11,
   },
-  neonInput: {
-    borderWidth: 2,
-    borderColor: '#22D3EE',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    marginBottom: 16,
-    backgroundColor: 'rgba(34, 211, 238, 0.05)',
-    shadowColor: '#22D3EE',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 3,
+  formInput: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
+    marginBottom: 12,
   },
   textArea: {
-    height: 120,
+    height: 100,
     textAlignVertical: 'top',
+    paddingTop: 12,
   },
   categoryButtons: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
-    marginBottom: 16,
+    gap: 8,
+    marginBottom: 12,
   },
   emptyText: {
     fontSize: 13,
-    marginBottom: 16,
+    marginBottom: 12,
   },
   categoryButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderWidth: 2,
-    borderColor: '#22D3EE',
-    borderRadius: 12,
-    backgroundColor: 'rgba(34, 211, 238, 0.1)',
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderRadius: 10,
   },
   categoryButtonSelected: {
-    backgroundColor: 'rgba(34, 211, 238, 0.3)',
-    shadowColor: '#22D3EE',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 8,
-    elevation: 4,
+    backgroundColor: '#FB923C',
+    borderColor: '#FB923C',
   },
   categoryButtonText: {
-    color: '#22D3EE',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
   },
   categoryButtonTextSelected: {
-    color: '#0B1320',
+    color: '#fff',
   },
   priceInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 24,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    marginBottom: 20,
   },
   currencySymbol: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
-    color: '#22D3EE',
-    marginRight: 8,
+    marginRight: 6,
   },
   priceInput: {
     flex: 1,
-    marginBottom: 0,
+    fontSize: 16,
+    paddingVertical: 12,
+    fontWeight: '600',
   },
-  publishButton: {
+  featuredRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    paddingHorizontal: 4,
+    marginBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1F2937',
+  },
+  featuredLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  featuredLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  publishButton: {
+    alignItems: 'center',
     justifyContent: 'center',
-    gap: 12,
-    backgroundColor: 'rgba(34, 211, 238, 0.15)',
-    borderWidth: 2,
-    borderColor: '#22D3EE',
+    backgroundColor: '#FB923C',
     borderRadius: 12,
     paddingVertical: 16,
-    marginTop: 8,
-    marginBottom: 24,
-    shadowColor: '#22D3EE',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 12,
+    marginBottom: 30,
+    shadowColor: '#FB923C',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
     elevation: 6,
   },
   publishButtonText: {
     color: '#fff',
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 17,
+    fontWeight: '800',
   },
   deleteModalOverlay: {
     flex: 1,

@@ -166,3 +166,68 @@ export const SubscriptionService = {
 export const OfferService = {
   getActive: (token) => fetchWithAuth(ENDPOINTS.activeOffer, token)
 };
+
+// Banner Service
+export const BannerService = {
+  // Public: get active banners for carousel
+  getActiveBanners: (token) => fetchWithAuth(`${API_URL}/banners/active`, token),
+
+  // Admin: get all banners
+  getAll: (token) => fetchWithAuth(`${API_URL}/admin/banners`, token),
+
+  // Admin: create banner (with optional image)
+  create: async (formData, token) => {
+    const response = await fetch(`${API_URL}/admin/banners`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+      },
+      body: formData,
+    });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    return response.json();
+  },
+
+  // Admin: update banner
+  update: async (id, data, token) => {
+    const response = await fetch(`${API_URL}/admin/banners/${id}`, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    return response.json();
+  },
+
+  // Admin: upload banner image
+  uploadImage: async (id, formData, token) => {
+    const response = await fetch(`${API_URL}/admin/banners/${id}/image`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+      },
+      body: formData,
+    });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    return response.json();
+  },
+
+  // Admin: delete banner
+  delete: async (id, token) => {
+    const response = await fetch(`${API_URL}/admin/banners/${id}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+      },
+    });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    return response.json();
+  },
+};

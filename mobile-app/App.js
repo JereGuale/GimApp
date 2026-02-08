@@ -4,14 +4,17 @@ import RootNavigator from './src/navigation/RootNavigator';
 import { DarkTheme } from './src/theme/darkTheme';
 import { ThemeProvider } from './src/context/ThemeContext';
 import { AuthProvider } from './src/context/AuthContext';
+import { CartProvider } from './src/context/CartContext';
 
 export default function App() {
   return (
     <AuthProvider>
       <ThemeProvider>
-        <NavigationContainer theme={DarkTheme}>
-          <RootNavigator />
-        </NavigationContainer>
+        <CartProvider>
+          <NavigationContainer theme={DarkTheme}>
+            <RootNavigator />
+          </NavigationContainer>
+        </CartProvider>
       </ThemeProvider>
     </AuthProvider>
   );
