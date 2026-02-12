@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Notification;
 use App\Models\Subscription;
 use App\Models\SubscriptionPlan;
 use Illuminate\Http\Request;
@@ -71,12 +72,31 @@ class SubscriptionController extends Controller
         }
 
         $subscription = Subscription::create($subscriptionData);
+        $subscription->load(['plan', 'user']);
+
+        // Si es transferencia, notificar a los trainers
+        if ($request->payment_method === 'transfer') {
+            // La notificación se enviará cuando suba el comprobante
+        } elseif ($request->payment_method === 'card') {
+            // Tarjeta: auto-aprobada, notificar al usuario
+            Notification::create([
+                'user_id' => $request->user()->id,
+                'type' => 'subscription_approved',
+                'title' => '¡Suscripción comprada con éxito!',
+                'message' => "Tu suscripción al {$subscription->plan->name} ha sido activada exitosamente.",
+                'data' => [
+                    'subscription_id' => $subscription->id,
+                    'plan_name' => $subscription->plan->name,
+                    'status' => 'active',
+                ],
+            ]);
+        }
 
         return response()->json([
             'message' => $request->payment_method === 'card'
-            ? 'Suscripción activada exitosamente'
+            ? 'Suscripción comprada con éxito'
             : 'Suscripción creada. Suba su comprobante para activarla',
-            'subscription' => $subscription->load('plan')
+            'subscription' => $subscription
         ], 201);
     }
 
@@ -112,9 +132,13 @@ class SubscriptionController extends Controller
             'status' => 'pending' // Asegurar que quede en pendiente
         ]);
 
+        // Notificar a trainers sobre nueva solicitud con comprobante
+        $subscription->load(['plan', 'user']);
+        Notification::notifyTrainers($subscription);
+
         return response()->json([
-            'message' => 'Comprobante subido exitosamente. Esperando aprobación',
-            'subscription' => $subscription->load('plan')
+            'message' => 'Comprobante enviado con éxito',
+            'subscription' => $subscription
         ]);
     }
 }

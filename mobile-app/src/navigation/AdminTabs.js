@@ -1,13 +1,16 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import { TouchableOpacity, View } from 'react-native';
+import { TouchableOpacity, View, Text } from 'react-native';
+import React, { useState } from 'react';
 import AdminDashboard from '../screens/admin/AdminDashboard';
 import AdminCategories from '../screens/admin/AdminCategories';
 import AdminProducts from '../screens/admin/AdminProducts';
 import AdminProfileScreen from '../screens/admin/AdminProfileScreen';
 import AdminSubscriptionManagement from '../screens/admin/AdminSubscriptionManagement';
+import NotificationPanel from '../components/NotificationPanel';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationContext';
 import { RoleGuard } from '../components/RoleGuard';
 
 const Tab = createBottomTabNavigator();
@@ -15,6 +18,8 @@ const Tab = createBottomTabNavigator();
 export default function AdminTabs() {
   const { theme, toggleTheme } = useTheme();
   const { logout } = useAuth();
+  const { unreadCount } = useNotifications();
+  const [notificationVisible, setNotificationVisible] = useState(false);
 
   const handleLogout = async () => {
     console.log('[AdminTabs] handleLogout called');
@@ -24,6 +29,11 @@ export default function AdminTabs() {
     } catch (error) {
       console.error('[AdminTabs] logout error:', error);
     }
+  };
+
+  const handleNotificationPress = (notification) => {
+    // Close panel - the admin can navigate to subscriptions tab
+    setNotificationVisible(false);
   };
 
   return (
@@ -53,6 +63,38 @@ export default function AdminTabs() {
                   size={24}
                   color={theme.isDark ? '#FB923C' : '#FFD700'}
                 />
+              </TouchableOpacity>
+
+              {/* Notification Bell */}
+              <TouchableOpacity
+                onPress={() => setNotificationVisible(true)}
+                style={{ marginRight: 8, padding: 8, position: 'relative' }}
+              >
+                <Ionicons
+                  name={unreadCount > 0 ? 'notifications' : 'notifications-outline'}
+                  size={23}
+                  color={unreadCount > 0 ? '#FB923C' : theme.colors.text}
+                />
+                {unreadCount > 0 && (
+                  <View style={{
+                    position: 'absolute',
+                    top: 2,
+                    right: 2,
+                    backgroundColor: '#EF4444',
+                    borderRadius: 9,
+                    minWidth: 18,
+                    height: 18,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    paddingHorizontal: 4,
+                    borderWidth: 2,
+                    borderColor: theme.colors.surface,
+                  }}>
+                    <Text style={{ color: '#FFF', fontSize: 10, fontWeight: '800' }}>
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </Text>
+                  </View>
+                )}
               </TouchableOpacity>
 
               {/* Profile Icon in Header */}
@@ -128,6 +170,13 @@ export default function AdminTabs() {
           }}
         />
       </Tab.Navigator>
+
+      {/* Notification Panel */}
+      <NotificationPanel
+        visible={notificationVisible}
+        onClose={() => setNotificationVisible(false)}
+        onNotificationPress={handleNotificationPress}
+      />
     </RoleGuard>
   );
 }

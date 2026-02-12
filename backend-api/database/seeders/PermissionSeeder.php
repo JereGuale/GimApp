@@ -78,14 +78,12 @@ class PermissionSeeder extends Seeder
 
         // Crear Roles Base
         $superAdminRole = Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => 'sanctum']);
-        $adminRole = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'sanctum']); // Legacy support
         $trainerRole = Role::firstOrCreate(['name' => 'trainer', 'guard_name' => 'sanctum']);
         $userRole = Role::firstOrCreate(['name' => 'user', 'guard_name' => 'sanctum']);
 
-        // Asignar TODO a Super Admin
+        // Asignar TODOS los permisos a Super Admin
         $allPermissions = Permission::all();
         $superAdminRole->syncPermissions($allPermissions);
-        $adminRole->syncPermissions($allPermissions); // Legacy admin gets all too
 
         // Asignar permisos específicos a Trainer
         $trainerPermissionNames = [
@@ -97,27 +95,31 @@ class PermissionSeeder extends Seeder
             'banners.view', 'banners.edit',
             'settings.view'
         ];
-
         $trainerPerms = Permission::whereIn('name', $trainerPermissionNames)->get();
         $trainerRole->syncPermissions($trainerPerms);
+
+        // Asignar permisos mínimos a User (solo ver productos y categorías)
+        $userPermissionNames = [
+            'products.view',
+            'categories.view',
+        ];
+        $userPerms = Permission::whereIn('name', $userPermissionNames)->get();
+        $userRole->syncPermissions($userPerms);
 
         // Crear Usuario Super Admin por defecto si no existe
         $adminEmail = 'admin@fitness.com';
         $adminUser = User::firstOrCreate(
-        ['email' => $adminEmail],
-        [
-            'name' => 'Super Admin',
-            'password' => Hash::make('password123'),
-            'role' => 'admin', // Legacy column support
-        ]
+            ['email' => $adminEmail],
+            [
+                'name' => 'Super Admin',
+                'password' => Hash::make('password123'),
+                'role' => 'super_admin',
+            ]
         );
 
         // Asegurar que tenga el rol Spatie
         if (!$adminUser->hasRole('super_admin')) {
             $adminUser->assignRole($superAdminRole);
-        }
-        if (!$adminUser->hasRole('admin')) {
-            $adminUser->assignRole($adminRole);
         }
 
     }

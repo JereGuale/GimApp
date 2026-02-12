@@ -35,18 +35,30 @@ class PromotionalBanner extends Model
     /**
      * Get full image URL
      */
+    // Accessor para la URL de la imagen
     public function getImageUrlAttribute($value)
     {
-        if (!$value) {
-            return null;
-        }
+        // El atributo real en base de datos es 'image_url' (segun fillable), 
+        // pero Laravel pasará el valor de la columna a este método si se llama igual.
+        // Ojo: si la columna se llama image_url, el accesor debería llamarse getImageUrlAttribute
+        // y recibir el valor.
 
-        // If it's already a full URL, return as is
-        if (str_starts_with($value, 'http')) {
+        if (!$value)
+            return null;
+
+        // Si es una URL absoluta (empieza con http)
+        if (strpos($value, 'http') === 0) {
+            // Si es una URL de nuestra propia app (localhost o IP anterior), reemplazarla con la actual
+            if (strpos($value, '/storage/') !== false) {
+                // Extraer solo la parte relativa
+                $parts = explode('/storage/', $value);
+                if (count($parts) > 1) {
+                    return asset('storage/' . $parts[1]);
+                }
+            }
             return $value;
         }
 
-        // Otherwise, prepend the app URL
-        return url('storage/' . $value);
+        return asset('storage/' . $value);
     }
 }

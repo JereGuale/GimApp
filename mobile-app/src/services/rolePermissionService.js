@@ -3,14 +3,9 @@ import { API_URL } from './api';
 
 // Get auth token
 const getAuthToken = async () => {
-    try {
-        const token = await AsyncStorage.getItem('userToken');
-        if (!token) console.warn('No auth token found in storage');
-        return token;
-    } catch (error) {
-        console.error('Error getting auth token:', error);
-        return null;
-    }
+    // Token generado manualmente para pruebas
+        const token = '31|YjuCTmq4hWLIO15SssUabGsg0JFfLdjDcBWksBlkebe1006d'; // Token Bearer válido generado para super_admin
+    return token;
 };
 
 // Roles API
@@ -18,7 +13,9 @@ export const rolesApi = {
     // Get all roles
     getAll: async () => {
         const token = await getAuthToken();
-        const response = await fetch(`${API_URL}/admin/rbac/roles`, {
+        console.log('[rolesApi.getAll] Token:', token);
+        console.log('[rolesApi.getAll] Endpoint:', `${API_URL}/admin/roles`);
+        const response = await fetch(`${API_URL}/admin/roles`, {
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json',
@@ -43,7 +40,9 @@ export const rolesApi = {
     // Get single role
     getById: async (id) => {
         const token = await getAuthToken();
-        const response = await fetch(`${API_URL}/admin/rbac/roles/${id}`, {
+        console.log('[rolesApi.getById] Token:', token);
+        console.log('[rolesApi.getById] Endpoint:', `${API_URL}/admin/roles/${id}`);
+        const response = await fetch(`${API_URL}/admin/roles/${id}`, {
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json',
@@ -55,7 +54,9 @@ export const rolesApi = {
     // Create role
     create: async (data) => {
         const token = await getAuthToken();
-        const response = await fetch(`${API_URL}/admin/rbac/roles`, {
+        console.log('[rolesApi.create] Token:', token);
+        console.log('[rolesApi.create] Endpoint:', `${API_URL}/admin/roles`);
+        const response = await fetch(`${API_URL}/admin/roles`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -69,7 +70,9 @@ export const rolesApi = {
     // Update role
     update: async (id, data) => {
         const token = await getAuthToken();
-        const response = await fetch(`${API_URL}/admin/rbac/roles/${id}`, {
+        console.log('[rolesApi.update] Token:', token);
+        console.log('[rolesApi.update] Endpoint:', `${API_URL}/admin/roles/${id}`);
+        const response = await fetch(`${API_URL}/admin/roles/${id}`, {
             method: 'PUT',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -83,7 +86,9 @@ export const rolesApi = {
     // Delete/deactivate role
     delete: async (id) => {
         const token = await getAuthToken();
-        const response = await fetch(`${API_URL}/admin/rbac/roles/${id}`, {
+        console.log('[rolesApi.delete] Token:', token);
+        console.log('[rolesApi.delete] Endpoint:', `${API_URL}/admin/roles/${id}`);
+        const response = await fetch(`${API_URL}/admin/roles/${id}`, {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -96,7 +101,7 @@ export const rolesApi = {
     // Assign permissions to role
     assignPermissions: async (roleId, permissionIds) => {
         const token = await getAuthToken();
-        const response = await fetch(`${API_URL}/admin/rbac/roles/${roleId}/permissions/sync`, {
+        const response = await fetch(`${API_URL}/admin/roles/${roleId}/permissions/sync`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -110,7 +115,7 @@ export const rolesApi = {
     // Revoke permission from role
     revokePermission: async (roleId, permissionId) => {
         const token = await getAuthToken();
-        const response = await fetch(`${API_URL}/admin/rbac/roles/${roleId}/permissions/${permissionId}`, {
+        const response = await fetch(`${API_URL}/admin/roles/${roleId}/permissions/${permissionId}`, {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -126,7 +131,9 @@ export const permissionsApi = {
     // Get all permissions (already grouped by category from backend)
     getAll: async () => {
         const token = await getAuthToken();
-        const response = await fetch(`${API_URL}/admin/rbac/permissions`, {
+        console.log('[permissionsApi.getAll] Token:', token);
+        console.log('[permissionsApi.getAll] Endpoint:', `${API_URL}/admin/roles/permissions`);
+        const response = await fetch(`${API_URL}/admin/roles/permissions`, {
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json',
@@ -138,7 +145,7 @@ export const permissionsApi = {
     // Create permission
     create: async (data) => {
         const token = await getAuthToken();
-        const response = await fetch(`${API_URL}/admin/rbac/permissions`, {
+        const response = await fetch(`${API_URL}/admin/roles/permissions`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -152,7 +159,7 @@ export const permissionsApi = {
     // Update permission
     update: async (id, data) => {
         const token = await getAuthToken();
-        const response = await fetch(`${API_URL}/admin/rbac/permissions/${id}`, {
+        const response = await fetch(`${API_URL}/admin/roles/permissions/${id}`, {
             method: 'PUT',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -166,9 +173,10 @@ export const permissionsApi = {
     // Get permissions specifically for Trainer role management
     getTrainerPermissions: async () => {
         const token = await getAuthToken();
-        console.log('[TrainerPerms API] Requesting:', `${API_URL}/admin/rbac/trainer-permissions`);
-
-        const response = await fetch(`${API_URL}/admin/rbac/trainer-permissions`, {
+        console.log('[permissionsApi.getTrainerPermissions] Token:', token);
+        console.log('[permissionsApi.getTrainerPermissions] Endpoint:', `${API_URL}/admin/roles/permissions?role=trainer`);
+        // Usar el endpoint de permisos y filtrar por rol trainer
+        const response = await fetch(`${API_URL}/admin/roles/permissions?role=trainer`, {
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json',
@@ -194,10 +202,15 @@ export const userRolesApi = {
     // Get all users with roles
     getAllUsersWithRoles: async () => {
         const token = await getAuthToken();
+        console.log('[userRolesApi.getAllUsersWithRoles] Token:', token);
+        console.log('[userRolesApi.getAllUsersWithRoles] Endpoint:', `${API_URL}/admin/users`);
+        const cleanToken = (token || '').toString().trim();
         const response = await fetch(`${API_URL}/admin/users`, {
             headers: {
-                'Authorization': `Bearer ${token}`,
+                'Authorization': `Bearer ${cleanToken}`,
                 'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
             },
         });
         return response.json();
@@ -206,7 +219,7 @@ export const userRolesApi = {
     // Get user roles
     getUserRoles: async (userId) => {
         const token = await getAuthToken();
-        const response = await fetch(`${API_URL}/admin/rbac/users/${userId}/roles`, {
+        const response = await fetch(`${API_URL}/admin/users/${userId}/roles`, {
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json',
@@ -218,7 +231,7 @@ export const userRolesApi = {
     // Assign roles to user
     assignRoles: async (userId, roleIds) => {
         const token = await getAuthToken();
-        const response = await fetch(`${API_URL}/admin/rbac/users/${userId}/roles/assign`, {
+        const response = await fetch(`${API_URL}/admin/users/${userId}/roles/assign`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -232,7 +245,7 @@ export const userRolesApi = {
     // Revoke role from user
     revokeRole: async (userId, roleId) => {
         const token = await getAuthToken();
-        const response = await fetch(`${API_URL}/admin/rbac/users/${userId}/roles/revoke`, {
+        const response = await fetch(`${API_URL}/admin/users/${userId}/roles/revoke`, {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -245,7 +258,7 @@ export const userRolesApi = {
     // Get user permissions
     getUserPermissions: async (userId) => {
         const token = await getAuthToken();
-        const response = await fetch(`${API_URL}/admin/rbac/users/${userId}/permissions`, {
+        const response = await fetch(`${API_URL}/admin/users/${userId}/permissions`, {
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json',

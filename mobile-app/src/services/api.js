@@ -1,9 +1,8 @@
-import { Platform } from 'react-native';
 
 // API Configuration for Laravel Backend
-// Base URL del servidor Laravel
-const DEV_HOST = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
-export const API_URL = `http://${DEV_HOST}:8000/api`;
+// Usar la IP del backend desde archivo de configuración
+import { DEV_BACKEND_IP } from '../../.env.js';
+export const API_URL = `http://${DEV_BACKEND_IP}:8000/api`;
 
 // Endpoints disponibles
 export const ENDPOINTS = {

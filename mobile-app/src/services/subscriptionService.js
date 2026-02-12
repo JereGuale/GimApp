@@ -1,7 +1,6 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_URL = 'http://localhost:8000/api';
 
 // Helper para obtener el token
 const getToken = async () => {
@@ -123,11 +122,25 @@ export const SubscriptionAPI = {
             const fileExtension = imageUri.split('.').pop().toLowerCase();
             const mimeType = fileExtension === 'png' ? 'image/png' : 'image/jpeg';
 
-            formData.append('receipt', {
-                uri: imageUri,
-                type: mimeType,
-                name: `receipt_${Date.now()}.${fileExtension}`
-            });
+            // Si la URI es local (blob:/ o file:/), obtener el blob
+            let uploadUri = imageUri;
+            let fileObj = null;
+            if (imageUri.startsWith('file://') || imageUri.startsWith('blob:')) {
+                // Para expo-image-picker, usar fetch para obtener el blob
+                const response = await fetch(imageUri);
+                const blob = await response.blob();
+                fileObj = blob;
+                fileObj.name = `receipt_${Date.now()}.${fileExtension}`;
+                fileObj.type = mimeType;
+            } else {
+                // Para URIs remotas
+                fileObj = {
+                    uri: imageUri,
+                    type: mimeType,
+                    name: `receipt_${Date.now()}.${fileExtension}`
+                };
+            }
+            formData.append('receipt', fileObj);
 
             console.log('FormData prepared, making request to API...');
 

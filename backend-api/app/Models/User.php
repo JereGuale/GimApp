@@ -13,6 +13,8 @@ class User extends Authenticatable
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasApiTokens, HasFactory, Notifiable, \Spatie\Permission\Traits\HasRoles;
 
+    protected $appends = ['profile_photo_url'];
+
     /**
      * The attributes that are mass assignable.
      *
@@ -23,6 +25,7 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
+        'profile_photo',
     ];
 
     /**
@@ -51,6 +54,19 @@ class User extends Authenticatable
     public function subscriptions()
     {
         return $this->hasMany(Subscription::class);
+    }
+
+    public function notifications()
+    {
+        return $this->hasMany(Notification::class);
+    }
+    // Accessor para la URL pública de la foto de perfil
+    public function getProfilePhotoUrlAttribute()
+    {
+        if (!$this->profile_photo)
+            return null;
+        // Usa asset() para devolver la URL completa
+        return asset('storage/' . $this->profile_photo);
     }
 
     public function isAdmin(): bool

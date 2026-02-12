@@ -55,8 +55,17 @@ export function AuthProvider({ children }) {
     console.log('[AuthContext] logout() completed');
   };
 
+  const updateUser = async (updatedUser) => {
+    try {
+      await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+      setUser(updatedUser);
+    } catch (error) {
+      console.error('Error updating user:', error);
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, token, login, logout, updateUser, loading }}>
       {children}
     </AuthContext.Provider>
   );

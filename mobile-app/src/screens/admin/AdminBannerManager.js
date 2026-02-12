@@ -12,9 +12,9 @@ import { useAuth } from '../../context/AuthContext';
 const { width: screenWidth } = Dimensions.get('window');
 
 // Platform-aware API URL
-const API_URL = Platform.OS === 'web'
-  ? 'http://localhost:8000/api'
-  : 'http://10.0.2.2:8000/api';
+import Constants from 'expo-constants';
+const DEV_BACKEND_IP = Constants.manifest?.extra?.DEV_BACKEND_IP || '127.0.0.1';
+const API_URL = `http://${DEV_BACKEND_IP}:8000/api`;
 
 const apiRequest = async (url, options = {}) => {
   const res = await fetch(url, {

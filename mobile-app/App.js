@@ -5,15 +5,18 @@ import { DarkTheme } from './src/theme/darkTheme';
 import { ThemeProvider } from './src/context/ThemeContext';
 import { AuthProvider } from './src/context/AuthContext';
 import { CartProvider } from './src/context/CartContext';
+import { NotificationProvider } from './src/context/NotificationContext';
 
 export default function App() {
   return (
     <AuthProvider>
       <ThemeProvider>
         <CartProvider>
-          <NavigationContainer theme={DarkTheme}>
-            <RootNavigator />
-          </NavigationContainer>
+          <NotificationProvider>
+            <NavigationContainer theme={DarkTheme}>
+              <RootNavigator />
+            </NavigationContainer>
+          </NotificationProvider>
         </CartProvider>
       </ThemeProvider>
     </AuthProvider>

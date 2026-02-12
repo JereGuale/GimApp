@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 
 class AuthController extends Controller
 {
@@ -106,6 +107,73 @@ class AuthController extends Controller
                 'roles' => $user->roles,
                 'permissions' => $permissions
             ]
+        ]);
+    }
+
+    /**
+     * Get current user profile
+     * GET /api/profile
+     */
+    public function profile(Request $request)
+    {
+        $user = $request->user();
+        $user->load('roles.permissions');
+
+        return response()->json([
+            'success' => true,
+            'user' => $user,
+            'profile_photo_url' => $user->profile_photo_url
+        ]);
+    }
+
+    /**
+     * Update user profile
+     * PUT /api/profile
+     */
+    public function updateProfile(Request $request)
+    {
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'name' => 'sometimes|string|max:255',
+            'email' => 'sometimes|email|unique:users,email,' . $user->id,
+        ]);
+
+        $user->update($validated);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Perfil actualizado exitosamente',
+            'user' => $user
+        ]);
+    }
+
+    /**
+     * Upload profile photo
+     * POST /api/profile/photo
+     */
+    public function uploadPhoto(Request $request)
+    {
+        $request->validate([
+            'photo' => 'required|image|max:5120' // 5MB max
+        ]);
+
+        $user = $request->user();
+
+        // Delete old photo if exists
+        if ($user->profile_photo) {
+            Storage::disk('public')->delete($user->profile_photo);
+        }
+
+        $path = $request->file('photo')->store('profile_photos', 'public');
+
+        $user->update(['profile_photo' => $path]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Foto de perfil actualizada',
+            'profile_photo' => $path,
+            'profile_photo_url' => asset('storage/' . $path)
         ]);
     }
 }

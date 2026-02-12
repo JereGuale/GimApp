@@ -276,7 +276,7 @@ export default function SuperAdminDashboard() {
             activeOpacity={0.8}
           >
             <Ionicons name="key-outline" size={18} color="#000" style={{ marginRight: 8 }} />
-            <Text style={styles.permissionsBtnText}>Gestionar Permisos</Text>
+            <Text style={styles.permissionsBtnText}>Gestionar Roles</Text>
           </TouchableOpacity>
         </View>
 

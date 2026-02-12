@@ -83,7 +83,7 @@ export default function SubscriptionScreen() {
       );
 
       if (result.success) {
-        Alert.alert('¡Éxito!', 'Suscripción activada exitosamente');
+        Alert.alert('¡Suscripción comprada con éxito!', 'Tu suscripción ha sido activada. ¡Disfrútala!');
         setCardFormVisible(false);
         setSelectedPlan(null);
       } else {
@@ -112,7 +112,7 @@ export default function SubscriptionScreen() {
       );
 
       if (uploadResult.success) {
-        Alert.alert('¡Comprobante Enviado!', 'Esperando aprobación del administrador');
+        Alert.alert('¡Comprobante enviado con éxito!', 'Tu solicitud será revisada por un administrador. Te notificaremos cuando sea aprobada.');
         setReceiptModalVisible(false);
         setSelectedPlan(null);
       } else {

@@ -1,5 +1,3 @@
-
-
 <?php
 
 namespace App\Http\Controllers\Api;
@@ -33,6 +31,10 @@ class ProductController extends Controller
         }
 
         $products = $query->get();
+        // Agrega image_url en cada producto
+        $products->each(function($product) {
+            $product->image_url = $product->image_url;
+        });
         return response()->json($products);
     }
 
@@ -42,7 +44,8 @@ class ProductController extends Controller
 
     public function store(Request $request)
     {
-        \Log::info('Product store request', [
+        use Illuminate\Support\Facades\Log;
+        Log::info('Product store request', [
             'all' => $request->all(),
             'files' => $request->allFiles(),
             'hasImages' => $request->hasFile('images')
@@ -88,12 +91,13 @@ class ProductController extends Controller
         
         $product = Product::create($validated);
         
-        \Log::info('Product created', [
+        Log::info('Product created', [
             'id' => $product->id,
             'image' => $product->image,
             'images' => $product->images
         ]);
         
+        $product->image_url = $product->image_url;
         return response()->json($product->load('category'), 201);
     }
 
@@ -103,6 +107,7 @@ class ProductController extends Controller
     public function show(string $id)
     {
         $product = Product::with('category')->findOrFail($id);
+        $product->image_url = $product->image_url;
         return response()->json($product);
     }
 
@@ -136,6 +141,7 @@ class ProductController extends Controller
             $validated['images'] = $imageUrls;
         }
         $product->update($validated);
+        $product->image_url = $product->image_url;
         return response()->json($product->load('category'));
     }
 

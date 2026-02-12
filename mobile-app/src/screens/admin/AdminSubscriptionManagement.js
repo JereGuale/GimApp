@@ -103,7 +103,6 @@ export default function AdminSubscriptionManagement() {
 
     const handleViewReceipt = (subscription) => {
         if (subscription.payment_receipt) {
-            const receiptUrl = `http://localhost:8000/storage/${subscription.payment_receipt}`;
             setSelectedImage(receiptUrl);
             setImageModalVisible(true);
         } else {

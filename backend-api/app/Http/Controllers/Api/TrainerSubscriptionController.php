@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Notification;
 use App\Models\Subscription;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -62,10 +63,14 @@ class TrainerSubscriptionController extends Controller
         }
 
         $subscription->approve($request->user()->id);
+        $subscription->load(['user', 'plan']);
+
+        // Notificar al usuario que su suscripción fue aprobada
+        Notification::notifyUser($subscription, 'active');
 
         return response()->json([
             'message' => 'Suscripción aprobada exitosamente',
-            'subscription' => $subscription->load(['user', 'plan'])
+            'subscription' => $subscription
         ]);
     }
 
@@ -91,10 +96,14 @@ class TrainerSubscriptionController extends Controller
         }
 
         $subscription->reject($request->reason ?? 'Comprobante no válido');
+        $subscription->load(['user', 'plan']);
+
+        // Notificar al usuario que su suscripción fue rechazada
+        Notification::notifyUser($subscription, 'rejected');
 
         return response()->json([
             'message' => 'Suscripción rechazada',
-            'subscription' => $subscription->load(['user', 'plan'])
+            'subscription' => $subscription
         ]);
     }
 

@@ -101,6 +101,24 @@ export default function ProductDetailScreen() {
         <View style={[styles.infoSection, isWide && { flex: 1 }]}>
           <Text style={[styles.productName, { color: theme.colors.text }]}>{product.name}</Text>
           <Text style={styles.productPrice}>${Number(product.price).toFixed(2)}</Text>
+          {/* Thumbnails horizontally below price */}
+          {images.length > 1 && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 8 }}>
+              {images.map((img, idx) => (
+                <TouchableOpacity
+                  key={img + idx}
+                  style={{ width: 70, height: 70, borderRadius: 12, overflow: 'hidden', borderWidth: 2, borderColor: activeImage === img ? '#22D3EE' : '#E2E8F0', marginRight: idx !== images.length - 1 ? 8 : 0 }}
+                  onPress={() => setActiveImage(img)}
+                >
+                  <Image
+                    source={{ uri: img }}
+                    style={{ width: '100%', height: '100%' }}
+                    resizeMode="cover"
+                  />
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
 
           {/* Size selector */}
           <View style={styles.optionGroup}>

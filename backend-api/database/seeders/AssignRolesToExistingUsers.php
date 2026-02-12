@@ -30,10 +30,6 @@ class AssignRolesToExistingUsers extends Seeder
                 $user->roles()->attach($roles['super_admin']->id);
                 echo "✓ Asignado Super Admin a: {$user->email}\n";
             }
-            elseif ($oldRole === 'admin' && isset($roles['admin'])) {
-                $user->roles()->attach($roles['admin']->id);
-                echo "✓ Asignado Admin a: {$user->email}\n";
-            }
             elseif ($oldRole === 'trainer' && isset($roles['trainer'])) {
                 $user->roles()->attach($roles['trainer']->id);
                 echo "✓ Asignado Trainer a: {$user->email}\n";

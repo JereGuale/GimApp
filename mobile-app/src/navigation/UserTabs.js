@@ -1,7 +1,7 @@
-
+import Constants from 'expo-constants';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import { TouchableOpacity, View, Text } from 'react-native';
+import { TouchableOpacity, View, Text, Image } from 'react-native';
 import HomeScreen from '../screens/user/HomeScreen';
 import CategoriesScreen from '../screens/user/CategoriesScreen';
 import SubscriptionScreen from '../screens/user/SubscriptionScreen';
@@ -15,6 +15,14 @@ const Tab = createBottomTabNavigator();
 export default function UserTabs() {
   const { theme, toggleTheme } = useTheme();
   const { totalItems } = useCart();
+  const { user } = require('../context/AuthContext').useAuth();
+  // Lógica para mostrar la foto de perfil
+ 
+  const DEV_BACKEND_IP = Constants.manifest?.extra?.DEV_BACKEND_IP || '127.0.0.1';
+  const BASE_URL = `http://${DEV_BACKEND_IP}:8000`;
+  const profilePhotoUri = user && user.profile_photo
+    ? `${BASE_URL}/storage/${user.profile_photo}`
+    : null;
 
   return (
     <RoleGuard requiredRole="user">
@@ -59,12 +67,23 @@ export default function UserTabs() {
               <TouchableOpacity
                 onPress={() => navigation.navigate('Perfil')}
                 style={{
-                  padding: 4, marginLeft: 4,
-                  borderWidth: 1.5, borderColor: '#22D3EE',
-                  borderRadius: 20,
+                  width: 32, height: 32,
+                  borderRadius: 16,
+                  overflow: 'hidden',
+                  alignItems: 'center', justifyContent: 'center',
+                  backgroundColor: 'transparent',
+                  marginLeft: 4,
+                  padding: 0,
                 }}
               >
-                <Ionicons name="person-circle-outline" size={26} color="#22D3EE" />
+                {profilePhotoUri ? (
+                  <Image
+                    source={{ uri: profilePhotoUri }}
+                    style={{ width: 32, height: 32, borderRadius: 16, resizeMode: 'cover' }}
+                  />
+                ) : (
+                  <Ionicons name="person-circle-outline" size={32} color={'#181818'} />
+                )}
               </TouchableOpacity>
             </View>
           ),
@@ -74,7 +93,7 @@ export default function UserTabs() {
             height: 60,
             paddingBottom: 8
           },
-          tabBarActiveTintColor: '#22D3EE',
+          tabBarActiveTintColor: '#FF6A1A',
           tabBarInactiveTintColor: '#9CA3AF',
           tabBarLabelStyle: { fontSize: 12, fontWeight: '600' },
           tabBarIconStyle: { marginTop: 6 }
@@ -84,33 +103,37 @@ export default function UserTabs() {
           name="Inicio"
           component={HomeScreen}
           options={{
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="home-outline" size={size} color={color} />
+            ),
             title: 'Inicio',
-            tabBarIcon: ({ color, size }) => <Ionicons name="home" size={size} color={color} />
           }}
         />
         <Tab.Screen
-          name="Productos"
+          name="Categorías"
           component={CategoriesScreen}
           options={{
-            title: 'Productos',
-            tabBarIcon: ({ color, size }) => <Ionicons name="barbell" size={size} color={color} />
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="grid-outline" size={size} color={color} />
+            ),
+            title: 'Categorías',
           }}
         />
         <Tab.Screen
-          name="Suscripcion"
+          name="Suscripción"
           component={SubscriptionScreen}
           options={{
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="card-outline" size={size} color={color} />
+            ),
             title: 'Suscripción',
-            tabBarIcon: ({ color, size }) => <Ionicons name="card" size={size} color={color} />
           }}
         />
         <Tab.Screen
           name="Perfil"
           component={ProfileScreen}
           options={{
-            title: 'Perfil',
-            tabBarButton: () => null,
-            tabBarIcon: ({ color, size }) => <Ionicons name="person" size={size} color={color} />
+            tabBarButton: () => null, // Hide from tab bar
           }}
         />
       </Tab.Navigator>
