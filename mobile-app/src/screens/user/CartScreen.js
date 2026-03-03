@@ -9,6 +9,9 @@ import { useTheme } from '../../context/ThemeContext';
 import { useCart } from '../../context/CartContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { API_URL } from '../../services/api';
+import PaymentMethodModal from '../../components/PaymentMethodModal';
+import CardPaymentForm from '../../components/CardPaymentForm';
+import ReceiptUploader from '../../components/ReceiptUploader';
 
 const BASE_URL = API_URL.replace('/api', '');
 
@@ -22,6 +25,17 @@ export default function CartScreen() {
 
   const slideAnim = useRef(new Animated.Value(DRAWER_WIDTH)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  // Payment Modals State
+  const [paymentModalVisible, setPaymentModalVisible] = React.useState(false);
+  const [cardFormVisible, setCardFormVisible] = React.useState(false);
+  const [receiptModalVisible, setReceiptModalVisible] = React.useState(false);
+
+  // Mock plan for payment modales
+  const checkoutPlan = {
+    name: 'Pedido del Carrito',
+    price: totalPrice || 0
+  };
 
   // Animar apertura
   useEffect(() => {
@@ -56,22 +70,40 @@ export default function CartScreen() {
 
   const handleCheckout = () => {
     if (items.length === 0) return;
-    Alert.alert(
-      'Confirmar Compra',
-      `Total: $${totalPrice.toFixed(2)} (${totalItems} artículos)`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Confirmar',
-          onPress: () => {
-            clearCart();
-            Alert.alert('¡Compra Exitosa!', 'Tu pedido ha sido procesado correctamente.', [
-              { text: 'OK', onPress: closeDrawer }
-            ]);
-          }
-        }
-      ]
-    );
+    setPaymentModalVisible(true);
+  };
+
+  const handlePaymentMethodSelect = (method) => {
+    setPaymentModalVisible(false);
+    if (method === 'card') {
+      setCardFormVisible(true);
+    } else if (method === 'transfer') {
+      setReceiptModalVisible(true);
+    }
+  };
+
+  const handleCardPayment = async (cardData) => {
+    // Simulando compra con tarjeta
+    setTimeout(() => {
+      setCardFormVisible(false);
+      clearCart();
+      Alert.alert('¡Compra Exitosa!', 'Tu pedido ha sido procesado mediante tarjeta de crédito.', [
+        { text: 'OK', onPress: closeDrawer }
+      ]);
+    }, 1500);
+  };
+
+  const handleReceiptUpload = async (imageAsset) => {
+    // Simulando subida de comprobante
+    setTimeout(() => {
+      setReceiptModalVisible(false);
+      clearCart();
+      Alert.alert(
+        '¡Comprobante enviado con éxito!',
+        'Tu solicitud será revisada por un administrador. Te notificaremos cuando el pedido sea aprobado.',
+        [{ text: 'Aceptar', onPress: closeDrawer }]
+      );
+    }, 1500);
   };
 
   const handleRemove = (item) => {
@@ -238,6 +270,32 @@ export default function CartScreen() {
           </View>
         )}
       </Animated.View>
+
+      {/* Payment Modals */}
+      <PaymentMethodModal
+        visible={paymentModalVisible}
+        onClose={() => setPaymentModalVisible(false)}
+        onSelectMethod={handlePaymentMethodSelect}
+        plan={checkoutPlan}
+      />
+
+      <CardPaymentForm
+        visible={cardFormVisible}
+        onClose={() => setCardFormVisible(false)}
+        onSubmit={handleCardPayment}
+        plan={checkoutPlan}
+      />
+
+      <ReceiptUploader
+        visible={receiptModalVisible}
+        onClose={() => setReceiptModalVisible(false)}
+        onUpload={handleReceiptUpload}
+        bankDetails={{
+          bank: 'Banco Nacional',
+          account: '1234-5678-9012-3456',
+          holder: 'Gimnasio Elite S.A.'
+        }}
+      />
     </View>
   );
 }

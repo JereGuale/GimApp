@@ -54,10 +54,7 @@ export default function ProductDetailScreen() {
 
   const handleAddToCart = () => {
     addToCart(product, 1);
-    Alert.alert('✓ Añadido', `${product.name} se añadió al carrito`, [
-      { text: 'Seguir comprando' },
-      { text: 'Ver carrito', onPress: () => navigation.navigate('Cart') }
-    ]);
+    navigation.navigate('Cart');
   };
 
   const handleBuyNow = () => {
