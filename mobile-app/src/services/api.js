@@ -1,7 +1,16 @@
-
 // API Configuration for Laravel Backend
-// Usar la IP del backend desde archivo de configuración
-import { DEV_BACKEND_IP } from '../../.env.js';
+// Resolve DEV_BACKEND_IP dynamically using Expo Constants
+import Constants from 'expo-constants';
+import { DEV_BACKEND_IP as HARDCODED_IP } from '../../.env.js';
+
+let DEV_BACKEND_IP = HARDCODED_IP;
+
+// If we are in Expo development mode, extract the LAN IP from the host URI
+const hostUri = Constants.expoConfig?.hostUri || Constants.manifest?.hostUri;
+if (hostUri) {
+  DEV_BACKEND_IP = hostUri.split(':')[0]; // Extracts '192.168.0.x' from '192.168.0.x:8081'
+}
+
 export const API_URL = `http://${DEV_BACKEND_IP}:8000/api`;
 
 // Endpoints disponibles

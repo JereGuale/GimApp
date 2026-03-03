@@ -9,7 +9,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
-import { CategoryService } from '../../services/api';
+import { CategoryService, API_URL } from '../../services/api';
+
+const BASE_URL = API_URL.replace('/api', '');
 
 const { width: screenWidth } = Dimensions.get('window');
 const PADDING = 16;
@@ -151,9 +153,10 @@ export default function CategoriesScreen() {
           <ScrollView contentContainerStyle={styles.productsGridWrap} showsVerticalScrollIndicator={false}>
             <View style={styles.productsGrid}>
               {products.map((product) => {
-                const imageUri = product.images && product.images.length > 0
+                const imageRaw = product.images && product.images.length > 0
                   ? product.images[0]
                   : product.image || null;
+                const imageUri = imageRaw ? (imageRaw.startsWith('http') ? imageRaw : `${BASE_URL}/storage/${imageRaw}`) : null;
                 return (
                   <TouchableOpacity
                     key={product.id}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, RefreshControl, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { SubscriptionAPI, SubscriptionPlanAPI } from '../../services/subscriptionService';
@@ -7,9 +7,11 @@ import SubscriptionStatusBadge from '../../components/SubscriptionStatusBadge';
 import PaymentMethodModal from '../../components/PaymentMethodModal';
 import CardPaymentForm from '../../components/CardPaymentForm';
 import ReceiptUploader from '../../components/ReceiptUploader';
+import { useNavigation } from '@react-navigation/native';
 
 export default function SubscriptionScreen() {
   const { theme } = useTheme();
+  const navigation = useNavigation();
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -22,40 +24,43 @@ export default function SubscriptionScreen() {
   const plans = [
     {
       id: 1,
-      name: 'Plan Basico',
-      price: 12.99,
+      name: 'Plan Estudiantil',
+      price: 20.00,
       color: '#22D3EE',
-      icon: 'barbell-outline',
+      icon: 'school-outline',
       features: [
-        { icon: 'home-outline', text: 'Acceso al gym' },
-        { icon: 'fitness-outline', text: 'Rutinas básicas' },
-        { icon: 'chatbubble-outline', text: 'Soporte por chat' }
+        { icon: 'id-card-outline', text: 'Presentando carnet estudiantil vigente' },
+        { icon: 'fitness-outline', text: 'Acceso total al gimnasio por 30 días' },
+        { icon: 'barbell-outline', text: 'Uso de todas las máquinas y pesas' },
+        { icon: 'time-outline', text: 'Horario libre sin restricciones' }
       ]
     },
     {
       id: 2,
-      name: 'Plan Pro',
-      price: 24.99,
+      name: 'Plan Standar',
+      price: 25.00,
       color: '#FB923C',
-      icon: 'body-outline',
-      badge: 'POPULAR',
+      icon: 'person-outline',
+      badge: 'NORMAL',
       features: [
-        { icon: 'lock-open-outline', text: 'Acceso total' },
-        { icon: 'flash-outline', text: 'Rutinas avanzadas' },
-        { icon: 'calendar-outline', text: 'Seguimiento semanal' },
-        { icon: 'gift-outline', text: 'Oferta Carnaval!' }
+        { icon: 'barbell-outline', text: 'El plan ideal para tu rutina diaria' },
+        { icon: 'fitness-outline', text: 'Acceso a todas las máquinas por 30 días' },
+        { icon: 'water-outline', text: 'Uso de áreas comunes y vestidores' },
+        { icon: 'chatbubble-outline', text: 'Soporte de entrenadores en piso' }
       ]
     },
     {
       id: 3,
-      name: 'Plan Elite',
-      price: 39.99,
+      name: 'Plan Duo',
+      price: 34.00,
       color: '#A78BFA',
-      icon: 'trophy-outline',
+      icon: 'people-outline',
+      badge: 'PROMO',
       features: [
-        { icon: 'star-outline', text: 'Acceso VIP' },
-        { icon: 'people-outline', text: 'Entrenador personal' },
-        { icon: 'nutrition-outline', text: 'Nutrición guiada' }
+        { icon: 'people-circle-outline', text: 'Promoción especial para 2 personas' },
+        { icon: 'flash-outline', text: 'Acceso completo para ti y un amigo por 30 días' },
+        { icon: 'lock-open-outline', text: 'Uso de todas las áreas e instalaciones' },
+        { icon: 'heart-outline', text: '¡Entrena mejor acompañado y ahorra!' }
       ]
     }
   ];
@@ -83,7 +88,11 @@ export default function SubscriptionScreen() {
       );
 
       if (result.success) {
-        Alert.alert('¡Suscripción comprada con éxito!', 'Tu suscripción ha sido activada. ¡Disfrútala!');
+        Alert.alert(
+          '¡Suscripción adquirida exitosamente!',
+          'Tu suscripción ha sido activada inmediatamente.',
+          [{ text: 'Aceptar', onPress: () => navigation.navigate('Profile') }]
+        );
         setCardFormVisible(false);
         setSelectedPlan(null);
       } else {
@@ -112,7 +121,11 @@ export default function SubscriptionScreen() {
       );
 
       if (uploadResult.success) {
-        Alert.alert('¡Comprobante enviado con éxito!', 'Tu solicitud será revisada por un administrador. Te notificaremos cuando sea aprobada.');
+        Alert.alert(
+          '¡Comprobante enviado con éxito!',
+          'Tu solicitud será revisada por un administrador. Te notificaremos cuando sea aprobada.',
+          [{ text: 'Aceptar', onPress: () => navigation.navigate('Profile') }]
+        );
         setReceiptModalVisible(false);
         setSelectedPlan(null);
       } else {
@@ -134,45 +147,58 @@ export default function SubscriptionScreen() {
           Elige el plan ideal para tu progreso
         </Text>
 
-        {plans.map((plan) => (
-          <TouchableOpacity
-            key={plan.id}
-            style={[styles.planCard, { borderColor: plan.color }]}
-            onPress={() => handlePlanPress(plan)}
-            activeOpacity={0.85}
-          >
-            {plan.badge && (
-              <View style={[styles.badge, { backgroundColor: plan.color }]}>
-                <Text style={styles.badgeText}>{plan.badge}</Text>
-              </View>
-            )}
+        <View style={Platform.OS === 'web' ? styles.plansWebRow : styles.plansMobileCol}>
+          {plans.map((plan) => (
+            <TouchableOpacity
+              key={plan.id}
+              style={[
+                styles.planCard,
+                { backgroundColor: theme.isDark ? theme.colors.surface : '#FFFFFF', borderColor: plan.color },
+                Platform.OS === 'web' && { flex: 1, marginHorizontal: 12 }
+              ]}
+              onPress={() => handlePlanPress(plan)}
+              activeOpacity={0.85}
+            >
+              {plan.badge && (
+                <View style={[styles.badge, { backgroundColor: plan.color }]}>
+                  <Text style={styles.badgeText}>{plan.badge}</Text>
+                </View>
+              )}
 
-            <View style={styles.planHeader}>
-              <View style={styles.planInfo}>
-                <Text style={[styles.planName, { color: theme.colors.text }]}>
-                  {plan.name}
-                </Text>
-                <Text style={[styles.planPrice, { color: plan.color }]}>
-                  ${plan.price.toFixed(2)}/mes
-                </Text>
-              </View>
-              <View style={[styles.iconBox, { borderColor: plan.color }]}>
-                <Ionicons name={plan.icon} size={40} color={plan.color} />
-              </View>
-            </View>
-
-            <View style={styles.features}>
-              {plan.features.map((feature, index) => (
-                <View key={index} style={styles.featureRow}>
-                  <Ionicons name={feature.icon} size={16} color={plan.color} />
-                  <Text style={[styles.featureText, { color: theme.colors.textSecondary }]}>
-                    {feature.text}
+              <View style={styles.planHeader}>
+                <View style={styles.planInfo}>
+                  <View style={styles.titleRow}>
+                    <Text style={[styles.planName, { color: theme.colors.text }]}>
+                      {plan.name}
+                    </Text>
+                    <View style={[styles.smallIconBox, { backgroundColor: plan.color + '1A' }]}>
+                      <Ionicons name={plan.icon} size={20} color={plan.color} />
+                    </View>
+                  </View>
+                  <Text style={[styles.planPrice, { color: plan.color }]}>
+                    <Text style={styles.priceBig}>${plan.price.toFixed(2)}</Text>
+                    <Text style={styles.priceSmall}>/mes</Text>
                   </Text>
                 </View>
-              ))}
-            </View>
-          </TouchableOpacity>
-        ))}
+              </View>
+
+              <View style={styles.features}>
+                {plan.features.map((feature, index) => (
+                  <View key={index} style={styles.featureRow}>
+                    <Ionicons name={feature.icon} size={16} color={plan.color} />
+                    <Text style={[styles.featureText, { color: theme.colors.textSecondary || '#6B7280' }]}>
+                      {feature.text}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+
+              <View style={[styles.planButton, { backgroundColor: plan.color }]}>
+                <Text style={styles.planButtonText}>ELEGIR {plan.name.toUpperCase()}</Text>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
       </ScrollView>
 
       {/* Payment Modals */}
@@ -221,66 +247,112 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 24
   },
+  plansWebRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginHorizontal: -12,
+  },
+  plansMobileCol: {
+    flexDirection: 'column',
+  },
   planCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 20,
-    borderWidth: 2,
-    padding: 18,
-    marginBottom: 16,
-    position: 'relative'
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    borderWidth: 1.5,
+    padding: 30,
+    position: 'relative',
+    display: 'flex',
+    flexDirection: 'column',
+    minHeight: 400,
+    justifyContent: 'space-between',
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 4,
   },
   badge: {
     position: 'absolute',
-    top: 16,
-    right: 16,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-    transform: [{ rotate: '8deg' }]
+    top: -14,
+    right: 32,
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 20,
+    zIndex: 10,
   },
   badgeText: {
-    color: '#000',
-    fontSize: 10,
+    color: '#FFF',
+    fontSize: 11,
     fontWeight: '900',
-    letterSpacing: 0.5
+    letterSpacing: 1,
   },
   planHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 20
+    flexDirection: 'column',
+    marginBottom: 24,
   },
   planInfo: {
-    flex: 1
+    flex: 1,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
   },
   planName: {
     fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 6
+    fontWeight: '800',
   },
   planPrice: {
-    fontSize: 16,
-    fontWeight: '700'
+    flexDirection: 'row',
+    alignItems: 'baseline',
   },
-  iconBox: {
-    width: 70,
-    height: 70,
-    borderRadius: 12,
-    borderWidth: 2,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+  priceBig: {
+    fontSize: 48,
+    fontWeight: '900',
+    letterSpacing: -1,
+  },
+  priceSmall: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  smallIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: 'center',
-    alignItems: 'center'
+    alignItems: 'center',
   },
   features: {
-    gap: 12
+    gap: 16,
+    flex: 1,
+    paddingVertical: 10,
   },
   featureRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10
+    alignItems: 'flex-start',
+    gap: 12,
   },
   featureText: {
     fontSize: 13,
-    flex: 1
+    flex: 1,
+    lineHeight: 20,
+    fontWeight: '500',
+  },
+  planButton: {
+    marginTop: 24,
+    paddingVertical: 18,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  planButtonText: {
+    color: '#FFF',
+    fontSize: 14,
+    fontWeight: '900',
+    letterSpacing: 1,
   }
 });

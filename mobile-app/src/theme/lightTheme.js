@@ -10,12 +10,13 @@ export const LightTheme = {
     background: '#FFFFFF', // Fondo blanco puro
     card: '#FFFFFF',
     text: '#181818', // Negro suave
-    primary: '#FF6A1A', // Naranja quemado
+    primary: '#000000', // Negro puro para contraste
     border: '#E5E5E5',
     surface: '#FFFFFF',
     secondaryText: '#6B6B6B', // Gris medio
-    accent: '#FF6A1A', // Naranja quemado
+    accent: '#000000', // Negro puro
     badgeBg: '#F2F2F2',
+    orange: '#FB923C',
   },
   fonts: {
     regular: 'Inter-Regular',

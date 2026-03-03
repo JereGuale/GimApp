@@ -117,15 +117,15 @@ export default function ReceiptUploader({ visible, onClose, onUpload }) {
             animationIn="slideInUp"
             animationOut="slideOutDown"
         >
-            <View style={[styles.container, { backgroundColor: theme.colors.surface }]}>
+            <View style={[styles.container, { backgroundColor: '#FFFFFF' }]}>
                 <ScrollView showsVerticalScrollIndicator={false}>
                     {/* Header */}
                     <View style={styles.header}>
-                        <Text style={[styles.title, { color: theme.colors.text }]}>
+                        <Text style={[styles.title, { color: '#111827' }]}>
                             Transferencia Bancaria
                         </Text>
                         <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                            <Ionicons name="close-circle" size={28} color="#6B7280" />
+                            <Ionicons name="close" size={24} color="#6B7280" />
                         </TouchableOpacity>
                     </View>
 
@@ -137,8 +137,8 @@ export default function ReceiptUploader({ visible, onClose, onUpload }) {
                                 style={[
                                     styles.bankTab,
                                     selectedBank === index && {
-                                        backgroundColor: 'rgba(34, 211, 238, 0.15)',
-                                        borderColor: '#22D3EE'
+                                        backgroundColor: '#ECFEFF',
+                                        borderColor: '#06B6D4'
                                     }
                                 ]}
                                 onPress={() => setSelectedBank(index)}
@@ -146,11 +146,11 @@ export default function ReceiptUploader({ visible, onClose, onUpload }) {
                                 <Ionicons
                                     name="business"
                                     size={18}
-                                    color={selectedBank === index ? '#22D3EE' : theme.colors.textSecondary}
+                                    color={selectedBank === index ? '#06B6D4' : '#6B7280'}
                                 />
                                 <Text style={[
                                     styles.bankTabText,
-                                    { color: selectedBank === index ? '#22D3EE' : theme.colors.textSecondary }
+                                    { color: selectedBank === index ? '#06B6D4' : '#6B7280' }
                                 ]}>
                                     {bank.bank.replace('Banco ', '')}
                                 </Text>
@@ -161,23 +161,23 @@ export default function ReceiptUploader({ visible, onClose, onUpload }) {
                     {/* Bank Details Card - Compacto */}
                     <View style={styles.bankDetailsCard}>
                         <View style={styles.detailRow}>
-                            <Ionicons name="wallet-outline" size={18} color="#FB923C" />
-                            <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>Tipo:</Text>
-                            <Text style={[styles.detailValue, { color: theme.colors.text }]}>
+                            <Ionicons name="wallet-outline" size={18} color="#F59E0B" />
+                            <Text style={[styles.detailLabel, { color: '#6B7280' }]}>Tipo:</Text>
+                            <Text style={[styles.detailValue, { color: '#111827' }]}>
                                 {currentBank.accountType}
                             </Text>
                         </View>
                         <View style={styles.detailRow}>
-                            <Ionicons name="card-outline" size={18} color="#FB923C" />
-                            <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>Cuenta:</Text>
-                            <Text style={[styles.detailValue, { color: theme.colors.text }]}>
+                            <Ionicons name="card-outline" size={18} color="#F59E0B" />
+                            <Text style={[styles.detailLabel, { color: '#6B7280' }]}>Cuenta:</Text>
+                            <Text style={[styles.detailValue, { color: '#111827' }]}>
                                 {currentBank.account}
                             </Text>
                         </View>
                         <View style={styles.detailRow}>
-                            <Ionicons name="person-outline" size={18} color="#FB923C" />
-                            <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>Titular:</Text>
-                            <Text style={[styles.detailValue, { color: theme.colors.text }]}>
+                            <Ionicons name="person-outline" size={18} color="#F59E0B" />
+                            <Text style={[styles.detailLabel, { color: '#6B7280' }]}>Titular:</Text>
+                            <Text style={[styles.detailValue, { color: '#111827' }]}>
                                 {currentBank.holder}
                             </Text>
                         </View>
@@ -185,25 +185,25 @@ export default function ReceiptUploader({ visible, onClose, onUpload }) {
 
                     {/* Compact Instructions */}
                     <View style={styles.instructionsCard}>
-                        <Text style={[styles.instructionText, { color: theme.colors.textSecondary }]}>
+                        <Text style={[styles.instructionText, { color: '#6B7280' }]}>
                             💡 Realiza la transferencia y sube el comprobante para aprobación
                         </Text>
                     </View>
 
                     {/* Image Selection */}
-                    <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
+                    <Text style={[styles.sectionTitle, { color: '#111827' }]}>
                         Comprobante de Pago
                     </Text>
 
                     {!selectedImage ? (
                         <View style={styles.imageButtons}>
                             <TouchableOpacity style={styles.imageButton} onPress={takePhoto}>
-                                <Ionicons name="camera" size={28} color="#22D3EE" />
+                                <Ionicons name="camera" size={28} color="#06B6D4" />
                                 <Text style={styles.imageButtonText}>Cámara</Text>
                             </TouchableOpacity>
 
                             <TouchableOpacity style={styles.imageButton} onPress={pickImage}>
-                                <Ionicons name="images" size={28} color="#22D3EE" />
+                                <Ionicons name="images" size={28} color="#06B6D4" />
                                 <Text style={styles.imageButtonText}>Galería</Text>
                             </TouchableOpacity>
                         </View>
@@ -255,7 +255,7 @@ const styles = StyleSheet.create({
     container: {
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
-        maxHeight: '85%',
+        maxHeight: '90%',
         padding: 20,
         paddingBottom: 30
     },
@@ -286,23 +286,22 @@ const styles = StyleSheet.create({
         gap: 6,
         paddingVertical: 10,
         paddingHorizontal: 8,
-        borderRadius: 12,
-        borderWidth: 2,
-        borderColor: 'transparent',
-        backgroundColor: 'rgba(107, 114, 128, 0.1)'
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        backgroundColor: '#F9FAFB'
     },
     bankTabText: {
-        fontSize: 11,
-        fontWeight: '700',
-        letterSpacing: 0.3
+        fontSize: 12,
+        fontWeight: '600',
     },
     bankDetailsCard: {
-        backgroundColor: 'rgba(34, 211, 238, 0.1)',
-        borderRadius: 14,
+        backgroundColor: '#FEFCE8',
+        borderRadius: 8,
         padding: 14,
         marginBottom: 12,
-        borderWidth: 2,
-        borderColor: '#22D3EE',
+        borderWidth: 1,
+        borderColor: '#FEF08A',
         gap: 8
     },
     detailRow: {
@@ -321,23 +320,23 @@ const styles = StyleSheet.create({
         flex: 1
     },
     instructionsCard: {
-        backgroundColor: 'rgba(251, 146, 60, 0.1)',
-        borderRadius: 12,
+        backgroundColor: '#F3F4F6',
+        borderRadius: 8,
         padding: 12,
-        marginBottom: 16,
+        marginBottom: 20,
         borderWidth: 1,
-        borderColor: '#FB923C'
+        borderColor: '#E5E7EB'
     },
     instructionText: {
         fontSize: 13,
-        lineHeight: 19,
-        textAlign: 'center'
+        lineHeight: 18,
+        textAlign: 'center',
+        fontWeight: '500'
     },
     sectionTitle: {
-        fontSize: 16,
+        fontSize: 15,
         fontWeight: '700',
         marginBottom: 12,
-        letterSpacing: 0.3
     },
     imageButtons: {
         flexDirection: 'row',
@@ -346,19 +345,18 @@ const styles = StyleSheet.create({
     },
     imageButton: {
         flex: 1,
-        backgroundColor: 'rgba(34, 211, 238, 0.15)',
-        borderRadius: 14,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 8,
         padding: 16,
         alignItems: 'center',
         gap: 6,
-        borderWidth: 2,
-        borderColor: '#22D3EE'
+        borderWidth: 1,
+        borderColor: '#E5E7EB'
     },
     imageButtonText: {
-        color: '#22D3EE',
+        color: '#06B6D4',
         fontSize: 13,
-        fontWeight: '700',
-        letterSpacing: 0.3
+        fontWeight: '600',
     },
     imagePreview: {
         position: 'relative',
@@ -369,7 +367,7 @@ const styles = StyleSheet.create({
     previewImage: {
         width: '100%',
         height: 200,
-        borderRadius: 14
+        borderRadius: 8
     },
     removeImageButton: {
         position: 'absolute',
@@ -380,27 +378,21 @@ const styles = StyleSheet.create({
         padding: 4
     },
     uploadButton: {
-        backgroundColor: '#22C55E',
-        borderRadius: 14,
-        paddingVertical: 15,
+        backgroundColor: '#06B6D4',
+        borderRadius: 8,
+        paddingVertical: 14,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         gap: 8,
-        shadowColor: '#22C55E',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.4,
-        shadowRadius: 8,
-        elevation: 5
     },
     uploadButtonDisabled: {
         backgroundColor: '#6B7280',
         shadowOpacity: 0
     },
     uploadButtonText: {
-        color: '#FFF',
-        fontSize: 16,
-        fontWeight: '800',
-        letterSpacing: 0.5
+        color: '#FFFFFF',
+        fontSize: 15,
+        fontWeight: '600',
     }
 });

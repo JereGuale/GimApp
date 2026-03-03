@@ -12,15 +12,19 @@ import {
   ActivityIndicator,
   Platform,
   useWindowDimensions,
+  Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
-import { CategoryService, BannerService } from '../../services/api';
+import { CategoryService, BannerService, API_URL } from '../../services/api';
+import { Alert } from 'react-native';
 
 const MAX_CONTENT_WIDTH = 1100; // max width for content sections on web
 const AUTO_SCROLL_INTERVAL = 4000;
+
+const BASE_URL = API_URL.replace('/api', '');
 
 export default function HomeScreen() {
   const { theme } = useTheme();
@@ -60,13 +64,13 @@ export default function HomeScreen() {
   const [favorites, setFavorites] = useState([]);
   const [searchText, setSearchText] = useState('');
 
-  const borderColors = ['#22D3EE', '#FB923C', '#A78BFA', '#34D399'];
+  const borderColors = [theme.colors.primary, theme.colors.primary, theme.colors.primary, theme.colors.primary];
 
   // Fallback banners when no API data
   const fallbackBanners = [
     {
       id: 'fallback-1',
-      title: 'Oferta Mes de Carnaval!',
+      title: 'Oferta Del Mes !',
       description: '¡Aprovecha esta oferta especial!',
       price: 25.00,
       image_url: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=60&w=800&auto=format&fit=crop',
@@ -75,9 +79,9 @@ export default function HomeScreen() {
     },
     {
       id: 'fallback-2',
-      title: 'Plan Mensual Premium',
+      title: 'Plan Student',
       description: '¡Acceso ilimitado a todas las áreas!',
-      price: 35.00,
+      price: 20.00,
       image_url: 'https://images.unsplash.com/photo-1571902943202-507ec2618e8f?q=60&w=800&auto=format&fit=crop',
       button_text: 'Suscribirse',
       button_action: 'subscription',
@@ -178,8 +182,11 @@ export default function HomeScreen() {
         const categories = await CategoryService.getAll(token);
         if (!isMounted) return;
 
+        const catsArray = Array.isArray(categories) ? categories : (categories?.data || []);
+        console.log('[HomeScreen] fetched categories count:', catsArray.length);
+
         const allProds = [];
-        categories.forEach((cat) => {
+        catsArray.forEach((cat) => {
           if (cat.products && Array.isArray(cat.products)) {
             cat.products.forEach((prod) => {
               allProds.push(prod);
@@ -191,6 +198,7 @@ export default function HomeScreen() {
         setProducts(allProds);
       } catch (error) {
         if (!isMounted) return;
+        console.error('[HomeScreen] Error loading products:', error);
         setProducts([]);
       } finally {
         if (isMounted) setLoading(false);
@@ -223,8 +231,8 @@ export default function HomeScreen() {
 
   const filteredProducts = searchText
     ? products.filter((p) =>
-        p.name?.toLowerCase().includes(searchText.toLowerCase())
-      )
+      p.name?.toLowerCase().includes(searchText.toLowerCase())
+    )
     : products;
 
   // ─── Banner Item ───
@@ -276,6 +284,9 @@ export default function HomeScreen() {
     const borderColor = borderColors[index % borderColors.length];
     const isFavorite = favorites.includes(product.id);
 
+    const imageRaw = product.images && product.images.length > 0 ? product.images[0] : product.image;
+    const imageUri = imageRaw?.startsWith('http') ? imageRaw : `${BASE_URL}/storage/${imageRaw}`;
+
     return (
       <TouchableOpacity
         key={`product-${product.id || index}`}
@@ -284,7 +295,6 @@ export default function HomeScreen() {
           {
             width: productCardWidth,
             backgroundColor: theme.colors.surface,
-            borderColor,
           },
         ]}
         onPress={() => navigation.navigate('ProductDetail', { product })}
@@ -292,12 +302,7 @@ export default function HomeScreen() {
       >
         <View style={styles.productImageContainer}>
           <Image
-            source={{
-              uri:
-                product.images && product.images.length > 0
-                  ? product.images[0]
-                  : product.image,
-            }}
+            source={{ uri: imageUri }}
             style={[styles.productImage, { height: productImageHeight }]}
             resizeMode="cover"
           />
@@ -321,7 +326,7 @@ export default function HomeScreen() {
             <Ionicons
               name={isFavorite ? 'heart' : 'heart-outline'}
               size={18}
-              color="#FFFFFF"
+              color="#000000"
             />
           </TouchableOpacity>
         </View>
@@ -350,12 +355,12 @@ export default function HomeScreen() {
           style={[
             styles.searchContainer,
             {
-              borderColor: '#22D3EE',
+              borderColor: theme.colors.border,
               backgroundColor: theme.colors.surface,
             },
           ]}
         >
-          <Ionicons name="search" size={22} color="#22D3EE" style={{ marginRight: 10 }} />
+          <Ionicons name="search" size={22} color={theme.colors.text} style={{ marginRight: 10 }} />
           <TextInput
             placeholder="Busca productos, marcas..."
             placeholderTextColor="#9CA3AF"
@@ -375,7 +380,7 @@ export default function HomeScreen() {
       <View style={styles.bannerSection}>
         {bannersLoading ? (
           <View style={[styles.bannerSlide, styles.bannerLoading, { width: bannerWidth, height: bannerHeight }]}>
-            <ActivityIndicator size="large" color="#22D3EE" />
+            <ActivityIndicator size="large" color={theme.colors.primary} />
           </View>
         ) : (
           <View>
@@ -402,7 +407,7 @@ export default function HomeScreen() {
                     style={[
                       styles.dot,
                       currentBannerIndex === index
-                        ? styles.dotActive
+                        ? { ...styles.dotActive, backgroundColor: theme.colors.primary }
                         : styles.dotInactive,
                     ]}
                   />
@@ -422,14 +427,14 @@ export default function HomeScreen() {
           onPress={() => navigation.navigate('Categorias')}
           style={styles.viewAllButton}
         >
-          <Text style={styles.viewAllText}>Ver Todos</Text>
-          <Ionicons name="chevron-forward" size={16} color="#22D3EE" />
+          <Text style={[styles.viewAllText, { color: theme.colors.text }]}>Ver Todos</Text>
+          <Ionicons name="chevron-forward" size={16} color={theme.colors.text} />
         </TouchableOpacity>
       </View>
 
       {loading ? (
         <View style={styles.productsLoading}>
-          <ActivityIndicator size="large" color="#22D3EE" />
+          <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
       ) : filteredProducts.length > 0 ? (
         isWeb ? (
@@ -487,45 +492,66 @@ export default function HomeScreen() {
         </View>
       )}
 
-      {/* ─── Quick Actions ─── */}
-      <View style={styles.quickActionsSection}>
-        <Text style={[styles.sectionTitle, { color: theme.colors.text, paddingHorizontal: contentPadding }]}>
-          Acceso Rápido
-        </Text>
-        <View style={[styles.quickActionsRow, { paddingHorizontal: contentPadding }]}>
-          <TouchableOpacity
-            style={[styles.quickActionCard, { backgroundColor: theme.colors.surface }]}
-            onPress={() => navigation.navigate('Categorias')}
-          >
-            <View style={[styles.quickActionIcon, { backgroundColor: 'rgba(34, 211, 238, 0.15)' }]}>
-              <Ionicons name="grid-outline" size={24} color="#22D3EE" />
-            </View>
-            <Text style={[styles.quickActionText, { color: theme.colors.text }]}>Categorías</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.quickActionCard, { backgroundColor: theme.colors.surface }]}
-            onPress={() => navigation.navigate('Subscription')}
-          >
-            <View style={[styles.quickActionIcon, { backgroundColor: 'rgba(251, 146, 60, 0.15)' }]}>
-              <Ionicons name="card-outline" size={24} color="#FB923C" />
-            </View>
-            <Text style={[styles.quickActionText, { color: theme.colors.text }]}>Suscripción</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.quickActionCard, { backgroundColor: theme.colors.surface }]}
-            onPress={() => navigation.navigate('Cart')}
-          >
-            <View style={[styles.quickActionIcon, { backgroundColor: 'rgba(167, 139, 250, 0.15)' }]}>
-              <Ionicons name="cart-outline" size={24} color="#A78BFA" />
-            </View>
-            <Text style={[styles.quickActionText, { color: theme.colors.text }]}>Carrito</Text>
-          </TouchableOpacity>
+      {/* ─── Motivational Section ─── */}
+      <View style={[styles.motivationalContainer, { paddingHorizontal: contentPadding }]}>
+        <View style={[styles.motivationalCard, { backgroundColor: theme.colors.surface }]}>
+          <View style={styles.motivationalContent}>
+            <Text style={[styles.motivationalSubtitle, { color: theme.colors.primary }]}>
+              MANTENTE EN MOVIMIENTO
+            </Text>
+            <Text style={[styles.motivationalTitle, { color: theme.colors.text }]}>
+              Tu mejor versión{'\n'}empieza hoy
+            </Text>
+            <Text style={[styles.motivationalDescription, { color: theme.colors.textSecondary || '#9CA3AF' }]}>
+              Equipa tu entrenamiento con productos pensados para durar, rendir y motivarte cada día.
+            </Text>
+          </View>
+          <Image
+            source={require('../../../assets/images/professional_gym_model.png')}
+            style={styles.motivationalImage}
+            resizeMode="cover"
+          />
         </View>
       </View>
 
-      <View style={{ height: 30 }} />
+      {/* ─── Ubicación ─── */}
+      <View style={[styles.locationContainer, { paddingHorizontal: contentPadding }]}>
+        <View style={styles.locationHeader}>
+          <Text style={[styles.locationSubtitle, { color: theme.colors.primary }]}>
+            UBICACIÓN
+          </Text>
+          <Text style={[styles.locationTitle, { color: theme.colors.text }]}>
+            Tu gimnasio en el punto clave de Manta
+          </Text>
+          <Text style={[styles.locationDescription, { color: theme.colors.textSecondary || '#9CA3AF' }]}>
+            Fácil acceso, estacionamiento cercano y una zona segura para que entrenar sea parte natural de tu rutina.
+          </Text>
+        </View>
+
+        <View style={[styles.locationCard, { backgroundColor: theme.colors.surface }]}>
+          <Image
+            source={require('../../../assets/images/map_location_placeholder.png')}
+            style={styles.locationImage}
+            resizeMode="contain"
+          />
+          <View style={styles.locationInfoRow}>
+            <View style={styles.locationTextContent}>
+              <Text style={[styles.locationGymName, { color: theme.colors.text }]}>
+                Gigafit Gim
+              </Text>
+              <Text style={[styles.locationAddress, { color: theme.colors.textSecondary || '#9CA3AF' }]}>
+                Zona "Costa Azul" • Fácil estacionamiento • Acceso 24/7
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.locationButton}
+              onPress={() => Linking.openURL('https://www.google.com/maps?q=-0.9674838,-80.6790125&z=17&hl=es')}
+            >
+              <Text style={styles.locationButtonText}>Ver en mapa</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
     </ScrollView>
   );
 }
@@ -540,20 +566,25 @@ const styles = StyleSheet.create({
 
   // ─── Search ───
   searchWrapper: {
-    paddingTop: 12,
-    paddingBottom: 8,
+    paddingTop: 16,
+    paddingBottom: 12,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 25,
+    borderRadius: 16,
     paddingHorizontal: 16,
-    height: 48,
-    borderWidth: 1.5,
+    height: 52,
+    borderWidth: 0,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 3,
   },
   searchInput: {
     flex: 1,
-    fontSize: 15,
+    fontSize: 16,
   },
 
   // ─── Banner Carousel ───
@@ -617,7 +648,7 @@ const styles = StyleSheet.create({
   bannerButton: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#22D3EE',
+    backgroundColor: '#FFFFFF', // Botón blanco como referencia
     paddingVertical: 14,
     paddingHorizontal: 40,
     borderRadius: 30,
@@ -628,7 +659,7 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   bannerButtonText: {
-    color: '#FFFFFF',
+    color: '#000000', // Texto negro para contraste
     fontWeight: '800',
     fontSize: 16,
     letterSpacing: 0.5,
@@ -651,7 +682,6 @@ const styles = StyleSheet.create({
   dotActive: {
     width: 10,
     height: 10,
-    backgroundColor: '#22D3EE',
     borderRadius: 5,
   },
   dotInactive: {
@@ -666,21 +696,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 14,
+    marginBottom: 18,
+    marginTop: 8,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 20,
+    fontWeight: '800',
+    letterSpacing: 0.3,
   },
   viewAllButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
+    gap: 4,
   },
   viewAllText: {
-    color: '#22D3EE',
     fontSize: 14,
     fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 
   // ─── Products Horizontal ───
@@ -698,23 +731,28 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(34,211,238,0.2)',
+    backgroundColor: 'rgba(255,255,255,0.1)',
     borderWidth: 1,
-    borderColor: '#22D3EE40',
+    borderColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
-    shadowColor: '#22D3EE',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 6,
     elevation: 3,
   },
   productCard: {
-    borderRadius: 18,
+    borderRadius: 16,
     overflow: 'hidden',
-    borderWidth: 1.5,
+    borderWidth: 0,
     flexShrink: 0,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
   },
   productImageContainer: {
     position: 'relative',
@@ -726,37 +764,44 @@ const styles = StyleSheet.create({
   },
   priceTag: {
     position: 'absolute',
-    bottom: 10,
-    left: 10,
+    bottom: 12,
+    left: 12,
     backgroundColor: '#FB923C',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 4,
   },
   priceText: {
     color: '#000',
     fontWeight: 'bold',
-    fontSize: 13,
+    fontSize: 14,
   },
   featuredBadge: {
     position: 'absolute',
-    top: 8,
-    left: 8,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(0,0,0,0.55)',
+    top: 12,
+    left: 12,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   heartButton: {
     position: 'absolute',
-    bottom: 10,
-    right: 10,
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: '#22D3EE',
+    bottom: 12,
+    right: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
@@ -766,12 +811,13 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   productInfo: {
-    padding: 10,
-    paddingTop: 8,
+    padding: 14,
+    paddingTop: 12,
   },
   productName: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600',
+    lineHeight: 20,
   },
 
   // ─── Empty ───
@@ -785,33 +831,237 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
 
-  // ─── Quick Actions ───
-  quickActionsSection: {
-    marginTop: 24,
-  },
-  quickActionsRow: {
+  // ─── Suscripciones ───
+  plansWebRow: {
     flexDirection: 'row',
-    gap: 12,
-    marginTop: 14,
+    justifyContent: 'center',
+    marginHorizontal: -12,
   },
-  quickActionCard: {
+  plansMobileCol: {
+    flexDirection: 'column',
+  },
+  homePlanCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    borderWidth: 1.5,
+    padding: 30,
+    position: 'relative',
+    display: 'flex',
+    flexDirection: 'column',
+    minHeight: 400,
+    justifyContent: 'space-between',
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  planBadge: {
+    position: 'absolute',
+    top: -14,
+    right: 32,
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 20,
+    zIndex: 10,
+  },
+  planBadgeText: {
+    color: '#FFF',
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
+  planHeader: {
+    flexDirection: 'column',
+    marginBottom: 24,
+  },
+  planInfo: {
     flex: 1,
-    alignItems: 'center',
-    paddingVertical: 18,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
   },
-  quickActionIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
+  titleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  homePlanName: {
+    fontSize: 20,
+    fontWeight: '800',
+  },
+  homePlanPrice: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+  },
+  priceBig: {
+    fontSize: 48,
+    fontWeight: '900',
+    letterSpacing: -1,
+  },
+  priceSmall: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  smallIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
   },
-  quickActionText: {
+  planFeatures: {
+    gap: 16,
+    flex: 1,
+    paddingVertical: 10,
+  },
+  planFeatureRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  planFeatureText: {
+    fontSize: 13,
+    flex: 1,
+    lineHeight: 20,
+    fontWeight: '500',
+  },
+  planButton: {
+    marginTop: 24,
+    paddingVertical: 18,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  planButtonText: {
+    color: '#FFF',
+    fontSize: 14,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
+
+  // ─── Motivational Section ───
+  motivationalContainer: {
+    marginBottom: 16,
+    marginTop: 8,
+  },
+  motivationalCard: {
+    flexDirection: Platform.OS === 'web' ? 'row' : 'column-reverse',
+    borderRadius: 20,
+    overflow: 'hidden',
+    padding: Platform.OS === 'web' ? 48 : 24,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 32,
+    borderWidth: 0,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  motivationalContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+  },
+  motivationalSubtitle: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '800',
+    letterSpacing: 1.5,
+    marginBottom: 8,
+    textTransform: 'uppercase',
   },
-}); 
+  motivationalTitle: {
+    fontSize: 28,
+    fontWeight: '900',
+    lineHeight: 34,
+    marginBottom: 12,
+  },
+  motivationalDescription: {
+    fontSize: 14,
+    lineHeight: 22,
+  },
+  motivationalImage: {
+    width: Platform.OS === 'web' ? 320 : '100%',
+    height: Platform.OS === 'web' ? 320 : 250,
+    borderRadius: 20,
+  },
+
+  // ─── Ubicación Section ───
+  locationContainer: {
+    marginTop: 16,
+    marginBottom: 32,
+  },
+  locationHeader: {
+    alignItems: 'center',
+    marginBottom: 20,
+    paddingHorizontal: 8,
+  },
+  locationSubtitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 1.5,
+    marginBottom: 8,
+    textTransform: 'uppercase',
+  },
+  locationTitle: {
+    fontSize: 24,
+    fontWeight: '900',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  locationDescription: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  locationCard: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    padding: 16,
+    borderWidth: 0,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  locationImage: {
+    width: '100%',
+    height: 350,
+    borderRadius: 16,
+    marginBottom: 16,
+  },
+  locationInfoRow: {
+    flexDirection: Platform.OS === 'web' ? 'row' : 'column',
+    justifyContent: 'space-between',
+    alignItems: Platform.OS === 'web' ? 'center' : 'flex-start',
+    gap: 16,
+  },
+  locationTextContent: {
+    flex: 1,
+  },
+  locationGymName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  locationAddress: {
+    fontSize: 13,
+  },
+  locationButton: {
+    backgroundColor: '#D95C2B', // Naranja oscuro como en la imagen
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignSelf: Platform.OS === 'web' ? 'center' : 'stretch',
+    alignItems: 'center',
+  },
+  locationButtonText: {
+    color: '#FFF',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+});

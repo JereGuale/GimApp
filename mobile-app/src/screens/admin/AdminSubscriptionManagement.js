@@ -15,7 +15,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
 import { TrainerSubscriptionAPI } from '../../services/subscriptionService';
+import { API_URL } from '../../services/api';
 import EmptyState from '../../components/EmptyState';
+
+const BASE_URL = API_URL.replace('/api', '');
 
 export default function AdminSubscriptionManagement() {
     const { theme } = useTheme();
@@ -135,13 +138,13 @@ export default function AdminSubscriptionManagement() {
 
     // ── Render Pending Card ──
     const renderPendingCard = (subscription) => (
-        <View key={subscription.id} style={[styles.card, { backgroundColor: theme.colors.surface, borderColor: 'rgba(251, 146, 60, 0.25)' }]}>
+        <View key={subscription.id} style={[styles.card, { backgroundColor: theme.colors.surface }]}>
             <View style={styles.cardHeader}>
                 <View style={styles.userInfo}>
                     {subscription.user?.profile_photo ? (
-                        <Image source={{ uri: subscription.user.profile_photo }} style={[styles.avatar, { borderColor: '#FB923C' }]} />
+                        <Image source={{ uri: subscription.user.profile_photo.startsWith('http') ? subscription.user.profile_photo : `${BASE_URL}/storage/${subscription.user.profile_photo}` }} style={[styles.avatar, { backgroundColor: theme.colors.border }]} />
                     ) : (
-                        <View style={[styles.avatarPlaceholder, { borderColor: '#FB923C', backgroundColor: 'rgba(251, 146, 60, 0.15)' }]}>
+                        <View style={[styles.avatarPlaceholder, { backgroundColor: theme.isDark ? 'rgba(251, 146, 60, 0.15)' : 'rgba(251, 146, 60, 0.1)' }]}>
                             <Text style={[styles.avatarInitials, { color: '#FB923C' }]}>{getInitials(subscription.user?.name)}</Text>
                         </View>
                     )}
@@ -154,35 +157,51 @@ export default function AdminSubscriptionManagement() {
                         </Text>
                     </View>
                 </View>
-                <View style={[styles.statusBadge, { backgroundColor: 'rgba(251, 146, 60, 0.15)', borderColor: '#FB923C' }]}>
-                    <Text style={[styles.statusText, { color: '#FB923C' }]}>PENDIENTE</Text>
+                <View style={[styles.statusBadge, { backgroundColor: theme.isDark ? 'rgba(253, 230, 138, 0.15)' : '#FDE68A' }]}>
+                    <Text style={[styles.statusText, { color: theme.isDark ? '#FCD34D' : '#92400E' }]}>PENDIENTE</Text>
                 </View>
             </View>
 
             <View style={styles.infoGrid}>
                 <View style={styles.infoItem}>
-                    <Ionicons name="fitness-outline" size={16} color={theme.colors.textSecondary} />
-                    <Text style={[styles.infoLabel, { color: theme.colors.textSecondary }]}>Plan</Text>
-                    <Text style={[styles.infoValue, { color: theme.colors.text }]}>{subscription.plan?.name || 'Plan'}</Text>
+                    <View style={[styles.iconContainer, { backgroundColor: theme.isDark ? 'rgba(251, 146, 60, 0.1)' : '#FFF7ED' }]}>
+                        <Ionicons name="heart-outline" size={16} color={theme.colors.textSecondary} />
+                    </View>
+                    <View>
+                        <Text style={[styles.infoLabel, { color: theme.colors.textSecondary }]}>PLAN</Text>
+                        <Text style={[styles.infoValue, { color: theme.colors.text }]}>{subscription.plan?.name || 'Plan'}</Text>
+                    </View>
                 </View>
                 <View style={styles.infoItem}>
-                    <Ionicons name="cash-outline" size={16} color={theme.colors.textSecondary} />
-                    <Text style={[styles.infoLabel, { color: theme.colors.textSecondary }]}>Monto</Text>
-                    <Text style={[styles.infoValue, { color: '#FB923C' }]}>${subscription.price}</Text>
+                    <View style={[styles.iconContainer, { backgroundColor: theme.isDark ? 'rgba(251, 146, 60, 0.1)' : '#FFF7ED' }]}>
+                        <Ionicons name="cash-outline" size={16} color={theme.colors.textSecondary} />
+                    </View>
+                    <View>
+                        <Text style={[styles.infoLabel, { color: theme.colors.textSecondary }]}>MONTO</Text>
+                        <Text style={[styles.infoValue, { color: '#22C55E' }]}>${subscription.price}</Text>
+                    </View>
                 </View>
                 <View style={styles.infoItem}>
-                    <Ionicons name="card-outline" size={16} color={theme.colors.textSecondary} />
-                    <Text style={[styles.infoLabel, { color: theme.colors.textSecondary }]}>Método</Text>
-                    <Text style={[styles.infoValue, { color: theme.colors.text }]}>
-                        {subscription.payment_method === 'card' ? 'Tarjeta' : subscription.payment_method === 'manual' ? 'Manual' : 'Transferencia'}
-                    </Text>
+                    <View style={[styles.iconContainer, { backgroundColor: theme.isDark ? 'rgba(251, 146, 60, 0.1)' : '#FFF7ED' }]}>
+                        <Ionicons name="card-outline" size={16} color={theme.colors.textSecondary} />
+                    </View>
+                    <View>
+                        <Text style={[styles.infoLabel, { color: theme.colors.textSecondary }]}>MÉTODO</Text>
+                        <Text style={[styles.infoValue, { color: theme.colors.text }]}>
+                            {subscription.payment_method === 'card' ? 'Tarjeta' : subscription.payment_method === 'manual' ? 'Manual' : 'Transferencia'}
+                        </Text>
+                    </View>
                 </View>
                 <View style={styles.infoItem}>
-                    <Ionicons name="calendar-outline" size={16} color={theme.colors.textSecondary} />
-                    <Text style={[styles.infoLabel, { color: theme.colors.textSecondary }]}>Fecha</Text>
-                    <Text style={[styles.infoValue, { color: theme.colors.text }]}>
-                        {new Date(subscription.created_at).toLocaleDateString()}
-                    </Text>
+                    <View style={[styles.iconContainer, { backgroundColor: theme.isDark ? 'rgba(251, 146, 60, 0.1)' : '#FFF7ED' }]}>
+                        <Ionicons name="calendar-outline" size={16} color={theme.colors.textSecondary} />
+                    </View>
+                    <View>
+                        <Text style={[styles.infoLabel, { color: theme.colors.textSecondary }]}>FECHA</Text>
+                        <Text style={[styles.infoValue, { color: theme.colors.text }]}>
+                            {new Date(subscription.created_at).toLocaleDateString()}
+                        </Text>
+                    </View>
                 </View>
             </View>
 
@@ -194,7 +213,7 @@ export default function AdminSubscriptionManagement() {
                     </TouchableOpacity>
                 )}
                 <View style={styles.actionRow}>
-                    <TouchableOpacity style={styles.rejectBtn} onPress={() => handleReject(subscription)}>
+                    <TouchableOpacity style={[styles.rejectBtn, { backgroundColor: theme.colors.surface, borderColor: theme.isDark ? 'rgba(239, 68, 68, 0.4)' : '#FECACA' }]} onPress={() => handleReject(subscription)}>
                         <Ionicons name="close" size={20} color="#EF4444" />
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.approveBtn} onPress={() => handleApprove(subscription)}>
@@ -213,13 +232,13 @@ export default function AdminSubscriptionManagement() {
         const isExpired = days !== null && days <= 0;
 
         return (
-            <View key={subscription.id} style={[styles.approvedCard, { backgroundColor: theme.colors.surface }]}>
+            <View key={subscription.id} style={[styles.approvedCard, { backgroundColor: theme.colors.surface, borderColor: theme.isDark ? '#374151' : 'transparent', borderWidth: theme.isDark ? 1 : 0 }]}>
                 <View style={styles.approvedRow}>
                     {/* User photo */}
                     {subscription.user?.profile_photo ? (
-                        <Image source={{ uri: subscription.user.profile_photo }} style={[styles.approvedAvatar, { borderColor: daysColor }]} />
+                        <Image source={{ uri: subscription.user.profile_photo.startsWith('http') ? subscription.user.profile_photo : `${BASE_URL}/storage/${subscription.user.profile_photo}` }} style={[styles.approvedAvatar, { borderColor: daysColor }]} />
                     ) : (
-                        <View style={[styles.approvedAvatarPlaceholder, { borderColor: daysColor, backgroundColor: daysColor + '20' }]}>
+                        <View style={[styles.approvedAvatarPlaceholder, { borderColor: daysColor, backgroundColor: theme.isDark ? 'transparent' : daysColor + '20' }]}>
                             <Text style={[styles.approvedInitials, { color: daysColor }]}>{getInitials(subscription.user?.name)}</Text>
                         </View>
                     )}
@@ -240,7 +259,7 @@ export default function AdminSubscriptionManagement() {
                     </View>
 
                     {/* Days remaining badge */}
-                    <View style={[styles.daysBadge, { backgroundColor: daysColor + '18', borderColor: daysColor }]}>
+                    <View style={[styles.daysBadge, { backgroundColor: theme.isDark ? 'transparent' : daysColor + '18', borderColor: daysColor }]}>
                         {isExpired ? (
                             <>
                                 <Ionicons name="alert-circle" size={16} color={daysColor} />
@@ -275,9 +294,13 @@ export default function AdminSubscriptionManagement() {
             <View style={styles.header}>
                 <Text style={[styles.title, { color: theme.colors.text }]}>Gestión de Suscripciones</Text>
 
-                <View style={styles.tabs}>
+                <View style={[styles.tabs, { backgroundColor: theme.isDark ? 'rgba(251, 146, 60, 0.1)' : '#FFF7ED' }]}>
                     <TouchableOpacity
-                        style={[styles.tab, activeTab === 'pending' && styles.tabActivePending]}
+                        style={[
+                            styles.tab,
+                            activeTab === 'pending' && styles.tabActive,
+                            activeTab === 'pending' && { backgroundColor: theme.colors.surface, shadowColor: theme.colors.text }
+                        ]}
                         onPress={() => setActiveTab('pending')}
                     >
                         <Text style={[styles.tabText, { color: activeTab === 'pending' ? '#FB923C' : theme.colors.textSecondary }]}>
@@ -290,10 +313,14 @@ export default function AdminSubscriptionManagement() {
                         )}
                     </TouchableOpacity>
                     <TouchableOpacity
-                        style={[styles.tab, activeTab === 'approved' && styles.tabActiveApproved]}
+                        style={[
+                            styles.tab,
+                            activeTab === 'approved' && styles.tabActive,
+                            activeTab === 'approved' && { backgroundColor: theme.colors.surface, shadowColor: theme.colors.text }
+                        ]}
                         onPress={() => setActiveTab('approved')}
                     >
-                        <Text style={[styles.tabText, { color: activeTab === 'approved' ? '#22C55E' : theme.colors.textSecondary }]}>
+                        <Text style={[styles.tabText, { color: activeTab === 'approved' ? '#FB923C' : theme.colors.textSecondary }]}>
                             Aprobadas
                         </Text>
                     </TouchableOpacity>
@@ -317,7 +344,7 @@ export default function AdminSubscriptionManagement() {
                 ) : (
                     <>
                         {/* Summary bar */}
-                        <View style={[styles.summaryBar, { backgroundColor: theme.colors.surface }]}>
+                        <View style={[styles.summaryBar, { backgroundColor: theme.colors.surface, borderColor: theme.isDark ? '#374151' : 'transparent', borderWidth: theme.isDark ? 1 : 0 }]}>
                             <View style={styles.summaryItem}>
                                 <Text style={[styles.summaryValue, { color: '#22C55E' }]}>{subscriptions.length}</Text>
                                 <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary }]}>Activas</Text>
@@ -407,62 +434,64 @@ const styles = StyleSheet.create({
     /* Header */
     header: { padding: 16, paddingBottom: 12 },
     title: { fontSize: 22, fontWeight: '800', marginBottom: 16, letterSpacing: 0.3 },
-    tabs: { flexDirection: 'row', gap: 10 },
+    tabs: { flexDirection: 'row', backgroundColor: '#FFF7ED', borderRadius: 12, padding: 4 },
     tab: {
         flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-        paddingVertical: 11, borderRadius: 12, borderWidth: 1.5,
-        borderColor: 'transparent', gap: 6,
+        paddingVertical: 11, borderRadius: 8, gap: 6,
     },
-    tabActivePending: { backgroundColor: 'rgba(251, 146, 60, 0.12)', borderColor: '#FB923C' },
-    tabActiveApproved: { backgroundColor: 'rgba(34, 197, 94, 0.12)', borderColor: '#22C55E' },
-    tabText: { fontSize: 14, fontWeight: '700' },
+    tabActivePending: { backgroundColor: '#FFFFFF', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2, elevation: 2 },
+    tabActiveApproved: { backgroundColor: '#FFFFFF', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2, elevation: 2 },
+    tabText: { fontSize: 13, fontWeight: '600' },
     tabBadge: {
-        backgroundColor: '#FB923C', width: 22, height: 22, borderRadius: 11,
+        backgroundColor: '#22C55E', paddingHorizontal: 6, height: 20, borderRadius: 10,
         alignItems: 'center', justifyContent: 'center',
     },
-    tabBadgeText: { color: '#FFF', fontSize: 11, fontWeight: '800' },
+    tabBadgeText: { color: '#FFF', fontSize: 11, fontWeight: '700' },
 
     /* Content */
     content: { padding: 16, paddingTop: 8 },
 
     /* ── Pending Card ── */
     card: {
-        borderRadius: 16, padding: 16, marginBottom: 14,
-        borderWidth: 1, shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08,
-        shadowRadius: 8, elevation: 3,
+        borderRadius: 12, padding: 16, marginBottom: 16,
+        borderWidth: 1, borderColor: '#F3F4F6',
+        shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
     },
     cardHeader: {
         flexDirection: 'row', justifyContent: 'space-between',
-        alignItems: 'center', marginBottom: 14,
+        alignItems: 'flex-start', marginBottom: 20,
     },
     userInfo: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: 12 },
     avatar: {
-        width: 48, height: 48, borderRadius: 24, borderWidth: 2.5,
+        width: 44, height: 44, borderRadius: 22, backgroundColor: '#F3F4F6'
     },
     avatarPlaceholder: {
-        width: 48, height: 48, borderRadius: 24, borderWidth: 2.5,
+        width: 44, height: 44, borderRadius: 22,
         alignItems: 'center', justifyContent: 'center',
     },
-    avatarInitials: { fontSize: 16, fontWeight: '800' },
+    avatarInitials: { fontSize: 15, fontWeight: '700' },
     userDetails: { flex: 1 },
     userName: { fontSize: 15, fontWeight: '700', marginBottom: 2 },
     userEmail: { fontSize: 12, fontWeight: '500' },
     statusBadge: {
-        paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 1,
+        paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4,
     },
     statusText: { fontSize: 10, fontWeight: '800', letterSpacing: 0.5 },
 
     infoGrid: {
-        flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14,
+        flexDirection: 'row', flexWrap: 'wrap', gap: 16, marginBottom: 20,
     },
     infoItem: {
-        flexDirection: 'row', alignItems: 'center', gap: 5,
-        paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8,
-        backgroundColor: 'rgba(255,255,255,0.04)', minWidth: '45%',
+        flexDirection: 'row', alignItems: 'center', gap: 10,
+        minWidth: '45%',
     },
-    infoLabel: { fontSize: 11, fontWeight: '500' },
-    infoValue: { fontSize: 12, fontWeight: '700' },
+    iconContainer: {
+        width: 36, height: 36, borderRadius: 8, backgroundColor: '#FFF7ED',
+        alignItems: 'center', justifyContent: 'center'
+    },
+    infoLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 0.5, marginBottom: 2 },
+    infoValue: { fontSize: 13, fontWeight: '700' },
 
     actions: { gap: 10 },
     receiptBtn: {
@@ -471,17 +500,15 @@ const styles = StyleSheet.create({
     },
     actionRow: { flexDirection: 'row', gap: 10 },
     rejectBtn: {
-        width: 46, height: 46, borderRadius: 12,
-        backgroundColor: 'rgba(239, 68, 68, 0.12)', borderWidth: 1, borderColor: '#EF4444',
+        width: 44, height: 44, borderRadius: 8,
+        backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#FECACA',
         alignItems: 'center', justifyContent: 'center',
     },
     approveBtn: {
         flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-        gap: 6, backgroundColor: '#22C55E', paddingVertical: 12, borderRadius: 12,
-        shadowColor: '#22C55E', shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.35, shadowRadius: 8, elevation: 4,
+        gap: 6, backgroundColor: '#22C55E', paddingVertical: 12, borderRadius: 8,
     },
-    approveBtnText: { color: '#fff', fontSize: 15, fontWeight: '800' },
+    approveBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
 
     /* ── Approved Card ── */
     approvedCard: {

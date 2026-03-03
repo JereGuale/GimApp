@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, Alert, RefreshControl, Modal, Dimensions } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
@@ -11,7 +12,7 @@ const { width } = Dimensions.get('window');
 
 export default function AdminDashboard() {
   const navigation = useNavigation();
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   const { user, token } = useAuth();
 
   const [categories, setCategories] = useState([]);
@@ -81,9 +82,9 @@ export default function AdminDashboard() {
 
   // Filter products
   const filteredProducts = products.filter((p) => {
-    const matchesSearch = !searchQuery || 
+    const matchesSearch = !searchQuery ||
       (p.name || '').toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesFilter = selectedFilter === 'Todos' || 
+    const matchesFilter = selectedFilter === 'Todos' ||
       (p.category?.name || '') === selectedFilter;
     return matchesSearch && matchesFilter;
   });
@@ -113,8 +114,8 @@ export default function AdminDashboard() {
 
   // ─── Mini Sparkline SVG (simplified as dots) ───
   const MiniChart = ({ color, trend }) => {
-    const points = trend === 'up' 
-      ? [8, 6, 7, 4, 5, 3, 2] 
+    const points = trend === 'up'
+      ? [8, 6, 7, 4, 5, 3, 2]
       : [3, 4, 2, 5, 6, 7, 8];
     const max = Math.max(...points);
     const h = 28;
@@ -145,37 +146,62 @@ export default function AdminDashboard() {
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.metricsRow}>
           {/* Usuarios Totales */}
           <View style={[styles.metricCard, { backgroundColor: theme.colors.surface }]}>
-            <View style={styles.metricHeader}>
-              <Text style={[styles.metricLabel, { color: theme.colors.textSecondary }]}>Usuarios Totales</Text>
-              <MiniChart color="#3B82F6" trend="up" />
-            </View>
-            <Text style={[styles.metricValue, { color: theme.colors.text }]}>{metrics.totalUsers}</Text>
-            <View style={styles.metricTrend}>
-              <Ionicons name="trending-up" size={12} color="#10B981" />
-              <Text style={[styles.trendText, { color: '#10B981' }]}>this week</Text>
-            </View>
+            <LinearGradient
+              colors={isDark ? ['#1E3A8A', '#172554'] : ['#EFF6FF', '#DBEAFE']}
+              style={styles.cardGradient}
+            >
+              <View style={styles.metricHeader}>
+                <Text style={[styles.metricLabel, { color: isDark ? '#BFDBFE' : '#3B82F6' }]}>Usuarios Totales</Text>
+                <View style={[styles.iconBadge, { backgroundColor: isDark ? 'rgba(59,130,246,0.2)' : '#BFDBFE' }]}>
+                  <Ionicons name="people" size={16} color="#3B82F6" />
+                </View>
+              </View>
+              <Text style={[styles.metricValue, { color: theme.colors.text }]}>{metrics.totalUsers}</Text>
+              <View style={styles.metricTrend}>
+                <Ionicons name="trending-up" size={14} color="#10B981" />
+                <Text style={[styles.trendText, { color: '#10B981' }]}>this week</Text>
+              </View>
+              {/* Background Icon Decoration */}
+              <Ionicons name="people" size={80} color={isDark ? 'rgba(255,255,255,0.03)' : 'rgba(59,130,246,0.05)'} style={styles.bgIcon} />
+            </LinearGradient>
           </View>
 
           {/* Ingresos Totales del Mes */}
           <View style={[styles.metricCard, { backgroundColor: theme.colors.surface }]}>
-            <View style={styles.metricHeader}>
-              <Text style={[styles.metricLabel, { color: theme.colors.textSecondary }]}>Ingresos del Mes</Text>
-              <MiniChart color="#10B981" trend="up" />
-            </View>
-            <Text style={[styles.metricValue, { color: theme.colors.text }]}>${metrics.monthlyIncome.toLocaleString()}</Text>
-            <View style={styles.metricTrend}>
-              <Ionicons name="trending-up" size={12} color="#10B981" />
-              <Text style={[styles.trendText, { color: '#10B981' }]}>this month</Text>
-            </View>
+            <LinearGradient
+              colors={isDark ? ['#064E3B', '#022C22'] : ['#ECFDF5', '#D1FAE5']}
+              style={styles.cardGradient}
+            >
+              <View style={styles.metricHeader}>
+                <Text style={[styles.metricLabel, { color: isDark ? '#A7F3D0' : '#10B981' }]}>Ingresos del Mes</Text>
+                <View style={[styles.iconBadge, { backgroundColor: isDark ? 'rgba(16,185,129,0.2)' : '#A7F3D0' }]}>
+                  <Ionicons name="cash" size={16} color="#10B981" />
+                </View>
+              </View>
+              <Text style={[styles.metricValue, { color: theme.colors.text }]}>${metrics.monthlyIncome.toLocaleString()}</Text>
+              <View style={styles.metricTrend}>
+                <Ionicons name="trending-up" size={14} color="#10B981" />
+                <Text style={[styles.trendText, { color: '#10B981' }]}>this month</Text>
+              </View>
+              <Ionicons name="wallet" size={80} color={isDark ? 'rgba(255,255,255,0.03)' : 'rgba(16,185,129,0.05)'} style={styles.bgIcon} />
+            </LinearGradient>
           </View>
 
-          {/* Ingresos Mensuales */}
+          {/* Ingresos Mensuales (Chart placeholder) */}
           <View style={[styles.metricCard, { backgroundColor: theme.colors.surface }]}>
-            <View style={styles.metricHeader}>
-              <Text style={[styles.metricLabel, { color: theme.colors.textSecondary }]}>Ingresos Mensuales</Text>
-              <MiniChart color="#FB923C" trend="up" />
-            </View>
-            <Text style={[styles.metricValue, { color: theme.colors.text }]}>${metrics.monthlyIncome.toLocaleString()}</Text>
+            <LinearGradient
+              colors={isDark ? ['#7C2D12', '#451A03'] : ['#FFF7ED', '#FFEDD5']}
+              style={styles.cardGradient}
+            >
+              <View style={styles.metricHeader}>
+                <Text style={[styles.metricLabel, { color: isDark ? '#FDBA74' : '#F97316' }]}>Ingresos Anuales</Text>
+                <View style={[styles.iconBadge, { backgroundColor: isDark ? 'rgba(249,115,22,0.2)' : '#FDBA74' }]}>
+                  <Ionicons name="bar-chart" size={16} color="#F97316" />
+                </View>
+              </View>
+              <Text style={[styles.metricValue, { color: theme.colors.text }]}>${(metrics.monthlyIncome * 12).toLocaleString()}</Text>
+              <Ionicons name="bar-chart" size={80} color={isDark ? 'rgba(255,255,255,0.03)' : 'rgba(249,115,22,0.05)'} style={styles.bgIcon} />
+            </LinearGradient>
           </View>
         </ScrollView>
       </View>
@@ -185,20 +211,39 @@ export default function AdminDashboard() {
         <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Estado de Membresías</Text>
         <View style={styles.membershipRow}>
           <View style={[styles.membershipCard, { backgroundColor: theme.colors.surface }]}>
-            <Text style={[styles.membershipLabel, { color: theme.colors.textSecondary }]}>Activas Totales</Text>
-            <Text style={[styles.membershipValue, { color: '#10B981' }]}>{metrics.activeSubscriptions}</Text>
-            <View style={styles.metricTrend}>
-              <Ionicons name="trending-up" size={12} color="#10B981" />
-              <Text style={[styles.trendText, { color: '#10B981' }]}>5% this week</Text>
-            </View>
+            <LinearGradient
+              colors={isDark ? ['#1E3A8A', '#172554'] : ['#EFF6FF', '#DBEAFE']}
+              style={styles.cardGradient}
+            >
+              <View style={styles.metricHeader}>
+                <Text style={[styles.membershipLabel, { color: isDark ? '#BFDBFE' : '#3B82F6' }]}>Activas Totales</Text>
+                <View style={[styles.iconBadge, { backgroundColor: isDark ? 'rgba(59,130,246,0.2)' : '#BFDBFE' }]}>
+                  <Ionicons name="card" size={16} color="#3B82F6" />
+                </View>
+              </View>
+              <Text style={[styles.membershipValue, { color: theme.colors.text }]}>{metrics.activeSubscriptions}</Text>
+              <View style={styles.metricTrend}>
+                <Ionicons name="trending-up" size={14} color="#10B981" />
+                <Text style={[styles.trendText, { color: '#10B981' }]}>5% this week</Text>
+              </View>
+              <Ionicons name="card" size={80} color={isDark ? 'rgba(255,255,255,0.03)' : 'rgba(59,130,246,0.05)'} style={styles.bgIcon} />
+            </LinearGradient>
           </View>
           <View style={[styles.membershipCard, { backgroundColor: theme.colors.surface }]}>
-            <Text style={[styles.membershipLabel, { color: theme.colors.textSecondary }]}>Por Vencer (7 días)</Text>
-            <Text style={[styles.membershipValue, { color: '#EF4444' }]}>{metrics.expiringSoon}</Text>
-            <View style={styles.metricTrend}>
-              <Ionicons name="trending-down" size={12} color="#EF4444" />
-              <Text style={[styles.trendText, { color: '#EF4444' }]}>from last week</Text>
-            </View>
+            <LinearGradient
+              colors={isDark ? ['#141821', '#141821'] : ['#FFFFFF', '#FEF2F2']}
+              style={styles.cardGradient}
+            >
+              <View style={styles.metricHeader}>
+                <Text style={[styles.membershipLabel, { color: isDark ? '#FCA5A5' : theme.colors.textSecondary }]}>Por Vencer (7 días)</Text>
+                <Ionicons name="alert-circle" size={20} color="#EF4444" />
+              </View>
+              <Text style={[styles.membershipValue, { color: '#EF4444' }]}>{metrics.expiringSoon}</Text>
+              <View style={styles.metricTrend}>
+                <Ionicons name="trending-down" size={14} color="#EF4444" />
+                <Text style={[styles.trendText, { color: '#EF4444' }]}>Action required</Text>
+              </View>
+            </LinearGradient>
           </View>
         </View>
       </View>
@@ -265,11 +310,11 @@ export default function AdminDashboard() {
         {/* Search & Filter Bar */}
         <View style={styles.searchFilterRow}>
           <View style={[styles.searchBox, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
-            <Ionicons name="search-outline" size={18} color={theme.colors.textSecondary} />
+            <Ionicons name="search-outline" size={18} color={isDark ? '#9CA3AF' : theme.colors.textSecondary} />
             <TextInput
               style={[styles.searchInput, { color: theme.colors.text }]}
               placeholder="Buscar..."
-              placeholderTextColor={theme.colors.textSecondary}
+              placeholderTextColor={isDark ? '#9CA3AF' : theme.colors.textSecondary}
               value={searchQuery}
               onChangeText={setSearchQuery}
             />
@@ -285,15 +330,17 @@ export default function AdminDashboard() {
                 key={f}
                 style={[
                   styles.filterChip,
-                  { backgroundColor: selectedFilter === f ? theme.colors.orange : theme.colors.surface,
-                    borderColor: selectedFilter === f ? theme.colors.orange : theme.colors.border }
+                  {
+                    backgroundColor: selectedFilter === f ? (theme.colors.orange || '#FB923C') : theme.colors.surface,
+                    borderColor: selectedFilter === f ? (theme.colors.orange || '#FB923C') : theme.colors.border
+                  }
                 ]}
                 onPress={() => setSelectedFilter(f)}
                 activeOpacity={0.7}
               >
                 <Text style={[
                   styles.filterChipText,
-                  { color: selectedFilter === f ? '#fff' : theme.colors.textSecondary }
+                  { color: selectedFilter === f ? '#fff' : (isDark ? '#E5E7EB' : theme.colors.textSecondary) }
                 ]}>{f}</Text>
               </TouchableOpacity>
             ))}
@@ -302,11 +349,11 @@ export default function AdminDashboard() {
 
         {/* Products Table Header */}
         <View style={[styles.tableHeader, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
-          <Text style={[styles.thCell, styles.thImage, { color: theme.colors.textSecondary }]}>Imagen</Text>
-          <Text style={[styles.thCell, styles.thName, { color: theme.colors.textSecondary }]}>Nombre</Text>
-          <Text style={[styles.thCell, styles.thCategory, { color: theme.colors.textSecondary }]}>Categoría</Text>
-          <Text style={[styles.thCell, styles.thPrice, { color: theme.colors.textSecondary }]}>Precio</Text>
-          <Text style={[styles.thCell, styles.thActions, { color: theme.colors.textSecondary }]}>Acciones</Text>
+          <Text style={[styles.thCell, styles.thImage, { color: isDark ? '#FFFFFF' : theme.colors.textSecondary }]}>Imagen</Text>
+          <Text style={[styles.thCell, styles.thName, { color: isDark ? '#FFFFFF' : theme.colors.textSecondary }]}>Nombre</Text>
+          <Text style={[styles.thCell, styles.thCategory, { color: isDark ? '#FFFFFF' : theme.colors.textSecondary }]}>Categoría</Text>
+          <Text style={[styles.thCell, styles.thPrice, { color: isDark ? '#FFFFFF' : theme.colors.textSecondary }]}>Precio</Text>
+          <Text style={[styles.thCell, styles.thActions, { color: isDark ? '#FFFFFF' : theme.colors.textSecondary }]}>Acciones</Text>
         </View>
 
         {/* Products Rows */}
@@ -323,8 +370,10 @@ export default function AdminDashboard() {
               key={product.id}
               style={[
                 styles.tableRow,
-                { backgroundColor: index % 2 === 0 ? theme.colors.surface : (theme.isDark ? '#0F1520' : '#F9FAFB'),
-                  borderColor: theme.colors.border }
+                {
+                  backgroundColor: index % 2 === 0 ? theme.colors.surface : (isDark ? '#0F1520' : '#F9FAFB'),
+                  borderColor: theme.colors.border
+                }
               ]}
             >
               {/* Image */}
@@ -347,7 +396,7 @@ export default function AdminDashboard() {
 
               {/* Category */}
               <View style={styles.tdCategory}>
-                <Text style={[styles.productCategory, { color: theme.colors.textSecondary }]} numberOfLines={1}>
+                <Text style={[styles.productCategory, { color: isDark ? '#D1D5DB' : theme.colors.textSecondary }]} numberOfLines={1}>
                   {product.category?.name || '-'}
                 </Text>
               </View>
@@ -387,7 +436,7 @@ export default function AdminDashboard() {
 
         {/* Product Count */}
         {filteredProducts.length > 0 && (
-          <Text style={[styles.productCount, { color: theme.colors.textSecondary }]}>
+          <Text style={[styles.productCount, { color: isDark ? '#9CA3AF' : theme.colors.textSecondary }]}>
             {filteredProducts.length} producto{filteredProducts.length !== 1 ? 's' : ''}
             {selectedFilter !== 'Todos' ? ` en ${selectedFilter}` : ''}
           </Text>
@@ -439,37 +488,44 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 18, fontWeight: '800', marginBottom: 12, letterSpacing: 0.2 },
 
   /* ── Metrics ── */
-  metricsRow: { gap: 12, paddingRight: 8 },
+  metricsRow: { gap: 16, paddingRight: 16 },
   metricCard: {
-    width: width * 0.52,
-    borderRadius: 16,
-    padding: 16,
+    width: width * 0.65,
+    borderRadius: 24,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 8,
+    overflow: 'hidden',
   },
-  metricHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  metricLabel: { fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.3 },
-  metricValue: { fontSize: 28, fontWeight: '900', marginBottom: 4 },
-  metricTrend: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  trendText: { fontSize: 11, fontWeight: '600' },
+  cardGradient: {
+    padding: 20,
+    width: '100%',
+    height: '100%',
+  },
+  metricHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, zIndex: 1 },
+  metricLabel: { fontSize: 13, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
+  iconBadge: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  metricValue: { fontSize: 36, fontWeight: '900', marginBottom: 6, zIndex: 1 },
+  metricTrend: { flexDirection: 'row', alignItems: 'center', gap: 6, zIndex: 1 },
+  trendText: { fontSize: 13, fontWeight: '700' },
+  bgIcon: { position: 'absolute', right: -10, bottom: -10, transform: [{ rotate: '-15deg' }] },
 
   /* ── Membership ── */
   membershipRow: { flexDirection: 'row', gap: 12 },
   membershipCard: {
     flex: 1,
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 4,
+    overflow: 'hidden',
   },
-  membershipLabel: { fontSize: 12, fontWeight: '600', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.3 },
-  membershipValue: { fontSize: 32, fontWeight: '900', marginBottom: 4 },
+  membershipLabel: { fontSize: 13, fontWeight: '700', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.3 },
+  membershipValue: { fontSize: 36, fontWeight: '900', marginBottom: 6 },
 
   /* ── Categories ── */
   categorySectionHeader: {
@@ -560,7 +616,7 @@ const styles = StyleSheet.create({
   },
   filterChipText: { fontSize: 12, fontWeight: '600' },
 
-  /* ── Table ── */
+  /* ═══ Table ═══ */
   tableHeader: {
     flexDirection: 'row',
     alignItems: 'center',

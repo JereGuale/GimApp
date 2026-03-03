@@ -1,7 +1,6 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-
+import { API_URL } from './api';
 // Helper para obtener el token
 const getToken = async () => {
     try {

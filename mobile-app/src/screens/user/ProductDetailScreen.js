@@ -7,6 +7,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
 import { useCart } from '../../context/CartContext';
+import { API_URL } from '../../services/api';
+
+const BASE_URL = API_URL.replace('/api', '');
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 const isWide = screenWidth > 600;
@@ -21,9 +24,13 @@ export default function ProductDetailScreen() {
 
   const images = useMemo(() => {
     if (!product) return [];
-    if (product.images && product.images.length > 0) return product.images;
-    if (product.image) return [product.image];
-    return [];
+    let rawImages = [];
+    if (product.images && product.images.length > 0) {
+      rawImages = product.images;
+    } else if (product.image) {
+      rawImages = [product.image];
+    }
+    return rawImages.map(img => img.startsWith('http') ? img : `${BASE_URL}/storage/${img}`);
   }, [product]);
   const [activeImage, setActiveImage] = useState(images[0] || null);
 
@@ -107,7 +114,7 @@ export default function ProductDetailScreen() {
               {images.map((img, idx) => (
                 <TouchableOpacity
                   key={img + idx}
-                  style={{ width: 70, height: 70, borderRadius: 12, overflow: 'hidden', borderWidth: 2, borderColor: activeImage === img ? '#22D3EE' : '#E2E8F0', marginRight: idx !== images.length - 1 ? 8 : 0 }}
+                  style={{ width: 70, height: 70, borderRadius: 12, overflow: 'hidden', borderWidth: 2, borderColor: activeImage === img ? '#FB923C' : '#E2E8F0', marginRight: idx !== images.length - 1 ? 8 : 0 }}
                   onPress={() => setActiveImage(img)}
                 >
                   <Image
@@ -135,7 +142,7 @@ export default function ProductDetailScreen() {
               <Ionicons name="cart-outline" size={20} color="#000" />
               <Text style={styles.addToCartText}>Añadir al Carrito</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.buyNowBtn, { borderColor: '#22D3EE' }]} onPress={handleBuyNow}>
+            <TouchableOpacity style={[styles.buyNowBtn, { borderColor: '#FB923C' }]} onPress={handleBuyNow}>
               <Text style={styles.buyNowText}>Comprar Ahora</Text>
             </TouchableOpacity>
           </View>
@@ -146,7 +153,7 @@ export default function ProductDetailScreen() {
               style={[styles.tab, activeTab === 'description' && styles.tabActive]}
               onPress={() => setActiveTab('description')}
             >
-              <Text style={[styles.tabText, { color: activeTab === 'description' ? '#22D3EE' : theme.colors.textSecondary }]}>
+              <Text style={[styles.tabText, { color: activeTab === 'description' ? '#FB923C' : theme.colors.textSecondary }]}>
                 Descripción
               </Text>
             </TouchableOpacity>
@@ -154,7 +161,7 @@ export default function ProductDetailScreen() {
               style={[styles.tab, activeTab === 'reviews' && styles.tabActive]}
               onPress={() => setActiveTab('reviews')}
             >
-              <Text style={[styles.tabText, { color: activeTab === 'reviews' ? '#22D3EE' : theme.colors.textSecondary }]}>
+              <Text style={[styles.tabText, { color: activeTab === 'reviews' ? '#FB923C' : theme.colors.textSecondary }]}>
                 Reseñas
               </Text>
             </TouchableOpacity>
@@ -222,7 +229,7 @@ const styles = StyleSheet.create({
   /* Info */
   infoSection: {},
   productName: { fontSize: 26, fontWeight: '800', marginBottom: 6, letterSpacing: 0.3 },
-  productPrice: { fontSize: 28, fontWeight: '900', color: '#22D3EE', marginBottom: 20 },
+  productPrice: { fontSize: 28, fontWeight: '900', color: '#FB923C', marginBottom: 20 },
 
   /* Options */
   optionGroup: { marginBottom: 18 },
@@ -242,8 +249,8 @@ const styles = StyleSheet.create({
   actionBtns: { flexDirection: 'row', gap: 12, marginBottom: 24 },
   addToCartBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 8, backgroundColor: '#22D3EE', paddingVertical: 14, borderRadius: 14,
-    shadowColor: '#22D3EE', shadowOffset: { width: 0, height: 3 },
+    gap: 8, backgroundColor: '#FB923C', paddingVertical: 14, borderRadius: 14,
+    shadowColor: '#FB923C', shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.35, shadowRadius: 8, elevation: 4,
   },
   addToCartText: { color: '#000', fontSize: 14, fontWeight: '800' },
@@ -251,14 +258,14 @@ const styles = StyleSheet.create({
     flex: 1, alignItems: 'center', justifyContent: 'center',
     paddingVertical: 14, borderRadius: 14, borderWidth: 2,
   },
-  buyNowText: { color: '#22D3EE', fontSize: 14, fontWeight: '800' },
+  buyNowText: { color: '#FB923C', fontSize: 14, fontWeight: '800' },
 
   /* Tabs */
   tabBar: {
     flexDirection: 'row', borderBottomWidth: 1, marginBottom: 16,
   },
   tab: { paddingVertical: 12, paddingHorizontal: 4, marginRight: 24 },
-  tabActive: { borderBottomWidth: 2.5, borderBottomColor: '#22D3EE' },
+  tabActive: { borderBottomWidth: 2.5, borderBottomColor: '#FB923C' },
   tabText: { fontSize: 14, fontWeight: '700' },
 
   /* Tab content */

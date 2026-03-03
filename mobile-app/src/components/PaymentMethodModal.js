@@ -19,84 +19,87 @@ export default function PaymentMethodModal({ visible, onClose, onSelectMethod, p
             onRequestClose={onClose}
         >
             <View style={styles.modalContainer}>
-                <View style={[styles.modalContent, { backgroundColor: theme.colors.surface }]}>
+                <View style={[styles.modalContent, { backgroundColor: '#FFFFFF' }]}>
                     <View style={styles.header}>
-                        <Text style={[styles.title, { color: theme.colors.text }]}>
-                            Método de Pago
+                        <Text style={[styles.title, { color: '#111827' }]}>
+                            Método de pago
                         </Text>
-                        <TouchableOpacity onPress={onClose}>
-                            <Ionicons name="close-circle" size={28} color={theme.colors.textSecondary} />
+                        <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+                            <Ionicons name="close" size={24} color="#6B7280" />
                         </TouchableOpacity>
                     </View>
 
                     {plan && (
-                        <View style={styles.planInfo}>
-                            <Text style={[styles.planName, { color: theme.colors.textSecondary }]}>
-                                Suscripción: <Text style={{ color: theme.colors.text, fontWeight: '700' }}>
+                        <View style={styles.planInfoCard}>
+                            <View>
+                                <Text style={[styles.planInfoLabel, { color: '#6B7280' }]}>
+                                    Suscripción
+                                </Text>
+                                <Text style={[styles.planInfoName, { color: '#111827' }]}>
                                     {plan.name}
                                 </Text>
-                            </Text>
-                            <Text style={styles.planPrice}>
-                                ${plan.price}
+                            </View>
+                            <Text style={[styles.planInfoPrice, { color: '#111827' }]}>
+                                ${plan.price.toFixed(2)}
                             </Text>
                         </View>
                     )}
 
-                    <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
+                    <Text style={[styles.subtitle, { color: '#111827' }]}>
                         Selecciona cómo deseas pagar
                     </Text>
 
                     {/* Credit Card Option */}
                     <TouchableOpacity
-                        style={styles.methodCard}
+                        style={[styles.methodCard, { backgroundColor: '#FFFFFF' }]}
                         onPress={() => handleSelect('card')}
                     >
-                        <View style={styles.methodIconContainer}>
-                            <Ionicons name="card" size={32} color="#22D3EE" />
+                        <View style={[styles.methodIconContainer, { backgroundColor: '#E0F2FE' }]}>
+                            <Ionicons name="card-outline" size={26} color="#0284C7" />
                         </View>
                         <View style={styles.methodInfo}>
-                            <Text style={[styles.methodTitle, { color: theme.colors.text }]}>
-                                Tarjeta de Crédito/Débito
+                            <Text style={[styles.methodTitle, { color: '#111827' }]}>
+                                Tarjeta de Crédito / Débito
                             </Text>
-                            <Text style={[styles.methodDescription, { color: theme.colors.textSecondary }]}>
+                            <Text style={[styles.methodDescription, { color: '#9CA3AF' }]}>
                                 Pago instantáneo y automático
                             </Text>
-                            <View style={styles.badge}>
-                                <Ionicons name="flash" size={14} color="#22C55E" />
-                                <Text style={styles.badgeText}>Activación inmediata</Text>
+                            <View style={[styles.badge, { backgroundColor: '#DCFCE7' }]}>
+                                <Ionicons name="flash-outline" size={12} color="#16A34A" />
+                                <Text style={[styles.badgeText, { color: '#16A34A' }]}>Activación inmediata</Text>
                             </View>
                         </View>
-                        <Ionicons name="chevron-forward" size={24} color={theme.colors.textSecondary} />
+                        <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
                     </TouchableOpacity>
 
                     {/* Bank Transfer Option */}
                     <TouchableOpacity
-                        style={styles.methodCard}
+                        style={[styles.methodCard, { backgroundColor: '#FFFFFF' }]}
                         onPress={() => handleSelect('transfer')}
                     >
-                        <View style={[styles.methodIconContainer, { backgroundColor: 'rgba(251, 146, 60, 0.15)' }]}>
-                            <Ionicons name="business" size={32} color="#FB923C" />
+                        <View style={[styles.methodIconContainer, { backgroundColor: '#FFEDD5' }]}>
+                            <Ionicons name="business-outline" size={26} color="#EA580C" />
                         </View>
                         <View style={styles.methodInfo}>
-                            <Text style={[styles.methodTitle, { color: theme.colors.text }]}>
+                            <Text style={[styles.methodTitle, { color: '#111827' }]}>
                                 Transferencia Bancaria
                             </Text>
-                            <Text style={[styles.methodDescription, { color: theme.colors.textSecondary }]}>
+                            <Text style={[styles.methodDescription, { color: '#9CA3AF' }]}>
                                 Sube tu comprobante de pago
                             </Text>
-                            <View style={[styles.badge, { backgroundColor: 'rgba(251, 146, 60, 0.15)', borderColor: '#FB923C' }]}>
-                                <Ionicons name="time" size={14} color="#FB923C" />
-                                <Text style={[styles.badgeText, { color: '#FB923C' }]}>Requiere aprobación</Text>
+                            <View style={[styles.badge, { backgroundColor: '#FEF9C3' }]}>
+                                <Ionicons name="time-outline" size={12} color="#CA8A04" />
+                                <Text style={[styles.badgeText, { color: '#CA8A04' }]}>Requiere aprobación</Text>
                             </View>
                         </View>
-                        <Ionicons name="chevron-forward" size={24} color={theme.colors.textSecondary} />
+                        <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
                     </TouchableOpacity>
 
                     <TouchableOpacity
                         style={styles.cancelButton}
                         onPress={onClose}
                     >
-                        <Text style={styles.cancelButtonText}>Cancelar</Text>
+                        <Text style={[styles.cancelButtonText, { color: '#111827' }]}>Cancelar</Text>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -120,100 +123,101 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 16
+        marginBottom: 24
     },
     title: {
-        fontSize: 24,
-        fontWeight: '800',
-        letterSpacing: 0.5
+        fontSize: 20,
+        fontWeight: '700',
     },
-    planInfo: {
+    closeButton: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: 'transparent',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    planInfoCard: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingBottom: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: 'rgba(255, 255, 255, 0.1)',
-        marginBottom: 16
+        backgroundColor: '#F3F4F6', // Light gray background
+        borderRadius: 12,
+        padding: 16,
+        marginBottom: 24
     },
-    planName: {
+    planInfoLabel: {
+        fontSize: 12,
+        fontWeight: '500',
+        marginBottom: 4
+    },
+    planInfoName: {
         fontSize: 14,
-        fontWeight: '600'
+        fontWeight: '700'
     },
-    planPrice: {
-        fontSize: 20,
-        fontWeight: '900',
-        color: '#22D3EE'
+    planInfoPrice: {
+        fontSize: 22,
+        fontWeight: '800',
     },
     subtitle: {
-        fontSize: 14,
+        fontSize: 15,
         fontWeight: '600',
         marginBottom: 16
     },
     methodCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: 'rgba(34, 211, 238, 0.05)',
-        borderWidth: 2,
-        borderColor: 'rgba(34, 211, 238, 0.3)',
-        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        borderRadius: 12,
         padding: 16,
         marginBottom: 12,
-        gap: 14
+        gap: 16
     },
     methodIconContainer: {
-        width: 56,
-        height: 56,
-        borderRadius: 16,
-        backgroundColor: 'rgba(34, 211, 238, 0.15)',
+        width: 48,
+        height: 48,
+        borderRadius: 12,
         alignItems: 'center',
         justifyContent: 'center'
     },
     methodInfo: {
-        flex: 1
+        flex: 1,
+        justifyContent: 'center',
     },
     methodTitle: {
-        fontSize: 16,
-        fontWeight: '700',
+        fontSize: 15,
+        fontWeight: '600',
         marginBottom: 4,
-        letterSpacing: 0.3
     },
     methodDescription: {
-        fontSize: 13,
-        fontWeight: '500',
+        fontSize: 12,
         marginBottom: 8
     },
     badge: {
         flexDirection: 'row',
         alignItems: 'center',
         alignSelf: 'flex-start',
-        backgroundColor: 'rgba(34, 197, 94, 0.15)',
         paddingHorizontal: 8,
         paddingVertical: 4,
-        borderRadius: 8,
+        borderRadius: 12,
         gap: 4,
-        borderWidth: 1,
-        borderColor: '#22C55E'
     },
     badgeText: {
         fontSize: 11,
-        fontWeight: '700',
-        color: '#22C55E',
-        letterSpacing: 0.3
+        fontWeight: '600',
     },
     cancelButton: {
-        backgroundColor: 'rgba(239, 68, 68, 0.15)',
-        paddingVertical: 16,
-        borderRadius: 14,
+        backgroundColor: 'transparent',
+        paddingVertical: 14,
+        borderRadius: 12,
         alignItems: 'center',
-        borderWidth: 2,
-        borderColor: '#EF4444',
-        marginTop: 8
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        marginTop: 16
     },
     cancelButtonText: {
-        color: '#EF4444',
-        fontSize: 16,
-        fontWeight: '800',
-        letterSpacing: 0.3
+        fontSize: 15,
+        fontWeight: '600',
     }
 });

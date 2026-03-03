@@ -63,24 +63,24 @@ export default function CardPaymentForm({ visible, onClose, onSubmit, plan }) {
             onRequestClose={handleClose}
         >
             <View style={styles.modalContainer}>
-                <View style={[styles.modalContent, { backgroundColor: theme.colors.surface }]}>
+                <View style={[styles.modalContent, { backgroundColor: '#FFFFFF' }]}>
                     <View style={styles.header}>
-                        <Text style={[styles.title, { color: theme.colors.text }]}>
+                        <Text style={[styles.title, { color: '#111827' }]}>
                             Pago con Tarjeta
                         </Text>
-                        <TouchableOpacity onPress={handleClose}>
-                            <Ionicons name="close-circle" size={28} color={theme.colors.textSecondary} />
+                        <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
+                            <Ionicons name="close" size={24} color="#6B7280" />
                         </TouchableOpacity>
                     </View>
 
                     {/* Plan Summary */}
                     {plan && (
                         <View style={styles.planSummary}>
-                            <Text style={[styles.planName, { color: theme.colors.text }]}>
+                            <Text style={[styles.planName, { color: '#111827' }]}>
                                 {plan.name}
                             </Text>
                             <Text style={styles.planPrice}>
-                                ${plan.price}
+                                ${plan.price.toFixed(2)}
                             </Text>
                         </View>
                     )}
@@ -88,15 +88,15 @@ export default function CardPaymentForm({ visible, onClose, onSubmit, plan }) {
                     {/* Card Form */}
                     <View style={styles.formContainer}>
                         <View style={styles.inputGroup}>
-                            <Text style={[styles.label, { color: theme.colors.textSecondary }]}>
+                            <Text style={[styles.label, { color: '#4B5563' }]}>
                                 Número de Tarjeta
                             </Text>
                             <View style={styles.inputContainer}>
-                                <Ionicons name="card-outline" size={20} color="#22D3EE" style={styles.inputIcon} />
+                                <Ionicons name="card-outline" size={20} color="#9CA3AF" style={styles.inputIcon} />
                                 <TextInput
-                                    style={[styles.input, { color: theme.colors.text }]}
+                                    style={[styles.input, { color: '#111827' }]}
                                     placeholder="1234 5678 9012 3456"
-                                    placeholderTextColor={theme.colors.textSecondary}
+                                    placeholderTextColor="#9CA3AF"
                                     value={cardNumber}
                                     onChangeText={(text) => setCardNumber(formatCardNumber(text))}
                                     keyboardType="numeric"
@@ -106,15 +106,15 @@ export default function CardPaymentForm({ visible, onClose, onSubmit, plan }) {
                         </View>
 
                         <View style={styles.inputGroup}>
-                            <Text style={[styles.label, { color: theme.colors.textSecondary }]}>
+                            <Text style={[styles.label, { color: '#4B5563' }]}>
                                 Nombre en la Tarjeta
                             </Text>
                             <View style={styles.inputContainer}>
-                                <Ionicons name="person-outline" size={20} color="#22D3EE" style={styles.inputIcon} />
+                                <Ionicons name="person-outline" size={20} color="#9CA3AF" style={styles.inputIcon} />
                                 <TextInput
-                                    style={[styles.input, { color: theme.colors.text }]}
+                                    style={[styles.input, { color: '#111827' }]}
                                     placeholder="JUAN PEREZ"
-                                    placeholderTextColor={theme.colors.textSecondary}
+                                    placeholderTextColor="#9CA3AF"
                                     value={cardName}
                                     onChangeText={setCardName}
                                     autoCapitalize="characters"
@@ -124,15 +124,15 @@ export default function CardPaymentForm({ visible, onClose, onSubmit, plan }) {
 
                         <View style={styles.row}>
                             <View style={[styles.inputGroup, { flex: 1 }]}>
-                                <Text style={[styles.label, { color: theme.colors.textSecondary }]}>
+                                <Text style={[styles.label, { color: '#4B5563' }]}>
                                     Vencimiento
                                 </Text>
                                 <View style={styles.inputContainer}>
-                                    <Ionicons name="calendar-outline" size={20} color="#22D3EE" style={styles.inputIcon} />
+                                    <Ionicons name="calendar-outline" size={20} color="#9CA3AF" style={styles.inputIcon} />
                                     <TextInput
-                                        style={[styles.input, { color: theme.colors.text }]}
+                                        style={[styles.input, { color: '#111827' }]}
                                         placeholder="MM/YY"
-                                        placeholderTextColor={theme.colors.textSecondary}
+                                        placeholderTextColor="#9CA3AF"
                                         value={cardExpiry}
                                         onChangeText={(text) => setCardExpiry(formatExpiry(text))}
                                         keyboardType="numeric"
@@ -142,15 +142,15 @@ export default function CardPaymentForm({ visible, onClose, onSubmit, plan }) {
                             </View>
 
                             <View style={[styles.inputGroup, { flex: 1 }]}>
-                                <Text style={[styles.label, { color: theme.colors.textSecondary }]}>
+                                <Text style={[styles.label, { color: '#4B5563' }]}>
                                     CVV
                                 </Text>
                                 <View style={styles.inputContainer}>
-                                    <Ionicons name="lock-closed-outline" size={20} color="#22D3EE" style={styles.inputIcon} />
+                                    <Ionicons name="lock-closed-outline" size={20} color="#9CA3AF" style={styles.inputIcon} />
                                     <TextInput
-                                        style={[styles.input, { color: theme.colors.text }]}
+                                        style={[styles.input, { color: '#111827' }]}
                                         placeholder="123"
-                                        placeholderTextColor={theme.colors.textSecondary}
+                                        placeholderTextColor="#9CA3AF"
                                         value={cardCvv}
                                         onChangeText={setCardCvv}
                                         keyboardType="numeric"
@@ -164,8 +164,8 @@ export default function CardPaymentForm({ visible, onClose, onSubmit, plan }) {
 
                     {/* Security Note */}
                     <View style={styles.securityNote}>
-                        <Ionicons name="shield-checkmark" size={18} color="#22C55E" />
-                        <Text style={[styles.securityText, { color: theme.colors.textSecondary }]}>
+                        <Ionicons name="shield-checkmark-outline" size={16} color="#10B981" />
+                        <Text style={[styles.securityText, { color: '#9CA3AF' }]}>
                             Tus datos están protegidos y encriptados
                         </Text>
                     </View>
@@ -177,7 +177,7 @@ export default function CardPaymentForm({ visible, onClose, onSubmit, plan }) {
                             onPress={handleClose}
                             disabled={loading}
                         >
-                            <Text style={styles.cancelButtonText}>Cancelar</Text>
+                            <Text style={[styles.cancelButtonText, { color: '#111827' }]}>Cancelar</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity
@@ -189,8 +189,8 @@ export default function CardPaymentForm({ visible, onClose, onSubmit, plan }) {
                                 <Text style={styles.submitButtonText}>Procesando...</Text>
                             ) : (
                                 <>
-                                    <Ionicons name="checkmark-circle" size={20} color="#0B0F14" />
-                                    <Text style={styles.submitButtonText}>Pagar ${plan?.price}</Text>
+                                    <Ionicons name="lock-closed-outline" size={18} color="#FFFFFF" />
+                                    <Text style={styles.submitButtonText}>Pagar ${plan?.price.toFixed(2)}</Text>
                                 </>
                             )}
                         </TouchableOpacity>
@@ -220,29 +220,34 @@ const styles = StyleSheet.create({
         marginBottom: 20
     },
     title: {
-        fontSize: 24,
-        fontWeight: '800',
-        letterSpacing: 0.5
+        fontSize: 20,
+        fontWeight: '700',
+    },
+    closeButton: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: 'transparent',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     planSummary: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        backgroundColor: 'rgba(34, 211, 238, 0.1)',
+        backgroundColor: '#ECFEFF',
         padding: 16,
-        borderRadius: 14,
-        marginBottom: 20,
-        borderWidth: 2,
-        borderColor: 'rgba(34, 211, 238, 0.3)'
+        borderRadius: 8,
+        marginBottom: 24,
     },
     planName: {
-        fontSize: 16,
-        fontWeight: '700'
+        fontSize: 14,
+        fontWeight: '600'
     },
     planPrice: {
-        fontSize: 24,
-        fontWeight: '900',
-        color: '#22D3EE'
+        fontSize: 18,
+        fontWeight: '800',
+        color: '#06B6D4'
     },
     formContainer: {
         marginBottom: 16
@@ -251,18 +256,17 @@ const styles = StyleSheet.create({
         marginBottom: 16
     },
     label: {
-        fontSize: 13,
-        fontWeight: '700',
+        fontSize: 12,
+        fontWeight: '600',
         marginBottom: 8,
-        letterSpacing: 0.3
     },
     inputContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: 'rgba(34, 211, 238, 0.1)',
-        borderWidth: 2,
-        borderColor: 'rgba(34, 211, 238, 0.3)',
-        borderRadius: 12,
+        backgroundColor: '#FFFFFF',
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        borderRadius: 8,
         paddingHorizontal: 14
     },
     inputIcon: {
@@ -270,9 +274,9 @@ const styles = StyleSheet.create({
     },
     input: {
         flex: 1,
-        height: 48,
-        fontSize: 15,
-        fontWeight: '600'
+        height: 44,
+        fontSize: 14,
+        fontWeight: '500'
     },
     row: {
         flexDirection: 'row',
@@ -282,13 +286,12 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 8,
-        marginBottom: 20,
-        paddingVertical: 10
+        gap: 6,
+        marginBottom: 24,
     },
     securityText: {
-        fontSize: 13,
-        fontWeight: '600'
+        fontSize: 12,
+        fontWeight: '500'
     },
     buttonContainer: {
         flexDirection: 'row',
@@ -296,41 +299,33 @@ const styles = StyleSheet.create({
     },
     cancelButton: {
         flex: 1,
-        backgroundColor: 'rgba(239, 68, 68, 0.15)',
-        paddingVertical: 16,
-        borderRadius: 14,
+        backgroundColor: 'transparent',
+        paddingVertical: 14,
+        borderRadius: 8,
         alignItems: 'center',
-        borderWidth: 2,
-        borderColor: '#EF4444'
+        borderWidth: 1,
+        borderColor: '#E5E7EB'
     },
     cancelButtonText: {
-        color: '#EF4444',
-        fontSize: 16,
-        fontWeight: '800',
-        letterSpacing: 0.3
+        fontSize: 14,
+        fontWeight: '600',
     },
     submitButton: {
         flex: 1,
         flexDirection: 'row',
-        backgroundColor: '#22D3EE',
-        paddingVertical: 16,
-        borderRadius: 14,
+        backgroundColor: '#06B6D4',
+        paddingVertical: 14,
+        borderRadius: 8,
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 8,
-        shadowColor: '#22D3EE',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.5,
-        shadowRadius: 10,
-        elevation: 8
+        gap: 6,
     },
     submitButtonDisabled: {
         opacity: 0.5
     },
     submitButtonText: {
-        color: '#0B0F14',
-        fontSize: 16,
-        fontWeight: '800',
-        letterSpacing: 0.5
+        color: '#FFFFFF',
+        fontSize: 14,
+        fontWeight: '600',
     }
 });
