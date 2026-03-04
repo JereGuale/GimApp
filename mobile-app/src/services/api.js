@@ -11,7 +11,8 @@ if (hostUri) {
   DEV_BACKEND_IP = hostUri.split(':')[0]; // Extracts '192.168.0.x' from '192.168.0.x:8081'
 }
 
-export const API_URL = `http://${DEV_BACKEND_IP}:8000/api`;
+// Use EXPO_PUBLIC_API_URL if defined (e.g., in Vercel), otherwise fallback to local IP
+export const API_URL = process.env.EXPO_PUBLIC_API_URL || `http://${DEV_BACKEND_IP}:8000/api`;
 
 // Endpoints disponibles
 export const ENDPOINTS = {
