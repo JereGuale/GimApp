@@ -47,19 +47,24 @@ class Product extends Model
         if (!$this->image)
             return null;
 
-        // Si es una URL absoluta (empieza con http)
+        // Si es una URL de localhost (imagen vieja del entorno local), no existe en producción
+        if (preg_match('/http:\/\/(localhost|127\.0\.0\.1|192\.168\.)/', $this->image)) {
+            return 'https://via.placeholder.com/400x400?text=Sin+imagen';
+        }
+
+        // Si es una URL absoluta externa (Supabase, placeholder, etc.)
         if (strpos($this->image, 'http') === 0) {
-            // Si es una URL de nuestra propia app (localhost o IP anterior), reemplazarla con la actual
-            if (strpos($this->image, '/storage/') !== false) {
-                // Extraer solo la parte relativa (ej: products/imagen.jpg)
+            // Si tiene /storage/ de nuestra propia app, reconstruir con APP_URL actual
+            if (strpos($this->image, '/storage/') !== false &&
+            !str_contains($this->image, 'supabase.co') &&
+            !str_contains($this->image, 'placeholder.com')) {
                 $path = explode('/storage/', $this->image)[1];
                 return asset('storage/' . $path);
             }
-            // Si es externa real (ej: via.placeholder), devolver tal qual
             return $this->image;
         }
 
-        // Si es ruta relativa, usar asset helper que usa APP_URL actual
+        // Ruta relativa
         return asset('storage/' . $this->image);
     }
 }

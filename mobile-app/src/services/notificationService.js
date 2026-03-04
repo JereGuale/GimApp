@@ -1,5 +1,17 @@
-
+import { Platform } from 'react-native';
 import { API_URL } from './api';
+import axios from 'axios';
+
+let AsyncStorage;
+if (Platform.OS === 'web') {
+    AsyncStorage = {
+        getItem: async (key) => Promise.resolve(window.localStorage.getItem(key)),
+        setItem: async (key, value) => Promise.resolve(window.localStorage.setItem(key, value)),
+        removeItem: async (key) => Promise.resolve(window.localStorage.removeItem(key)),
+    };
+} else {
+    AsyncStorage = require('@react-native-async-storage/async-storage').default;
+}
 
 const getToken = async () => {
     try {
@@ -69,7 +81,7 @@ export const NotificationAPI = {
             console.error('Error marking as read:', error.response?.data || error.message);
             return {
                 success: false,
-                error: error.response?.data?.message || 'Error al marcar como leída'
+                error: error.response?.data?.message || 'Error al marcar como leÃ­da'
             };
         }
     },
@@ -90,7 +102,7 @@ export const NotificationAPI = {
             console.error('Error marking all as read:', error.response?.data || error.message);
             return {
                 success: false,
-                error: error.response?.data?.message || 'Error al marcar como leídas'
+                error: error.response?.data?.message || 'Error al marcar como leÃ­das'
             };
         }
     }
@@ -138,7 +150,7 @@ export const ProfileAPI = {
         try {
             const token = await getToken();
             if (!token) {
-                return { success: false, error: 'No hay token de autenticación' };
+                return { success: false, error: 'No hay token de autenticaciÃ³n' };
             }
 
             const formData = new FormData();
