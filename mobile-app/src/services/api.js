@@ -1,18 +1,21 @@
 // API Configuration for Laravel Backend
-// Resolve DEV_BACKEND_IP dynamically using Expo Constants
 import Constants from 'expo-constants';
 import { DEV_BACKEND_IP as HARDCODED_IP } from '../../.env.js';
+
+// Production URL (Render.com deployment)
+const PRODUCTION_URL = 'https://gimapp.onrender.com/api';
 
 let DEV_BACKEND_IP = HARDCODED_IP;
 
 // If we are in Expo development mode, extract the LAN IP from the host URI
 const hostUri = Constants.expoConfig?.hostUri || Constants.manifest?.hostUri;
 if (hostUri) {
-  DEV_BACKEND_IP = hostUri.split(':')[0]; // Extracts '192.168.0.x' from '192.168.0.x:8081'
+  DEV_BACKEND_IP = hostUri.split(':')[0];
 }
 
-// Use EXPO_PUBLIC_API_URL if defined (e.g., in Vercel), otherwise fallback to local IP
-export const API_URL = process.env.EXPO_PUBLIC_API_URL || `http://${DEV_BACKEND_IP}:8000/api`;
+// In production (__DEV__ is false), use Render URL. In dev, use local IP.
+export const API_URL = !__DEV__ ? PRODUCTION_URL : (process.env.EXPO_PUBLIC_API_URL || `http://${DEV_BACKEND_IP}:8000/api`);
+
 
 // Endpoints disponibles
 export const ENDPOINTS = {
