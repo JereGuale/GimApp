@@ -10,7 +10,7 @@ import {
   Platform,
   ScrollView,
   useWindowDimensions,
-  Animated
+  ActivityIndicator
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
@@ -24,6 +24,7 @@ export default function RegisterScreen({ navigation }) {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState('error');
@@ -67,10 +68,10 @@ export default function RegisterScreen({ navigation }) {
     }
 
     try {
+      setLoading(true);
       const { user, token } = await authRegister(fullName, email, password, confirmPassword);
       showToast('¡Cuenta creada con éxito!', 'success');
 
-      // Esperar a que el toast se vea antes de cambiar de pantalla
       setTimeout(async () => {
         await login(user, token);
       }, 1500);
@@ -91,6 +92,8 @@ export default function RegisterScreen({ navigation }) {
         }
       }
       showToast(errorMsg, 'error');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -187,8 +190,11 @@ export default function RegisterScreen({ navigation }) {
               <Text style={styles.checkText}>Acepto terminos y condiciones</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.btn} onPress={handleRegister}>
-              <Text style={styles.btnText}>REGISTRARSE</Text>
+            <TouchableOpacity style={[styles.btn, loading && styles.btnDisabled]} onPress={handleRegister} disabled={loading}>
+              {loading
+                ? <ActivityIndicator color="#FFFFFF" />
+                : <Text style={styles.btnText}>REGISTRARSE</Text>
+              }
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -285,6 +291,9 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 999,
     alignItems: 'center'
+  },
+  btnDisabled: {
+    backgroundColor: 'rgba(46, 139, 255, 0.6)',
   },
   btnText: { color: '#FFFFFF', fontWeight: '700', letterSpacing: 0.5 }
 });

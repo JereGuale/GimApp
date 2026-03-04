@@ -7,39 +7,52 @@ use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 class ProductController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
+    private function uploadImageToSupabase(string $base64Image, int $index): ?string
+    {
+        if (!preg_match('/^data:image\/(\w+);base64,/', $base64Image, $type)) {
+            return null;
+        }
+        $imageData = base64_decode(substr($base64Image, strpos($base64Image, ',') + 1));
+        if ($imageData === false) return null;
+
+        $ext = strtolower($type[1]);
+        $fileName = 'product_' . time() . '_' . $index . '.' . $ext;
+        $filePath = 'products/' . $fileName;
+
+        try {
+            Storage::disk('supabase')->put($filePath, $imageData, 'public');
+            return Storage::disk('supabase')->url($filePath);
+        } catch (\Exception $e) {
+            Log::error('Supabase upload failed: ' . $e->getMessage());
+            // Fallback to local
+            Storage::disk('public')->put($filePath, $imageData);
+            return Storage::disk('public')->url($filePath);
+        }
+    }
+
     public function index(Request $request)
     {
-        // Cache identical catalog API requests for 5 minutes
         $cacheKey = 'products_index_' . md5(json_encode($request->all()));
 
         $products = Cache::remember($cacheKey, 300, function () use ($request) {
             $query = Product::with('category');
 
-        // Filtrar por categoría si se proporciona
-        if ($request->has('category_id')) {
-            $query->where('category_id', $request->category_id);
-        }
-
-        // Filtrar por productos destacados
-        if ($request->has('is_featured')) {
-            $query->where('is_featured', $request->is_featured);
-        }
-
-        // Buscar por nombre
-        if ($request->has('search')) {
-            $query->where('name', 'like', '%' . $request->search . '%');
-        }
+            if ($request->has('category_id')) {
+                $query->where('category_id', $request->category_id);
+            }
+            if ($request->has('is_featured')) {
+                $query->where('is_featured', $request->is_featured);
+            }
+            if ($request->has('search')) {
+                $query->where('name', 'like', '%' . $request->search . '%');
+            }
 
             $productsData = $query->get();
-            // Agrega image_url en cada producto
             $productsData->each(function($product) {
-                // accessing the accessor to ensure it's loaded in the JSON
                 $product->image_url = $product->image_url;
             });
             return $productsData;
@@ -48,19 +61,8 @@ class ProductController extends Controller
         return response()->json($products);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-
     public function store(Request $request)
     {
-        use Illuminate\Support\Facades\Log;
-        Log::info('Product store request', [
-            'all' => $request->all(),
-            'files' => $request->allFiles(),
-            'hasImages' => $request->hasFile('images')
-        ]);
-
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -73,47 +75,23 @@ class ProductController extends Controller
             'images.*' => 'nullable|string'
         ]);
 
-        // Procesar imágenes en base64
         $imageUrls = [];
         if (isset($validated['images']) && is_array($validated['images'])) {
             foreach ($validated['images'] as $index => $base64Image) {
-                if (preg_match('/^data:image\/(\w+);base64,/', $base64Image, $type)) {
-                    $base64Image = substr($base64Image, strpos($base64Image, ',') + 1);
-                    $type = strtolower($type[1]); // jpg, png, gif
-
-                    $imageData = base64_decode($base64Image);
-                    if ($imageData === false) {
-                        continue;
-                    }
-
-                    $fileName = 'product_' . time() . '_' . $index . '.' . $type;
-                    $filePath = 'products/' . $fileName;
-                    
-                    Storage::disk('public')->put($filePath, $imageData);
-                    $imageUrls[] = Storage::url($filePath);
-                }
+                $url = $this->uploadImageToSupabase($base64Image, $index);
+                if ($url) $imageUrls[] = $url;
             }
         }
 
         $validated['image'] = $imageUrls[0] ?? 'https://via.placeholder.com/400';
         $validated['images'] = !empty($imageUrls) ? json_encode($imageUrls) : null;
         $validated['status'] = $validated['status'] ?? 'active';
-        
+
         $product = Product::create($validated);
-        
-        Log::info('Product created', [
-            'id' => $product->id,
-            'image' => $product->image,
-            'images' => $product->images
-        ]);
-        
         $product->image_url = $product->image_url;
         return response()->json($product->load('category'), 201);
     }
 
-    /**
-     * Display the specified resource.
-     */
     public function show(string $id)
     {
         $product = Product::with('category')->findOrFail($id);
@@ -121,14 +99,10 @@ class ProductController extends Controller
         return response()->json($product);
     }
 
-
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, string $id)
     {
         $product = Product::findOrFail($id);
-        
+
         $validated = $request->validate([
             'name' => 'sometimes|required|string|max:255',
             'description' => 'nullable|string',
@@ -144,20 +118,24 @@ class ProductController extends Controller
         if ($request->hasFile('images')) {
             $imageUrls = [];
             foreach ($request->file('images') as $image) {
-                $path = $image->store('products', 'public');
-                $imageUrls[] = Storage::url($path);
+                try {
+                    $fileName = 'product_' . time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
+                    Storage::disk('supabase')->putFileAs('products', $image, $fileName, 'public');
+                    $imageUrls[] = Storage::disk('supabase')->url('products/' . $fileName);
+                } catch (\Exception $e) {
+                    $path = $image->store('products', 'public');
+                    $imageUrls[] = Storage::disk('public')->url($path);
+                }
             }
             $validated['image'] = $imageUrls[0] ?? $product->image;
             $validated['images'] = $imageUrls;
         }
+
         $product->update($validated);
         $product->image_url = $product->image_url;
         return response()->json($product->load('category'));
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(string $id)
     {
         $product = Product::findOrFail($id);

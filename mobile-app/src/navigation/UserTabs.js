@@ -19,8 +19,11 @@ export default function UserTabs() {
   // Lógica para mostrar la foto de perfil
 
   const BASE_URL = API_URL.replace('/api', '');
+  // profile_photo puede ser URL absoluta (Supabase) o ruta relativa (local)
   const profilePhotoUri = user && user.profile_photo
-    ? `${BASE_URL}/storage/${user.profile_photo}`
+    ? (user.profile_photo.startsWith('http')
+      ? user.profile_photo
+      : `${BASE_URL}/storage/${user.profile_photo}`)
     : null;
 
   return (
