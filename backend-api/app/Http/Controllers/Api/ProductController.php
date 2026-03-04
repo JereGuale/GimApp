@@ -71,11 +71,32 @@ class ProductController extends Controller
         ]);
 
         $imageUrls = [];
-        if (!empty($validated['images'])) {
+
+        if ($request->hasFile('images')) {
+            $supabase = new SupabaseStorage();
+            foreach ($request->file('images') as $image) {
+                $fileName = 'product_' . time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
+                $filePath = 'products/' . $fileName;
+                $url = null;
+                if ($supabase->isConfigured()) {
+                    $url = $supabase->uploadFile($image, $filePath);
+                }
+                if (!$url) {
+                    $path = $image->store('products', 'public');
+                    $appUrl = rtrim(config('app.url', 'https://gimapp.onrender.com'), '/');
+                    $url = $appUrl . '/storage/' . $path;
+                }
+                $imageUrls[] = $url;
+            }
+        }
+        elseif (!empty($validated['images'])) {
+            // Fallback for older base64 JSON requests
             foreach ($validated['images'] as $idx => $b64) {
-                $url = $this->uploadImage($b64, $idx);
-                if ($url)
-                    $imageUrls[] = $url;
+                if (is_string($b64) && str_starts_with($b64, 'data:image')) {
+                    $url = $this->uploadImage($b64, $idx);
+                    if ($url)
+                        $imageUrls[] = $url;
+                }
             }
         }
 

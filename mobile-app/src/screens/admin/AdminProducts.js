@@ -94,14 +94,15 @@ export default function AdminProducts({ route }) {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsMultiple: true,
-        quality: 0.6,
-        base64: true,
+        quality: 0.8,
+        base64: false,
       });
 
       if (!result.canceled) {
         const newImages = result.assets.map(asset => ({
           uri: asset.uri,
-          base64: asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : null,
+          type: asset.mimeType || 'image/jpeg',
+          name: asset.fileName || `photo_${Date.now()}.jpg`,
           id: Math.random().toString()
         }));
         setSelectedImages([...selectedImages, ...newImages]);
@@ -179,9 +180,8 @@ export default function AdminProducts({ route }) {
         imagesCount: selectedImages.length
       });
 
-      const images = selectedImages.length > 0
-        ? selectedImages.map(img => img.base64 || img.uri)
-        : [];
+      // Pass the fully constructed image objects to API layer
+      const images = selectedImages;
 
       if (editingProduct) {
         await SuperAdminService.updateProduct(token, editingProduct.id, {

@@ -71,23 +71,35 @@ export const SuperAdminService = {
     body: JSON.stringify(data)
   }),
   createProduct: async (token, data) => {
-    const payload = {
-      name: data.name,
-      price: data.price,
-      description: data.description || '',
-      category_id: data.category_id,
-      is_featured: data.is_featured ? 1 : 0,
-      images: data.images || []
-    };
+    const formData = new FormData();
+    formData.append('name', data.name);
+    formData.append('price', data.price);
+    formData.append('description', data.description || '');
+    formData.append('category_id', data.category_id);
+    formData.append('is_featured', data.is_featured ? 1 : 0);
+
+    if (data.images && data.images.length > 0) {
+      data.images.forEach((img, index) => {
+        if (img.uri && img.uri.startsWith('http')) {
+          formData.append('images[]', img.uri);
+        } else if (img.uri) {
+          formData.append('images[]', {
+            uri: img.uri,
+            type: img.type || 'image/jpeg',
+            name: img.name || `photo_${index}.jpg`
+          });
+        }
+      });
+    }
 
     const response = await fetch(`${API_URL}/admin/products`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
         Accept: 'application/json'
+        // Content-Type is generated automatically by fetch for FormData
       },
-      body: JSON.stringify(payload)
+      body: formData
     });
 
     if (!response.ok) {
@@ -107,23 +119,35 @@ export const SuperAdminService = {
     return response.json();
   },
   updateProduct: async (token, id, data) => {
-    const payload = {
-      name: data.name,
-      price: data.price,
-      description: data.description || '',
-      category_id: data.category_id,
-      is_featured: data.is_featured ? 1 : 0,
-      images: data.images || []
-    };
+    const formData = new FormData();
+    formData.append('_method', 'PUT'); // Required by Laravel for multipart/form-data via PUT
+    formData.append('name', data.name);
+    formData.append('price', data.price);
+    formData.append('description', data.description || '');
+    formData.append('category_id', data.category_id);
+    formData.append('is_featured', data.is_featured ? 1 : 0);
+
+    if (data.images && data.images.length > 0) {
+      data.images.forEach((img, index) => {
+        if (img.uri && img.uri.startsWith('http')) {
+          formData.append('images[]', img.uri);
+        } else if (img.uri) {
+          formData.append('images[]', {
+            uri: img.uri,
+            type: img.type || 'image/jpeg',
+            name: img.name || `photo_${index}.jpg`
+          });
+        }
+      });
+    }
 
     const response = await fetch(`${API_URL}/admin/products/${id}`, {
-      method: 'PUT',
+      method: 'POST', // We send as POST because Laravel needs _method inside FormData for PUT requests
       headers: {
         Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
         Accept: 'application/json'
       },
-      body: JSON.stringify(payload)
+      body: formData
     });
 
     if (!response.ok) {
