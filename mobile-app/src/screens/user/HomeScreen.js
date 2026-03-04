@@ -516,9 +516,16 @@ export default function HomeScreen() {
 
       {/* ─── Motivational Section ─── */}
       <View style={[styles.motivationalContainer, { paddingHorizontal: contentPadding }]}>
-        <View style={[styles.motivationalCard, { backgroundColor: theme.colors.surface }]}>
+        <View style={[
+          styles.motivationalCard,
+          {
+            backgroundColor: theme.colors.surface,
+            flexDirection: isDesktop ? 'row' : 'column-reverse',
+            padding: isDesktop ? 48 : 20,
+          }
+        ]}>
           <View style={styles.motivationalContent}>
-            <Text style={[styles.motivationalSubtitle, { color: theme.colors.primary }]}>
+            <Text style={[styles.motivationalSubtitle, { color: theme.colors.primary, fontSize: isSmallScreen ? 10 : 12 }]}>
               MANTENTE EN MOVIMIENTO
             </Text>
             <Text style={[styles.motivationalTitle, { color: theme.colors.text }]}>
@@ -530,7 +537,10 @@ export default function HomeScreen() {
           </View>
           <Image
             source={require('../../../assets/images/professional_gym_model.png')}
-            style={styles.motivationalImage}
+            style={[
+              styles.motivationalImage,
+              { width: isDesktop ? 320 : '100%', height: isDesktop ? 320 : 220 }
+            ]}
             contentFit="cover"
             transition={300}
             cachePolicy="memory-disk"
@@ -555,10 +565,16 @@ export default function HomeScreen() {
         <View style={[styles.locationCard, { backgroundColor: theme.colors.surface }]}>
           <Image
             source={require('../../../assets/images/map_location_placeholder.png')}
-            style={styles.locationImage}
+            style={[styles.locationImage, { height: isDesktop ? 350 : winWidth * 0.6 }]}
             resizeMode="contain"
           />
-          <View style={styles.locationInfoRow}>
+          <View style={[
+            styles.locationInfoRow,
+            {
+              flexDirection: isDesktop ? 'row' : 'column',
+              alignItems: isDesktop ? 'center' : 'flex-start'
+            }
+          ]}>
             <View style={styles.locationTextContent}>
               <Text style={[styles.locationGymName, { color: theme.colors.text }]}>
                 Gigafit Gim
@@ -568,7 +584,7 @@ export default function HomeScreen() {
               </Text>
             </View>
             <TouchableOpacity
-              style={styles.locationButton}
+              style={[styles.locationButton, { alignSelf: isDesktop ? 'center' : 'stretch' }]}
               onPress={() => Linking.openURL('https://www.google.com/maps?q=-0.9674838,-80.6790125&z=17&hl=es')}
             >
               <Text style={styles.locationButtonText}>Ver en mapa</Text>
@@ -971,10 +987,8 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   motivationalCard: {
-    flexDirection: !isSmallScreen ? 'row' : 'column-reverse',
     borderRadius: 20,
     overflow: 'hidden',
-    padding: !isSmallScreen ? 48 : 20,
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 32,
@@ -991,7 +1005,6 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   motivationalSubtitle: {
-    fontSize: isSmallScreen ? 10 : 12,
     fontWeight: '800',
     letterSpacing: 1.5,
     marginBottom: 8,
@@ -1008,8 +1021,6 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   motivationalImage: {
-    width: !isSmallScreen ? 320 : '100%',
-    height: !isSmallScreen ? 320 : 220,
     borderRadius: 20,
   },
 
@@ -1054,14 +1065,11 @@ const styles = StyleSheet.create({
   },
   locationImage: {
     width: '100%',
-    height: !isSmallScreen ? 350 : winWidth * 0.6,
     borderRadius: 16,
     marginBottom: 16,
   },
   locationInfoRow: {
-    flexDirection: !isSmallScreen ? 'row' : 'column',
     justifyContent: 'space-between',
-    alignItems: !isSmallScreen ? 'center' : 'flex-start',
     gap: 16,
   },
   locationTextContent: {
@@ -1080,7 +1088,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 12,
-    alignSelf: !isSmallScreen ? 'center' : 'stretch',
     alignItems: 'center',
   },
   locationButtonText: {

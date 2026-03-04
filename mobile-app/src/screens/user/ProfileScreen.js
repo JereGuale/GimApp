@@ -171,7 +171,7 @@ export default function ProfileScreen() {
       {drawerVisible && (
         <TouchableOpacity style={styles.drawerOverlay} activeOpacity={1} onPress={closeDrawer} />
       )}
-      <Animated.View style={[styles.drawerContainer, { transform: [{ translateX: slideAnim }], backgroundColor: theme.colors.surface }]}>
+      <Animated.View style={[styles.drawerContainer, { width: DRAWER_WIDTH, transform: [{ translateX: slideAnim }], backgroundColor: theme.colors.surface }]}>
         <DrawerContent />
       </Animated.View>
 
@@ -367,7 +367,7 @@ const styles = StyleSheet.create({
   mainContent: { padding: 16, paddingBottom: 60, alignSelf: 'center', width: '100%' },
 
   drawerOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 40 },
-  drawerContainer: { position: 'absolute', top: 0, bottom: 0, left: 0, width: DRAWER_WIDTH, zIndex: 50, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 20, elevation: 10 },
+  drawerContainer: { position: 'absolute', top: 0, bottom: 0, left: 0, zIndex: 50, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 20, elevation: 10 },
   drawer: { flex: 1, paddingTop: 60, paddingHorizontal: 20, paddingBottom: 40 },
   drawerHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 40 },
   drawerTitle: { fontSize: 24, fontWeight: '800' },

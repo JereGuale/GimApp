@@ -148,9 +148,9 @@ export default function CategoriesScreen() {
                   >
                     <View style={styles.imageContainer}>
                       {imageUri ? (
-                        <Image source={{ uri: imageUri }} style={styles.productImage} contentFit="cover" transition={300} cachePolicy="memory-disk" />
+                        <Image source={{ uri: imageUri }} style={[styles.productImage, { height: cardWidth * 1.0 }]} contentFit="cover" transition={300} cachePolicy="memory-disk" />
                       ) : (
-                        <View style={[styles.productImage, styles.imagePlaceholder, { backgroundColor: theme.isDark ? '#1F2937' : '#F1F5F9' }]}>
+                        <View style={[styles.productImage, styles.imagePlaceholder, { height: cardWidth * 1.0, backgroundColor: theme.isDark ? '#1F2937' : '#F1F5F9' }]}>
                           <Ionicons name="image-outline" size={36} color={theme.colors.textSecondary} />
                         </View>
                       )}
@@ -327,7 +327,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1, shadowRadius: 8, elevation: 3,
   },
   imageContainer: { position: 'relative', width: '100%' },
-  productImage: { width: '100%', height: cardWidth * 1.0, backgroundColor: '#F1F5F9' },
+  productImage: { width: '100%', backgroundColor: '#F1F5F9' },
   imagePlaceholder: { alignItems: 'center', justifyContent: 'center' },
   priceTag: {
     position: 'absolute', bottom: 8, left: 8,
