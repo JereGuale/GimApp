@@ -348,91 +348,95 @@ export default function AdminDashboard() {
         </View>
 
         {/* Products Table Header */}
-        <View style={[styles.tableHeader, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
-          <Text style={[styles.thCell, styles.thImage, { color: isDark ? '#FFFFFF' : theme.colors.textSecondary }]}>Imagen</Text>
-          <Text style={[styles.thCell, styles.thName, { color: isDark ? '#FFFFFF' : theme.colors.textSecondary }]}>Nombre</Text>
-          <Text style={[styles.thCell, styles.thCategory, { color: isDark ? '#FFFFFF' : theme.colors.textSecondary }]}>Categoría</Text>
-          <Text style={[styles.thCell, styles.thPrice, { color: isDark ? '#FFFFFF' : theme.colors.textSecondary }]}>Precio</Text>
-          <Text style={[styles.thCell, styles.thActions, { color: isDark ? '#FFFFFF' : theme.colors.textSecondary }]}>Acciones</Text>
-        </View>
-
-        {/* Products Rows */}
-        {filteredProducts.length === 0 ? (
-          <View style={[styles.emptyRow, { backgroundColor: theme.colors.surface }]}>
-            <Ionicons name="cube-outline" size={32} color={theme.colors.textSecondary} style={{ marginBottom: 8 }} />
-            <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
-              {searchQuery ? 'No se encontraron productos' : 'No hay productos aún'}
-            </Text>
-          </View>
-        ) : (
-          filteredProducts.map((product, index) => (
-            <View
-              key={product.id}
-              style={[
-                styles.tableRow,
-                {
-                  backgroundColor: index % 2 === 0 ? theme.colors.surface : (isDark ? '#0F1520' : '#F9FAFB'),
-                  borderColor: theme.colors.border
-                }
-              ]}
-            >
-              {/* Image */}
-              <View style={styles.tdImage}>
-                {product.image ? (
-                  <Image source={{ uri: product.image }} style={styles.productThumb} />
-                ) : (
-                  <View style={[styles.productThumb, styles.thumbPlaceholder, { backgroundColor: theme.isDark ? '#1F2937' : '#E5E7EB' }]}>
-                    <Ionicons name="image-outline" size={16} color={theme.colors.textSecondary} />
-                  </View>
-                )}
-              </View>
-
-              {/* Name */}
-              <View style={styles.tdName}>
-                <Text style={[styles.productName, { color: theme.colors.text }]} numberOfLines={1}>
-                  {product.name}
-                </Text>
-              </View>
-
-              {/* Category */}
-              <View style={styles.tdCategory}>
-                <Text style={[styles.productCategory, { color: isDark ? '#D1D5DB' : theme.colors.textSecondary }]} numberOfLines={1}>
-                  {product.category?.name || '-'}
-                </Text>
-              </View>
-
-              {/* Price */}
-              <View style={styles.tdPrice}>
-                <Text style={styles.productPrice}>${Number(product.price || 0).toFixed(2)}</Text>
-              </View>
-
-              {/* Actions */}
-              <View style={styles.tdActions}>
-                <TouchableOpacity
-                  style={[styles.actionBtn, styles.viewBtn]}
-                  onPress={() => handleEditProduct(product)}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="eye-outline" size={16} color="#3B82F6" />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.actionBtn, styles.editBtn]}
-                  onPress={() => handleEditProduct(product)}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="create-outline" size={16} color="#FB923C" />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.actionBtn, styles.deleteBtn]}
-                  onPress={() => handleDeleteProduct(product.id, product.name)}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="trash-outline" size={16} color="#EF4444" />
-                </TouchableOpacity>
-              </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={true} style={{ width: '100%' }}>
+          <View style={{ minWidth: 700, width: '100%' }}>
+            <View style={[styles.tableHeader, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+              <Text style={[styles.thCell, styles.thImage, { color: isDark ? '#FFFFFF' : theme.colors.textSecondary }]}>Imagen</Text>
+              <Text style={[styles.thCell, styles.thName, { color: isDark ? '#FFFFFF' : theme.colors.textSecondary }]}>Nombre</Text>
+              <Text style={[styles.thCell, styles.thCategory, { color: isDark ? '#FFFFFF' : theme.colors.textSecondary }]}>Categoría</Text>
+              <Text style={[styles.thCell, styles.thPrice, { color: isDark ? '#FFFFFF' : theme.colors.textSecondary }]}>Precio</Text>
+              <Text style={[styles.thCell, styles.thActions, { color: isDark ? '#FFFFFF' : theme.colors.textSecondary }]}>Acciones</Text>
             </View>
-          ))
-        )}
+
+            {/* Products Rows */}
+            {filteredProducts.length === 0 ? (
+              <View style={[styles.emptyRow, { backgroundColor: theme.colors.surface }]}>
+                <Ionicons name="cube-outline" size={32} color={theme.colors.textSecondary} style={{ marginBottom: 8 }} />
+                <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
+                  {searchQuery ? 'No se encontraron productos' : 'No hay productos aún'}
+                </Text>
+              </View>
+            ) : (
+              filteredProducts.map((product, index) => (
+                <View
+                  key={product.id}
+                  style={[
+                    styles.tableRow,
+                    {
+                      backgroundColor: index % 2 === 0 ? theme.colors.surface : (isDark ? '#0F1520' : '#F9FAFB'),
+                      borderColor: theme.colors.border
+                    }
+                  ]}
+                >
+                  {/* Image */}
+                  <View style={styles.tdImage}>
+                    {product.image ? (
+                      <Image source={{ uri: product.image }} style={styles.productThumb} />
+                    ) : (
+                      <View style={[styles.productThumb, styles.thumbPlaceholder, { backgroundColor: theme.isDark ? '#1F2937' : '#E5E7EB' }]}>
+                        <Ionicons name="image-outline" size={16} color={theme.colors.textSecondary} />
+                      </View>
+                    )}
+                  </View>
+
+                  {/* Name */}
+                  <View style={styles.tdName}>
+                    <Text style={[styles.productName, { color: theme.colors.text }]} numberOfLines={1}>
+                      {product.name}
+                    </Text>
+                  </View>
+
+                  {/* Category */}
+                  <View style={styles.tdCategory}>
+                    <Text style={[styles.productCategory, { color: isDark ? '#D1D5DB' : theme.colors.textSecondary }]} numberOfLines={1}>
+                      {product.category?.name || '-'}
+                    </Text>
+                  </View>
+
+                  {/* Price */}
+                  <View style={styles.tdPrice}>
+                    <Text style={styles.productPrice}>${Number(product.price || 0).toFixed(2)}</Text>
+                  </View>
+
+                  {/* Actions */}
+                  <View style={styles.tdActions}>
+                    <TouchableOpacity
+                      style={[styles.actionBtn, styles.viewBtn]}
+                      onPress={() => handleEditProduct(product)}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="eye-outline" size={16} color="#3B82F6" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.actionBtn, styles.editBtn]}
+                      onPress={() => handleEditProduct(product)}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="create-outline" size={16} color="#FB923C" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.actionBtn, styles.deleteBtn]}
+                      onPress={() => handleDeleteProduct(product.id, product.name)}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="trash-outline" size={16} color="#EF4444" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))
+            )}
+          </View>
+        </ScrollView>
 
         {/* Product Count */}
         {filteredProducts.length > 0 && (

@@ -468,8 +468,8 @@ export default function AdminReportsScreen() {
                                     <Text style={[styles.boxTitle, { color: theme.colors.text }]}>Reporte Mensual</Text>
                                     <Text style={[styles.boxSubtitle, { color: theme.colors.textSecondary }]}>Clientes con pago de membresía mensual activa e inactiva.</Text>
                                 </View>
-                                <View style={[styles.tableActions, isSmallScreen && { width: '100%', justifyContent: 'space-between' }]}>
-                                    <Text style={{ color: theme.colors.textSecondary, marginRight: 15, fontWeight: 'bold' }}>Mes: {monthlyMonth} / {monthlyYear}</Text>
+                                <View style={[styles.tableActions, isSmallScreen && { width: '100%', flexDirection: 'column', alignItems: 'flex-start', gap: 10 }]}>
+                                    <Text style={{ color: theme.colors.textSecondary, fontWeight: 'bold' }}>Mes: {monthlyMonth} / {monthlyYear}</Text>
                                     <TouchableOpacity style={styles.pdfBtnMonthly} onPress={generateMonthlyPDF}>
                                         <Ionicons name="download-outline" size={18} color="#fff" />
                                         <Text style={styles.pdfBtnText}>Descargar Reporte PDF</Text>
@@ -478,7 +478,7 @@ export default function AdminReportsScreen() {
                             </View>
 
                             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                                <View style={{ minWidth: 700 }}>
+                                <View style={{ minWidth: 800 }}>
                                     <View style={[styles.tableHead, { backgroundColor: isDark ? '#1E293B' : '#F1F5F9' }]}>
                                         <Text style={[styles.th, { flex: 2, color: theme.colors.textSecondary }]}>CLIENTE</Text>
                                         <Text style={[styles.th, { flex: 1, color: theme.colors.textSecondary }]}>MONTO</Text>
@@ -643,7 +643,7 @@ export default function AdminReportsScreen() {
                                     <Text style={[styles.boxTitle, { color: theme.colors.text }]}>Reporte Diario</Text>
                                     <Text style={[styles.boxSubtitle, { color: theme.colors.textSecondary }]}>Lista de clientes registrados con pase de un día.</Text>
                                 </View>
-                                <View style={[styles.tableActions, isSmallScreen && { width: '100%', justifyContent: 'flex-end' }]}>
+                                <View style={[styles.tableActions, isSmallScreen && { width: '100%', justifyContent: 'flex-start' }]}>
                                     <TouchableOpacity style={styles.pdfBtnDaily} onPress={generateDailyPDF}>
                                         <Ionicons name="download-outline" size={18} color="#fff" />
                                         <Text style={styles.pdfBtnText}>Descargar Reporte PDF</Text>
@@ -652,7 +652,7 @@ export default function AdminReportsScreen() {
                             </View>
 
                             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                                <View style={{ minWidth: 600 }}>
+                                <View style={{ minWidth: 700 }}>
                                     <View style={[styles.tableHead, { backgroundColor: isDark ? '#1E293B' : '#F1F5F9' }]}>
                                         <Text style={[styles.th, { flex: 2, color: theme.colors.textSecondary }]}>CLIENTE</Text>
                                         <Text style={[styles.th, { flex: 1.5, color: theme.colors.textSecondary }]}>HORA DE REGISTRO</Text>
