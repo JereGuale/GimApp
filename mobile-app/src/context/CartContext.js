@@ -1,9 +1,37 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const CartContext = createContext();
 
 export function CartProvider({ children }) {
   const [items, setItems] = useState([]);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  // Load cart on mount
+  useEffect(() => {
+    const loadCart = async () => {
+      try {
+        const savedCart = await AsyncStorage.getItem('@cart_items');
+        if (savedCart !== null) {
+          setItems(JSON.parse(savedCart));
+        }
+      } catch (error) {
+        console.error('Error loading cart:', error);
+      } finally {
+        setIsLoaded(true);
+      }
+    };
+    loadCart();
+  }, []);
+
+  // Save cart whenever it changes
+  useEffect(() => {
+    if (isLoaded) {
+      AsyncStorage.setItem('@cart_items', JSON.stringify(items)).catch(err => {
+        console.error('Error saving cart:', err);
+      });
+    }
+  }, [items, isLoaded]);
 
   const addToCart = useCallback((product, quantity = 1) => {
     setItems(prev => {
@@ -51,6 +79,7 @@ export function CartProvider({ children }) {
       clearCart,
       totalItems,
       totalPrice,
+      isLoaded, // Exposing just in case
     }}>
       {children}
     </CartContext.Provider>
