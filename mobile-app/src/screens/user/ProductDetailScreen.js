@@ -31,7 +31,18 @@ export default function ProductDetailScreen() {
     } else if (product.image) {
       rawImages = [product.image];
     }
-    return rawImages.map(img => img.startsWith('http') ? img : `${BASE_URL}/storage/${img}`);
+    return rawImages.map(img => {
+      let url = img;
+      if (url.match(/^http:\/\/(192\.168\.\d+\.\d+|localhost|127\.0\.0\.1):\d+/)) {
+        const pathPart = url.split('/storage/')[1];
+        if (pathPart) {
+          url = `${BASE_URL}/storage/${pathPart}`;
+        }
+      } else if (!url.startsWith('http')) {
+        url = `${BASE_URL}/storage/${url}`;
+      }
+      return url;
+    });
   }, [product]);
   const [activeImage, setActiveImage] = useState(images[0] || null);
 

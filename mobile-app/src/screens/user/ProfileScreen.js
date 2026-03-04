@@ -78,8 +78,15 @@ export default function ProfileScreen() {
         const uploadResult = await ProfileAPI.uploadPhoto(selectedUri);
         if (uploadResult.success) {
           Alert.alert('¡Éxito!', 'Foto de perfil actualizada');
-          if (updateUser) updateUser({ ...user, profile_photo: uploadResult.data.profile_photo });
-          setPhotoKey(Date.now());
+          const newTimestamp = Date.now();
+          if (updateUser) {
+            updateUser({
+              ...user,
+              profile_photo: uploadResult.data.profile_photo,
+              profile_photo_url: uploadResult.data.profile_photo_url ? `${uploadResult.data.profile_photo_url}?t=${newTimestamp}` : null
+            });
+          }
+          setPhotoKey(newTimestamp);
         } else {
           Alert.alert('Error', uploadResult.error || 'No se pudo subir la foto');
           setLocalPhotoUri(null);
@@ -107,12 +114,22 @@ export default function ProfileScreen() {
 
   const profilePhotoUri = (() => {
     if (localPhotoUri) return localPhotoUri;
-    const photo = user?.profile_photo_url || user?.profile_photo;
-    if (!photo) return null;
-    // Supabase or other absolute URL
-    if (photo.startsWith('http')) return `${photo}?t=${photoKey}`;
-    // Legacy relative path
-    return `${BASE_URL}/storage/${photo}?t=${photoKey}`;
+
+    let photoUrl = user?.profile_photo_url || user?.profile_photo;
+    if (!photoUrl) return null;
+
+    // Si la URL es de un backend local (contiene 192.168, localhost, 127.0.0.1) 
+    // y el BASE_URL actual es diferente, la reemplazamos para que cargue correctamente.
+    if (photoUrl.match(/^http:\/\/(192\.168\.\d+\.\d+|localhost|127\.0\.0\.1):\d+/)) {
+      const pathPart = photoUrl.split('/storage/')[1];
+      if (pathPart) {
+        photoUrl = `${BASE_URL}/storage/${pathPart}`;
+      }
+    } else if (!photoUrl.startsWith('http')) {
+      photoUrl = `${BASE_URL}/storage/${photoUrl}`;
+    }
+
+    return photoUrl.includes('?') ? photoUrl : `${photoUrl}?t=${photoKey}`;
   })();
 
   const DrawerContent = () => (

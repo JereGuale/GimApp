@@ -157,7 +157,21 @@ export default function CategoriesScreen() {
                 const imageRaw = product.images && product.images.length > 0
                   ? product.images[0]
                   : product.image || null;
-                const imageUri = imageRaw ? (imageRaw.startsWith('http') ? imageRaw : `${BASE_URL}/storage/${imageRaw}`) : null;
+                let imageUri = null;
+                if (imageRaw) {
+                  if (imageRaw.match(/^http:\/\/(192\.168\.\d+\.\d+|localhost|127\.0\.0\.1):\d+/)) {
+                    const pathPart = imageRaw.split('/storage/')[1];
+                    if (pathPart) {
+                      imageUri = `${BASE_URL}/storage/${pathPart}`;
+                    } else {
+                      imageUri = imageRaw;
+                    }
+                  } else if (!imageRaw.startsWith('http')) {
+                    imageUri = `${BASE_URL}/storage/${imageRaw}`;
+                  } else {
+                    imageUri = imageRaw;
+                  }
+                }
                 return (
                   <TouchableOpacity
                     key={product.id}

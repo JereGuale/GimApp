@@ -28,7 +28,8 @@ class AuthController extends Controller
         ]);
 
         $userRole = \App\Models\Role::where('name', 'user')->first();
-        if ($userRole) $user->assignRole($userRole);
+        if ($userRole)
+            $user->assignRole($userRole);
 
         $token = $user->createToken('auth')->plainTextToken;
         $user->load('roles.permissions');
@@ -65,7 +66,8 @@ class AuthController extends Controller
     public function permissions(Request $request)
     {
         $user = $request->user();
-        if (!$user) return response()->json(['success' => false, 'message' => 'No autenticado'], 401);
+        if (!$user)
+            return response()->json(['success' => false, 'message' => 'No autenticado'], 401);
         $user->load('roles.permissions');
         $permissions = $user->roles->flatMap(fn($r) => $r->permissions)->unique('id')->values();
         return response()->json(['success' => true, 'data' => ['roles' => $user->roles, 'permissions' => $permissions]]);
@@ -106,7 +108,7 @@ class AuthController extends Controller
         if (empty($photoUrl)) {
             // Fallback to local storage
             $request->file('photo')->storeAs('profile_photos', $fileName, 'public');
-            $appUrl = rtrim(env('APP_URL', 'https://gimapp.onrender.com'), '/');
+            $appUrl = rtrim(config('app.url', 'https://gimapp.onrender.com'), '/');
             $photoUrl = $appUrl . '/storage/' . $filePath;
         }
 

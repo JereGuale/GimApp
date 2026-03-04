@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ProfileAPI } from '../services/notificationService';
 
 const AuthContext = createContext();
 
@@ -19,7 +20,15 @@ export function AuthProvider({ children }) {
 
       if (storedToken && storedUser) {
         setToken(storedToken);
-        setUser(JSON.parse(storedUser));
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+
+        // Intenta obtener los datos más recientes del backend
+        ProfileAPI.getProfile().then((res) => {
+          if (res.success && res.data) {
+            updateUser(res.data);
+          }
+        }).catch(() => { });
       }
     } catch (error) {
       console.error('Error loading auth:', error);

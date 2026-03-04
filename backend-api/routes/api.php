@@ -8,7 +8,7 @@ use App\Http\Controllers\Api\CheckinController;
 use App\Http\Controllers\Api\HomeController;
 use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\Api\OfferController;
-use App\Http\Controllers\Admin\ProductController;
+use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\PromotionController;
 use App\Http\Controllers\Api\BannerController;
 use App\Http\Controllers\Api\SettingController;

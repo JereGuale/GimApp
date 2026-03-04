@@ -6,6 +6,7 @@ import HomeScreen from '../screens/user/HomeScreen';
 import CategoriesScreen from '../screens/user/CategoriesScreen';
 import SubscriptionScreen from '../screens/user/SubscriptionScreen';
 import ProfileScreen from '../screens/user/ProfileScreen';
+import { Image as ExpoImage } from 'expo-image';
 import { useTheme } from '../context/ThemeContext';
 import { useCart } from '../context/CartContext';
 import { RoleGuard } from '../components/RoleGuard';
@@ -17,15 +18,23 @@ export default function UserTabs() {
   const { totalItems } = useCart();
   const { user } = require('../context/AuthContext').useAuth();
   // Lógica para mostrar la foto de perfil
-
   const BASE_URL = API_URL.replace('/api', '');
-  // profile_photo puede ser URL absoluta (Supabase) o ruta relativa (local)
-  const profilePhotoUri = user && user.profile_photo
-    ? (user.profile_photo.startsWith('http')
-      ? user.profile_photo
-      : `${BASE_URL}/storage/${user.profile_photo}`)
-    : null;
 
+  const profilePhotoUri = (() => {
+    let photoUrl = user?.profile_photo_url || user?.profile_photo;
+    if (!photoUrl) return null;
+
+    if (photoUrl.match(/^http:\/\/(192\.168\.\d+\.\d+|localhost|127\.0\.0\.1):\d+/)) {
+      const pathPart = photoUrl.split('/storage/')[1];
+      if (pathPart) {
+        photoUrl = `${BASE_URL}/storage/${pathPart}`;
+      }
+    } else if (!photoUrl.startsWith('http')) {
+      photoUrl = `${BASE_URL}/storage/${photoUrl}`;
+    }
+
+    return photoUrl.includes('?') ? photoUrl : `${photoUrl}?t=${Date.now()}`;
+  })();
   return (
     <RoleGuard requiredRole="user">
       <Tab.Navigator
@@ -69,22 +78,26 @@ export default function UserTabs() {
               <TouchableOpacity
                 onPress={() => navigation.navigate('Perfil')}
                 style={{
-                  width: 32, height: 32,
-                  borderRadius: 16,
+                  width: 34, height: 34,
+                  borderRadius: 17,
                   overflow: 'hidden',
                   alignItems: 'center', justifyContent: 'center',
-                  backgroundColor: 'transparent',
-                  marginLeft: 4,
-                  padding: 0,
+                  backgroundColor: theme.isDark ? '#374151' : '#F3F4F6',
+                  marginLeft: 8,
+                  borderWidth: 1,
+                  borderColor: theme.colors.border,
                 }}
               >
                 {profilePhotoUri ? (
-                  <Image
+                  <ExpoImage
                     source={{ uri: profilePhotoUri }}
-                    style={{ width: 32, height: 32, borderRadius: 16, resizeMode: 'cover' }}
+                    style={{ width: '100%', height: '100%' }}
+                    contentFit="cover"
+                    transition={200}
+                    cachePolicy="memory-disk"
                   />
                 ) : (
-                  <Ionicons name="person-circle-outline" size={32} color={'#181818'} />
+                  <Ionicons name="person" size={20} color={theme.colors.textSecondary || '#9CA3AF'} />
                 )}
               </TouchableOpacity>
             </View>

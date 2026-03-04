@@ -117,7 +117,17 @@ export default function CartScreen() {
   const getImage = (product) => {
     const rawImage = product.images && product.images.length > 0 ? product.images[0] : product.image;
     if (!rawImage) return null;
-    return rawImage.startsWith('http') ? rawImage : `${BASE_URL}/storage/${rawImage}`;
+
+    let url = rawImage;
+    if (url.match(/^http:\/\/(192\.168\.\d+\.\d+|localhost|127\.0\.0\.1):\d+/)) {
+      const pathPart = url.split('/storage/')[1];
+      if (pathPart) {
+        url = `${BASE_URL}/storage/${pathPart}`;
+      }
+    } else if (!url.startsWith('http')) {
+      url = `${BASE_URL}/storage/${url}`;
+    }
+    return url;
   };
 
   const renderItem = ({ item }) => {

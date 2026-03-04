@@ -287,7 +287,22 @@ export default function HomeScreen() {
     const isFavorite = favorites.includes(product.id);
 
     const imageRaw = product.images && product.images.length > 0 ? product.images[0] : product.image;
-    const imageUri = imageRaw?.startsWith('http') ? imageRaw : `${BASE_URL}/storage/${imageRaw}`;
+
+    let imageUri = null;
+    if (imageRaw) {
+      if (imageRaw.match(/^http:\/\/(192\.168\.\d+\.\d+|localhost|127\.0\.0\.1):\d+/)) {
+        const pathPart = imageRaw.split('/storage/')[1];
+        if (pathPart) {
+          imageUri = `${BASE_URL}/storage/${pathPart}`;
+        } else {
+          imageUri = imageRaw;
+        }
+      } else if (!imageRaw.startsWith('http')) {
+        imageUri = `${BASE_URL}/storage/${imageRaw}`;
+      } else {
+        imageUri = imageRaw;
+      }
+    }
 
     return (
       <TouchableOpacity
