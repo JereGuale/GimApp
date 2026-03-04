@@ -55,13 +55,9 @@ export default function ProductDetailScreen() {
   if (!product) {
     return (
       <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <View style={[styles.headerBar, { backgroundColor: theme.colors.surface, borderBottomColor: theme.colors.border }]}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.backBtn, { backgroundColor: theme.isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }]}>
-            <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: theme.colors.text }]}>Producto</Text>
-          <View style={{ width: 40 }} />
-        </View>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.floatingBackBtn, { backgroundColor: theme.isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }]}>
+          <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
+        </TouchableOpacity>
         <View style={styles.emptyContainer}>
           <Ionicons name="cube-outline" size={64} color={theme.colors.textSecondary} />
           <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>Producto no disponible</Text>
@@ -82,13 +78,12 @@ export default function ProductDetailScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      {/* Header */}
-      <View style={[styles.headerBar, { backgroundColor: theme.colors.surface, borderBottomColor: theme.colors.border }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.backBtn, { backgroundColor: theme.isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }]}>
+      {/* Floating Header Buttons */}
+      <View style={styles.floatingHeaderArea}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.floatingBackBtn, { backgroundColor: theme.isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }]}>
           <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: theme.colors.text }]} numberOfLines={1}>Detalle del Producto</Text>
-        <TouchableOpacity style={[styles.backBtn, { backgroundColor: theme.isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }]}>
+        <TouchableOpacity style={[styles.floatingBackBtn, { backgroundColor: theme.isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }]}>
           <Ionicons name="share-outline" size={20} color={theme.colors.text} />
         </TouchableOpacity>
       </View>
@@ -208,23 +203,27 @@ export default function ProductDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, position: 'relative' },
 
-  /* Header */
-  headerBar: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingHorizontal: 16, paddingTop: 48, paddingBottom: 12,
-    borderBottomWidth: 1,
+  /* Floating Header */
+  floatingHeaderArea: {
+    position: 'absolute',
+    top: 50,
+    left: 16,
+    right: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    zIndex: 10,
   },
-  backBtn: {
-    width: 40, height: 40, borderRadius: 12,
+  floatingBackBtn: {
+    width: 44, height: 44, borderRadius: 22,
     alignItems: 'center', justifyContent: 'center',
+    backdropFilter: 'blur(10px)',
   },
-  headerTitle: { flex: 1, fontSize: 17, fontWeight: '700', textAlign: 'center' },
 
   /* Content */
-  scrollContent: { padding: 16, paddingBottom: 120 },
-  scrollContentWide: { flexDirection: 'row', gap: 24 },
+  scrollContent: { padding: 16, paddingTop: 16, paddingBottom: 160, flexGrow: 1 },
+  scrollContentWide: { flexDirection: 'row', gap: 24, paddingTop: 80 },
 
   /* Gallery */
   gallerySection: { marginBottom: 20 },
