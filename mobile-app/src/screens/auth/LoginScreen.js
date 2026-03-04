@@ -1,5 +1,5 @@
 
-import { View, Text, TouchableOpacity, StyleSheet, Image, TextInput, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image, TextInput, KeyboardAvoidingView, Platform, Animated } from 'react-native';
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
@@ -8,20 +8,41 @@ import { authLogin } from '../../services/api';
 export default function LoginScreen({ navigation }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [keepLoggedIn, setKeepLoggedIn] = useState(true);
+
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState('error');
+  const [toastVisible, setToastVisible] = useState(false);
+
   const { login } = useAuth();
+
+  const showToast = (message, type = 'error') => {
+    setToastMessage(message);
+    setToastType(type);
+    setToastVisible(true);
+    setTimeout(() => {
+      setToastVisible(false);
+    }, 3500);
+  };
 
   const handleLogin = async () => {
     try {
       if (!username.trim() || !password.trim()) {
-        Alert.alert('Error', 'Ingresa correo y contraseña');
+        showToast('Ingresa correo y contraseña', 'error');
         return;
       }
       const { user, token } = await authLogin(username.trim(), password);
       console.log('[LoginScreen] Response from backend:', { user, token });
       console.log('[LoginScreen] User role:', user?.role);
-      await login(user, token);
+
+      showToast('¡Inicio de sesión exitoso!', 'success');
+
+      setTimeout(async () => {
+        await login(user, token, keepLoggedIn);
+      }, 1000);
+
     } catch (error) {
-      Alert.alert('Error', 'Credenciales invalidas');
+      showToast('Credenciales inválidas o cuenta no existe', 'error');
       console.error('Login error:', error);
     }
   };
@@ -33,6 +54,18 @@ export default function LoginScreen({ navigation }) {
         style={styles.bgImage}
       />
       <View style={styles.backdrop} />
+
+      {toastVisible && (
+        <View style={styles.toast}>
+          <Ionicons
+            name={toastType === 'success' ? 'checkmark-circle' : 'alert-circle'}
+            size={20}
+            color={toastType === 'success' ? '#10B981' : '#EF4444'}
+          />
+          <Text style={styles.toastText}>{toastMessage}</Text>
+        </View>
+      )}
+
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.content}
@@ -57,6 +90,17 @@ export default function LoginScreen({ navigation }) {
               onChangeText={setPassword}
             />
           </View>
+
+          <TouchableOpacity
+            style={styles.checkboxContainer}
+            onPress={() => setKeepLoggedIn(!keepLoggedIn)}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.checkbox, keepLoggedIn && styles.checkboxChecked]}>
+              {keepLoggedIn && <Ionicons name="checkmark" size={14} color="#FFFFFF" />}
+            </View>
+            <Text style={styles.checkboxLabel}>Guardar inicio de sesión</Text>
+          </TouchableOpacity>
 
           <TouchableOpacity style={styles.btn} onPress={handleLogin}>
             <Text style={styles.btnText}>INICIAR SESION</Text>
@@ -108,6 +152,31 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(8, 10, 14, 0.55)'
   },
+  toast: {
+    position: 'absolute',
+    bottom: 50,
+    alignSelf: 'center',
+    backgroundColor: 'rgba(15, 23, 42, 0.95)',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 999,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    zIndex: 100,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)'
+  },
+  toastText: {
+    color: '#F8FAFC',
+    fontSize: 14,
+    fontWeight: '500',
+  },
   content: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
   card: {
     width: '100%',
@@ -129,6 +198,33 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.08)'
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    marginBottom: 20,
+    marginTop: -8,
+    marginLeft: 4,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)'
+  },
+  checkboxChecked: {
+    backgroundColor: '#2E8BFF',
+    borderColor: '#2E8BFF'
+  },
+  checkboxLabel: {
+    color: '#9CA3AF',
+    fontSize: 14,
   },
   btn: {
     width: '100%',

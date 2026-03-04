@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Cache;
+
 class ProductController extends Controller
 {
     /**
@@ -13,7 +15,11 @@ class ProductController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Product::with('category');
+        // Cache identical catalog API requests for 5 minutes
+        $cacheKey = 'products_index_' . md5(json_encode($request->all()));
+
+        $products = Cache::remember($cacheKey, 300, function () use ($request) {
+            $query = Product::with('category');
 
         // Filtrar por categoría si se proporciona
         if ($request->has('category_id')) {
@@ -30,11 +36,15 @@ class ProductController extends Controller
             $query->where('name', 'like', '%' . $request->search . '%');
         }
 
-        $products = $query->get();
-        // Agrega image_url en cada producto
-        $products->each(function($product) {
-            $product->image_url = $product->image_url;
+            $productsData = $query->get();
+            // Agrega image_url en cada producto
+            $productsData->each(function($product) {
+                // accessing the accessor to ensure it's loaded in the JSON
+                $product->image_url = $product->image_url;
+            });
+            return $productsData;
         });
+
         return response()->json($products);
     }
 

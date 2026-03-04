@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Image,
+  View, Text, StyleSheet, TouchableOpacity,
   ScrollView, Dimensions, Alert
 } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
@@ -93,7 +94,9 @@ export default function ProductDetailScreen() {
             <Image
               source={{ uri: activeImage || images[0] || 'https://via.placeholder.com/400' }}
               style={styles.mainImage}
-              resizeMode="contain"
+              contentFit="contain"
+              transition={300}
+              cachePolicy="memory-disk"
             />
             <TouchableOpacity style={[styles.favBtn, { backgroundColor: theme.isDark ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.8)' }]}>
               <Ionicons name="star-outline" size={22} color="#FBBF24" />
@@ -117,7 +120,9 @@ export default function ProductDetailScreen() {
                   <Image
                     source={{ uri: img }}
                     style={{ width: '100%', height: '100%' }}
-                    resizeMode="cover"
+                    contentFit="cover"
+                    transition={300}
+                    cachePolicy="memory-disk"
                   />
                 </TouchableOpacity>
               ))}

@@ -1,8 +1,9 @@
 import React, { useEffect, useRef } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, Image,
+  View, Text, StyleSheet, FlatList,
   TouchableOpacity, Alert, Dimensions, Animated, Platform
 } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
@@ -126,7 +127,7 @@ export default function CartScreen() {
         {/* Product image */}
         <View style={styles.itemImageWrap}>
           {img ? (
-            <Image source={{ uri: img }} style={styles.itemImage} resizeMode="cover" />
+            <Image source={{ uri: img }} style={styles.itemImage} contentFit="cover" transition={300} cachePolicy="memory-disk" />
           ) : (
             <View style={[styles.itemImageFallback, { backgroundColor: theme.isDark ? '#1F2937' : '#F3F4F6' }]}>
               <Ionicons name="cube-outline" size={24} color={theme.colors.textSecondary} />

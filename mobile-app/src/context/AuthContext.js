@@ -16,7 +16,7 @@ export function AuthProvider({ children }) {
     try {
       const storedToken = await AsyncStorage.getItem('token');
       const storedUser = await AsyncStorage.getItem('user');
-      
+
       if (storedToken && storedUser) {
         setToken(storedToken);
         setUser(JSON.parse(storedUser));
@@ -28,10 +28,12 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const login = async (userData, authToken) => {
+  const login = async (userData, authToken, keepLoggedIn = true) => {
     try {
-      await AsyncStorage.setItem('token', authToken);
-      await AsyncStorage.setItem('user', JSON.stringify(userData));
+      if (keepLoggedIn) {
+        await AsyncStorage.setItem('token', authToken);
+        await AsyncStorage.setItem('user', JSON.stringify(userData));
+      }
       setToken(authToken);
       setUser(userData);
     } catch (error) {

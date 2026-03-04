@@ -56,6 +56,16 @@ export const SuperAdminService = {
   deleteOffer: (token, id) => withAuth(`${API_URL}/admin/offers/${id}`, token, {
     method: 'DELETE'
   }),
+  getReportDashboard: (token) => withAuth(`${API_URL}/admin/reports/dashboard`, token),
+  getDailyReports: (token, date) => withAuth(`${API_URL}/admin/reports/daily?date=${date}`, token),
+  getMonthlyReports: (token, month, year) => withAuth(`${API_URL}/admin/reports/monthly?month=${month}&year=${year}`, token),
+  registerDailyIncome: (token, data) => withAuth(`${API_URL}/admin/reports/daily`, token, {
+    method: 'POST',
+    body: JSON.stringify(data)
+  }),
+  deleteDailyIncome: (token, id) => withAuth(`${API_URL}/admin/reports/daily/${id}`, token, {
+    method: 'DELETE'
+  }),
   createCategory: (token, data) => withAuth(`${API_URL}/admin/categories`, token, {
     method: 'POST',
     body: JSON.stringify(data)

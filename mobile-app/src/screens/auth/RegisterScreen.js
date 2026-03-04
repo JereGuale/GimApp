@@ -10,8 +10,9 @@ import {
   Platform,
   ScrollView,
   useWindowDimensions,
-  Alert
+  Animated
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { authRegister } from '../../services/api';
 
@@ -23,34 +24,73 @@ export default function RegisterScreen({ navigation }) {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState('error');
+  const [toastVisible, setToastVisible] = useState(false);
+
   const { login } = useAuth();
   const { width } = useWindowDimensions();
   const isNarrow = width < 360;
   const inputHalfStyle = isNarrow ? styles.inputFull : styles.inputHalf;
 
+  const showToast = (message, type = 'error') => {
+    setToastMessage(message);
+    setToastType(type);
+    setToastVisible(true);
+    setTimeout(() => {
+      setToastVisible(false);
+    }, 3500);
+  };
+
   const handleRegister = async () => {
     if (!fullName || !email || !username || !password) {
-      Alert.alert('Error', 'Por favor completa todos los campos requeridos');
+      showToast('Por favor completa todos los campos requeridos', 'error');
+      return;
+    }
+
+    // Validar nombre sin números
+    const nameRegex = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/;
+    if (!nameRegex.test(fullName)) {
+      showToast('El nombre no puede contener números ni caracteres especiales', 'error');
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Las contraseñas no coinciden');
+      showToast('Las contraseñas no coinciden', 'error');
       return;
     }
 
     if (!accepted) {
-      Alert.alert('Error', 'Debes aceptar los términos y condiciones');
+      showToast('Debes aceptar los términos y condiciones', 'error');
       return;
     }
 
     try {
       const { user, token } = await authRegister(fullName, email, password, confirmPassword);
-      await login(user, token);
-      Alert.alert('Éxito', 'Cuenta creada exitosamente');
+      showToast('¡Cuenta creada con éxito!', 'success');
+
+      // Esperar a que el toast se vea antes de cambiar de pantalla
+      setTimeout(async () => {
+        await login(user, token);
+      }, 1500);
+
     } catch (error) {
-      Alert.alert('Error', 'No se pudo crear la cuenta');
       console.error('Register error:', error);
+      let errorMsg = 'No se pudo crear la cuenta';
+      if (error.message) {
+        if (error.message.includes('email has already been taken') || error.message.includes('correo ya ha sido registrado')) {
+          errorMsg = 'Ese correo ya está registrado';
+        } else if (error.message.includes('JSON')) {
+          try {
+            let parsed = JSON.parse(error.message);
+            if (parsed.errors && parsed.errors.email) {
+              errorMsg = 'Ese correo ya está registrado';
+            }
+          } catch (e) { }
+        }
+      }
+      showToast(errorMsg, 'error');
     }
   };
 
@@ -61,17 +101,29 @@ export default function RegisterScreen({ navigation }) {
       resizeMode="cover"
     >
       <View style={styles.backdrop} />
+
+      {toastVisible && (
+        <View style={styles.toast}>
+          <Ionicons
+            name={toastType === 'success' ? 'checkmark-circle' : 'alert-circle'}
+            size={20}
+            color={toastType === 'success' ? '#10B981' : '#EF4444'}
+          />
+          <Text style={styles.toastText}>{toastMessage}</Text>
+        </View>
+      )}
+
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.content}>
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <View style={styles.card}>
             <View style={styles.cardHeader}>
               <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                <Text style={styles.backIcon}>{'<'}</Text>
+                <Ionicons name="arrow-back" size={26} color="#FFFFFF" />
               </TouchableOpacity>
               <Text style={styles.brand}>APP FITNESS</Text>
             </View>
 
-            <Text style={styles.title}>CREAR CUENTA</Text>
+            <Text style={styles.title}>Crear cuenta</Text>
 
             <View style={styles.formRow}>
               <TextInput
@@ -151,44 +203,66 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(8, 10, 14, 0.55)'
   },
+  toast: {
+    position: 'absolute',
+    bottom: 50,
+    alignSelf: 'center',
+    backgroundColor: 'rgba(15, 23, 42, 0.95)',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 999,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    zIndex: 100,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)'
+  },
+  toastText: {
+    color: '#F8FAFC',
+    fontSize: 14,
+    fontWeight: '500',
+  },
   content: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
-  scrollContent: { flexGrow: 1, justifyContent: 'center', alignItems: 'center' },
+  scrollContent: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 40 },
   card: {
     width: '100%',
-    maxWidth: 480,
+    maxWidth: 600, // Made wider
     backgroundColor: 'rgba(21, 24, 32, 0.75)',
     borderRadius: 24,
-    paddingVertical: 24,
-    paddingHorizontal: 20
+    paddingVertical: 40,
+    paddingHorizontal: 32
   },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
   backButton: {
     position: 'absolute',
-    left: 0,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    left: -5,
+    padding: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.08)'
   },
-  backIcon: { color: '#8BD3FF', fontSize: 18, fontWeight: '700' },
-  brand: { color: '#FFFFFF', fontSize: 18, fontWeight: '700', letterSpacing: 1 },
-  title: { color: '#FFFFFF', textAlign: 'center', fontSize: 16, fontWeight: '700', marginBottom: 14 },
+  brand: { color: '#2E8BFF', fontSize: 16, fontWeight: '800', letterSpacing: 1 },
+  title: { color: '#FFFFFF', textAlign: 'center', fontSize: 24, fontWeight: '700', marginBottom: 28, letterSpacing: 0.5, textTransform: 'uppercase' },
   formRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    marginBottom: 12
+    marginBottom: 16
   },
   input: {
-    height: 46,
+    height: 52,
     borderRadius: 16,
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
     backgroundColor: 'rgba(255, 255, 255, 0.06)',
     color: '#FFFFFF',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)'
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    fontSize: 15
   },
   inputHalf: { width: '48%' },
   inputFull: { width: '100%', marginBottom: 10 },

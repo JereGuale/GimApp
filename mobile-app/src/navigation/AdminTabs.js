@@ -3,6 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { TouchableOpacity, View, Text } from 'react-native';
 import React, { useState } from 'react';
 import AdminDashboard from '../screens/admin/AdminDashboard';
+import AdminReportsScreen from '../screens/admin/AdminReportsScreen';
 import AdminCategories from '../screens/admin/AdminCategories';
 import AdminProducts from '../screens/admin/AdminProducts';
 import AdminProfileScreen from '../screens/admin/AdminProfileScreen';
@@ -134,6 +135,14 @@ export default function AdminTabs() {
           options={{
             title: 'Panel',
             tabBarIcon: ({ color, size }) => <Ionicons name="settings" size={size} color={color} />
+          }}
+        />
+        <Tab.Screen
+          name="Reportes"
+          component={AdminReportsScreen}
+          options={{
+            title: 'Reportes',
+            tabBarIcon: ({ color, size }) => <Ionicons name="pie-chart" size={size} color={color} />
           }}
         />
         <Tab.Screen

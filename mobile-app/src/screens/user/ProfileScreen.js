@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Alert, ActivityIndicator, TextInput, Modal, Animated, Dimensions, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator, TextInput, Modal, Animated, Dimensions, Platform } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
@@ -161,7 +162,7 @@ export default function ProfileScreen() {
           </TouchableOpacity>
           <TouchableOpacity onPress={handlePickPhoto} style={[styles.headerAvatarContainer, { borderColor: theme.colors.surface }]}>
             {profilePhotoUri ? (
-              <Image source={{ uri: profilePhotoUri }} style={styles.headerAvatar} />
+              <Image source={{ uri: profilePhotoUri }} style={styles.headerAvatar} contentFit="cover" transition={300} cachePolicy="memory-disk" />
             ) : (
               <View style={[styles.headerAvatarPlaceholder, { backgroundColor: theme.isDark ? '#374151' : '#F3F4F6' }]}>
                 <Ionicons name="person" size={20} color={theme.colors.textSecondary} />
@@ -262,7 +263,7 @@ export default function ProfileScreen() {
               </View>
               <View style={[styles.purchaseItem, { borderBottomColor: theme.colors.border }]}>
                 <View style={[styles.purchaseImgPlaceholder, { backgroundColor: theme.isDark ? '#374151' : '#F3F4F6' }]}>
-                  <Image source={{ uri: 'https://images.unsplash.com/photo-1593095948071-474c5cc2989d?auto=format&fit=crop&q=80&w=150' }} style={styles.purchaseImg} />
+                  <Image source={{ uri: 'https://images.unsplash.com/photo-1593095948071-474c5cc2989d?auto=format&fit=crop&q=80&w=150' }} style={styles.purchaseImg} contentFit="cover" transition={300} cachePolicy="memory-disk" />
                 </View>
                 <View style={styles.purchaseInfo}>
                   <Text style={[styles.purchaseName, { color: theme.colors.text }]}>Proteína Whey Isolate 2kg - Sabor Vainilla</Text>
@@ -276,7 +277,7 @@ export default function ProfileScreen() {
               </View>
               <View style={[styles.purchaseItem, { borderBottomWidth: 0 }]}>
                 <View style={[styles.purchaseImgPlaceholder, { backgroundColor: theme.isDark ? '#374151' : '#F3F4F6' }]}>
-                  <Image source={{ uri: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&q=80&w=150' }} style={styles.purchaseImg} />
+                  <Image source={{ uri: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&q=80&w=150' }} style={styles.purchaseImg} contentFit="cover" transition={300} cachePolicy="memory-disk" />
                 </View>
                 <View style={styles.purchaseInfo}>
                   <Text style={[styles.purchaseName, { color: theme.colors.text }]}>Camiseta de Entrenamiento DryFit - Talla M</Text>
@@ -300,7 +301,7 @@ export default function ProfileScreen() {
             <Text style={[styles.editModalTitle, { color: theme.colors.text }]}>Editar Perfil</Text>
             <TouchableOpacity onPress={handlePickPhoto} disabled={uploadingPhoto} style={styles.editPhotoSection}>
               {profilePhotoUri ? (
-                <Image source={{ uri: profilePhotoUri }} style={styles.editAvatar} />
+                <Image source={{ uri: profilePhotoUri }} style={styles.editAvatar} contentFit="cover" transition={300} cachePolicy="memory-disk" />
               ) : (
                 <View style={[styles.editAvatarPlaceholder, { borderColor: theme.colors.primary, backgroundColor: theme.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}>
                   <Ionicons name="person" size={32} color={theme.colors.text} />

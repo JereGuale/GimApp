@@ -15,30 +15,27 @@ class CorsMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $allowedOrigins = [
-            'http://localhost:8081',
-            'http://10.0.2.2:8081',
-            'http://localhost:8080',
-            'http://localhost:3000',
-            'http://127.0.0.1:8081',
-        ];
-
         $origin = $request->header('Origin');
+        $allowOrigin = $origin ? $origin : '*';
 
-        if (in_array($origin, $allowedOrigins)) {
-            return $next($request)
-                ->header('Access-Control-Allow-Origin', $origin)
+        if ($request->getMethod() === 'OPTIONS') {
+            return response('', 200)
+                ->header('Access-Control-Allow-Origin', $allowOrigin)
                 ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH')
                 ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, X-Requested-With')
                 ->header('Access-Control-Allow-Credentials', 'true');
         }
 
-        if ($request->getMethod() === 'OPTIONS') {
-            return response('', 200)
+        $response = $next($request);
+
+        // Append CORS headers to normal requests
+        if (method_exists($response, 'header')) {
+            $response->header('Access-Control-Allow-Origin', $allowOrigin)
                 ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH')
-                ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, X-Requested-With');
+                ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, X-Requested-With')
+                ->header('Access-Control-Allow-Credentials', 'true');
         }
 
-        return $next($request);
+        return $response;
     }
 }

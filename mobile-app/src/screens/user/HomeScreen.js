@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Image,
   TextInput,
   Dimensions,
   FlatList,
@@ -14,6 +13,7 @@ import {
   useWindowDimensions,
   Linking,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
@@ -245,7 +245,9 @@ export default function HomeScreen() {
       <Image
         source={{ uri: item.image_url || 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=60&w=800&auto=format&fit=crop' }}
         style={styles.bannerImage}
-        resizeMode="cover"
+        contentFit="cover"
+        transition={300}
+        cachePolicy="memory-disk"
       />
       {/* Dark gradient overlay */}
       <View style={styles.bannerGradient} />
@@ -304,7 +306,9 @@ export default function HomeScreen() {
           <Image
             source={{ uri: imageUri }}
             style={[styles.productImage, { height: productImageHeight }]}
-            resizeMode="cover"
+            contentFit="cover"
+            transition={300}
+            cachePolicy="memory-disk"
           />
           {/* Price tag */}
           <View style={styles.priceTag}>
@@ -509,7 +513,9 @@ export default function HomeScreen() {
           <Image
             source={require('../../../assets/images/professional_gym_model.png')}
             style={styles.motivationalImage}
-            resizeMode="cover"
+            contentFit="cover"
+            transition={300}
+            cachePolicy="memory-disk"
           />
         </View>
       </View>

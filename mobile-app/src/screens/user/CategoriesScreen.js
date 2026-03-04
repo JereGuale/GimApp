@@ -2,8 +2,9 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Image, ActivityIndicator, RefreshControl, Dimensions,
+  ActivityIndicator, RefreshControl, Dimensions,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
@@ -169,7 +170,7 @@ export default function CategoriesScreen() {
                   >
                     <View style={styles.imageContainer}>
                       {imageUri ? (
-                        <Image source={{ uri: imageUri }} style={styles.productImage} resizeMode="cover" />
+                        <Image source={{ uri: imageUri }} style={styles.productImage} contentFit="cover" transition={300} cachePolicy="memory-disk" />
                       ) : (
                         <View style={[styles.productImage, styles.imagePlaceholder, { backgroundColor: theme.isDark ? '#1F2937' : '#F1F5F9' }]}>
                           <Ionicons name="image-outline" size={36} color={theme.colors.textSecondary} />
@@ -227,7 +228,9 @@ export default function CategoriesScreen() {
             <Image
               source={typeof bgImage === 'string' ? { uri: bgImage } : bgImage}
               style={styles.categoryBgImg}
-              resizeMode="cover"
+              contentFit="cover"
+              transition={300}
+              cachePolicy="memory-disk"
             />
 
             {/* Gradient overlay: dark left → transparent right */}

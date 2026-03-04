@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Cache;
 
 class Product extends Model
 {
@@ -23,6 +24,17 @@ class Product extends Model
         'is_featured' => 'boolean',
         'images' => 'array'
     ];
+
+    protected static function booted()
+    {
+        static::saved(function ($product) {
+            Cache::flush();
+        });
+
+        static::deleted(function ($product) {
+            Cache::flush();
+        });
+    }
 
     public function category()
     {

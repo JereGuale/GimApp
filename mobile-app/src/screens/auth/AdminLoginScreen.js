@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, StyleSheet, ImageBackground, TextInput, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ImageBackground, TextInput, KeyboardAvoidingView, Platform, Animated } from 'react-native';
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
@@ -7,26 +7,47 @@ import { authLogin } from '../../services/api';
 export default function AdminLoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [keepLoggedIn, setKeepLoggedIn] = useState(true);
+
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState('error');
+  const [toastVisible, setToastVisible] = useState(false);
+
   const { login } = useAuth();
+
+  const showToast = (message, type = 'error') => {
+    setToastMessage(message);
+    setToastType(type);
+    setToastVisible(true);
+    setTimeout(() => {
+      setToastVisible(false);
+    }, 3500);
+  };
 
   const handleLogin = async () => {
     try {
       if (!email.trim() || !password.trim()) {
-        Alert.alert('Error', 'Ingresa correo y contraseña');
+        showToast('Ingresa correo y contraseña', 'error');
         return;
       }
       const { user, token } = await authLogin(email.trim(), password);
-      
+
       // Validar que el usuario sea admin
       if (user.role !== 'admin') {
-        Alert.alert('Acceso Denegado', 'Solo administradores pueden acceder aquí');
+        showToast('Solo administradores pueden acceder aquí', 'error');
         return;
       }
-      
+
       console.log('[AdminLoginScreen] Admin login successful - role:', user?.role);
-      await login(user, token);
+
+      showToast('¡Inicio de sesión exitoso!', 'success');
+
+      setTimeout(async () => {
+        await login(user, token, keepLoggedIn);
+      }, 1000);
+
     } catch (error) {
-      Alert.alert('Error', 'Credenciales invalidas');
+      showToast('Credenciales inválidas o cuenta no existe', 'error');
       console.error('Admin login error:', error);
     }
   };
@@ -38,9 +59,20 @@ export default function AdminLoginScreen({ navigation }) {
       resizeMode="cover"
     >
       <View style={styles.backdrop} />
-      
+
+      {toastVisible && (
+        <View style={styles.toast}>
+          <Ionicons
+            name={toastType === 'success' ? 'checkmark-circle' : 'alert-circle'}
+            size={20}
+            color={toastType === 'success' ? '#10B981' : '#EF4444'}
+          />
+          <Text style={styles.toastText}>{toastMessage}</Text>
+        </View>
+      )}
+
       {/* Botón de volver */}
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.backButton}
         onPress={() => navigation.goBack()}
       >
@@ -55,7 +87,7 @@ export default function AdminLoginScreen({ navigation }) {
           <View style={styles.iconContainer}>
             <Ionicons name="shield-checkmark" size={60} color="#22D3EE" />
           </View>
-          
+
           <Text style={styles.title}>PANEL ADMINISTRADOR</Text>
           <Text style={styles.subtitle}>Acceso solo para administradores</Text>
 
@@ -79,6 +111,17 @@ export default function AdminLoginScreen({ navigation }) {
             />
           </View>
 
+          <TouchableOpacity
+            style={styles.checkboxContainer}
+            onPress={() => setKeepLoggedIn(!keepLoggedIn)}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.checkbox, keepLoggedIn && styles.checkboxChecked]}>
+              {keepLoggedIn && <Ionicons name="checkmark" size={14} color="#000000" />}
+            </View>
+            <Text style={styles.checkboxLabel}>Guardar inicio de sesión</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity style={styles.btn} onPress={handleLogin}>
             <Text style={styles.btnText}>INICIAR SESIÓN</Text>
           </TouchableOpacity>
@@ -93,6 +136,31 @@ const styles = StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(8, 10, 14, 0.7)'
+  },
+  toast: {
+    position: 'absolute',
+    bottom: 50,
+    alignSelf: 'center',
+    backgroundColor: 'rgba(15, 23, 42, 0.95)',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 999,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    zIndex: 100,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)'
+  },
+  toastText: {
+    color: '#F8FAFC',
+    fontSize: 14,
+    fontWeight: '500',
   },
   backButton: {
     position: 'absolute',
@@ -118,12 +186,12 @@ const styles = StyleSheet.create({
   iconContainer: {
     marginBottom: 16
   },
-  title: { 
-    color: '#22D3EE', 
-    fontSize: 24, 
-    fontWeight: '800', 
-    letterSpacing: 1, 
-    marginBottom: 8 
+  title: {
+    color: '#22D3EE',
+    fontSize: 24,
+    fontWeight: '800',
+    letterSpacing: 1,
+    marginBottom: 8
   },
   subtitle: {
     color: '#9CA3AF',
@@ -141,6 +209,33 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(34, 211, 238, 0.2)'
   },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    marginBottom: 20,
+    marginTop: -8,
+    marginLeft: 4,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)'
+  },
+  checkboxChecked: {
+    backgroundColor: '#22D3EE',
+    borderColor: '#22D3EE'
+  },
+  checkboxLabel: {
+    color: '#9CA3AF',
+    fontSize: 14,
+  },
   btn: {
     width: '100%',
     backgroundColor: '#22D3EE',
@@ -152,10 +247,10 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 5
   },
-  btnText: { 
-    color: '#000000', 
-    textAlign: 'center', 
-    fontWeight: '700', 
+  btnText: {
+    color: '#000000',
+    textAlign: 'center',
+    fontWeight: '700',
     letterSpacing: 0.5,
     fontSize: 15
   }
