@@ -65,7 +65,11 @@ class User extends Authenticatable
     {
         if (!$this->profile_photo)
             return null;
-        // Usa asset() para devolver la URL completa
+        // Si ya es URL absoluta (Supabase o Render), devolverla tal cual
+        if (str_starts_with($this->profile_photo, 'http')) {
+            return $this->profile_photo;
+        }
+        // Ruta relativa: usar asset()
         return asset('storage/' . $this->profile_photo);
     }
 

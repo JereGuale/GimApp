@@ -1,24 +1,25 @@
 #!/usr/bin/env bash
 # Script de build para Render.com
-# Se ejecuta automáticamente en cada deploy
+set -o errexit
 
-set -o errexit  # Detener si hay algún error
-
-# Instalar dependencias de PHP (sin paquetes de desarrollo)
+# Instalar dependencias
 composer install --no-dev --optimize-autoloader
 
-# Generar clave de aplicación si no existe
+# Generar clave si no existe
 php artisan key:generate --force
 
-# Limpiar y generar cachés para producción
+# Crear symlink de storage
+php artisan storage:link || true
+
+# Cachear config, rutas y vistas
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 
-# Ejecutar migraciones de base de datos
+# Migraciones
 php artisan migrate --force
 
-# Optimizar la aplicación
+# Optimizar
 php artisan optimize
 
-echo "✅ Build completado exitosamente"
+echo "Build completado"

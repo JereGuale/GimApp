@@ -13,9 +13,9 @@ class SupabaseStorage
 
     public function __construct()
     {
-        $this->projectUrl = rtrim(env('SUPABASE_URL', 'https://edogsfwdluaubsfdknul.supabase.co'), '/');
-        $this->serviceKey = env('SUPABASE_SERVICE_KEY', '');
-        $this->bucket = env('SUPABASE_STORAGE_BUCKET', 'gym-images');
+        $this->projectUrl = rtrim(config('supabase.url', 'https://edogsfwdluaubsfdknul.supabase.co'), '/');
+        $this->serviceKey = config('supabase.service_key', '');
+        $this->bucket = config('supabase.storage_bucket', 'gym-images');
     }
 
     /**

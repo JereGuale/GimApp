@@ -1,0 +1,5 @@
+{
+    "require-dev": {
+        "fly-apps/dockerfile-laravel": "^1.0"
+    }
+}
