@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
@@ -14,7 +14,6 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // CORS must run FIRST (before routing) to handle OPTIONS preflight
         $middleware->prepend(\App\Http\Middleware\CorsMiddleware::class);
         $middleware->alias([
             'admin' => \App\Http\Middleware\AdminMiddleware::class,
@@ -22,7 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        // Return JSON 401 for unauthenticated API requests
+        $exceptions->shouldRenderJsonWhen(fn($request, $e) => $request->is('api/*'));
         $exceptions->render(function (AuthenticationException $e, Request $request) {
             if ($request->is('api/*') || $request->expectsJson()) {
                 return response()->json(['message' => 'Unauthenticated.'], 401);
