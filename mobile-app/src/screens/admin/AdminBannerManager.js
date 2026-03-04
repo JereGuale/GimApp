@@ -8,8 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
-
-const { width: screenWidth } = Dimensions.get('window');
+import { useResponsive } from '../../hooks/useResponsive';
 
 // Import centralized API_URL (auto-switches between local and Render in production)
 import { API_URL } from '../../services/api';
@@ -29,8 +28,7 @@ const apiRequest = async (url, options = {}) => {
 export default function AdminBannerManager() {
   const { theme } = useTheme();
   const { token } = useAuth();
-  const { width: winWidth } = useWindowDimensions();
-  const isWide = winWidth > 700;
+  const { isDesktop: isWide, isSmallScreen } = useResponsive();
 
   const [banners, setBanners] = useState([]);
   const [loading, setLoading] = useState(true);

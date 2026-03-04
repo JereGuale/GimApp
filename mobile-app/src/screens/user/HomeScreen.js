@@ -19,6 +19,8 @@ import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { CategoryService, BannerService, API_URL } from '../../services/api';
+import { useResponsive } from '../../hooks/useResponsive';
+
 import { Alert } from 'react-native';
 
 const MAX_CONTENT_WIDTH = 1100; // max width for content sections on web
@@ -30,23 +32,24 @@ export default function HomeScreen() {
   const { theme } = useTheme();
   const { token } = useAuth();
   const navigation = useNavigation();
-  const { width: winWidth } = useWindowDimensions();
+  const { width: winWidth, isSmallScreen } = useResponsive();
 
   // Responsive sizing
-  const isWeb = Platform.OS === 'web';
+  const isDesktop = !isSmallScreen;
+
   // Banner: full width on all platforms
   const bannerWidth = winWidth;
-  const bannerHeight = isWeb ? Math.min(winWidth * 0.3, 380) : winWidth * 0.48;
+  const bannerHeight = isDesktop ? Math.min(winWidth * 0.3, 380) : winWidth * 0.52;
   // Content padding: center within max width
   const innerWidth = Math.min(winWidth, MAX_CONTENT_WIDTH);
-  const contentPadding = isWeb ? Math.max((winWidth - MAX_CONTENT_WIDTH) / 2, 20) : 16;
-  // Products: responsive card count — 4 per row on web
-  const PRODUCTS_PER_PAGE = isWeb ? 4 : 2;
-  const productGap = isWeb ? 16 : 12;
-  const productCardWidth = isWeb
+  const contentPadding = isDesktop ? Math.max((winWidth - MAX_CONTENT_WIDTH) / 2, 20) : 16;
+  // Products: responsive card count
+  const PRODUCTS_PER_PAGE = isDesktop ? 4 : 2;
+  const productGap = isDesktop ? 16 : 12;
+  const productCardWidth = isDesktop
     ? Math.min((innerWidth - productGap * 5) / 4, 270)
-    : winWidth * 0.42;
-  const productImageHeight = isWeb ? productCardWidth * 1.1 : productCardWidth * 1.05;
+    : (winWidth - 40) / 2; // More fluid width for mobile (2 cards with 20px margins and 12px gap)
+  const productImageHeight = productCardWidth * 1.1;
 
   const productScrollRef = useRef(null);
   const [productScrollX, setProductScrollX] = useState(0);
@@ -456,7 +459,7 @@ export default function HomeScreen() {
           <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
       ) : filteredProducts.length > 0 ? (
-        isWeb ? (
+        isDesktop ? (
           // Web: single horizontal row with arrow to scroll
           <View style={{ paddingHorizontal: contentPadding }}>
             <View style={styles.productsRow}>
@@ -968,10 +971,10 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   motivationalCard: {
-    flexDirection: Platform.OS === 'web' ? 'row' : 'column-reverse',
+    flexDirection: !isSmallScreen ? 'row' : 'column-reverse',
     borderRadius: 20,
     overflow: 'hidden',
-    padding: Platform.OS === 'web' ? 48 : 24,
+    padding: !isSmallScreen ? 48 : 20,
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 32,
@@ -988,7 +991,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   motivationalSubtitle: {
-    fontSize: 12,
+    fontSize: isSmallScreen ? 10 : 12,
     fontWeight: '800',
     letterSpacing: 1.5,
     marginBottom: 8,
@@ -1005,8 +1008,8 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   motivationalImage: {
-    width: Platform.OS === 'web' ? 320 : '100%',
-    height: Platform.OS === 'web' ? 320 : 250,
+    width: !isSmallScreen ? 320 : '100%',
+    height: !isSmallScreen ? 320 : 220,
     borderRadius: 20,
   },
 
@@ -1051,14 +1054,14 @@ const styles = StyleSheet.create({
   },
   locationImage: {
     width: '100%',
-    height: 350,
+    height: !isSmallScreen ? 350 : winWidth * 0.6,
     borderRadius: 16,
     marginBottom: 16,
   },
   locationInfoRow: {
-    flexDirection: Platform.OS === 'web' ? 'row' : 'column',
+    flexDirection: !isSmallScreen ? 'row' : 'column',
     justifyContent: 'space-between',
-    alignItems: Platform.OS === 'web' ? 'center' : 'flex-start',
+    alignItems: !isSmallScreen ? 'center' : 'flex-start',
     gap: 16,
   },
   locationTextContent: {
@@ -1077,7 +1080,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 12,
-    alignSelf: Platform.OS === 'web' ? 'center' : 'stretch',
+    alignSelf: !isSmallScreen ? 'center' : 'stretch',
     alignItems: 'center',
   },
   locationButtonText: {

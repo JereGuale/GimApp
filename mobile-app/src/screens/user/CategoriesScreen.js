@@ -10,58 +10,22 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
+import { useResponsive } from '../../hooks/useResponsive';
 import { CategoryService, API_URL } from '../../services/api';
 
 const BASE_URL = API_URL.replace('/api', '');
 
-const { width: screenWidth } = Dimensions.get('window');
 const PADDING = 16;
 const CARD_GAP = 12;
-const numColumns = screenWidth > 768 ? 3 : 2;
-const cardWidth = (screenWidth - PADDING * 2 - CARD_GAP * (numColumns - 1)) / numColumns;
-
-// Colores por posición de categoría
-const BUTTON_COLORS = ['#22D3EE', '#FB923C', '#A78BFA', '#34D399', '#F472B6', '#60A5FA'];
-
-// Imágenes de fondo por categoría (alta calidad, orientadas a gym)
-const CATEGORY_IMAGES = {
-  suplementos: 'https://images.unsplash.com/photo-1616803689943-5601631c7fec?w=800&q=80&auto=format&fit=crop',
-  ropa: 'https://images.unsplash.com/photo-1556906781-9a412961c28c?w=800&q=80&auto=format&fit=crop',
-  deportiva: 'https://images.unsplash.com/photo-1556906781-9a412961c28c?w=800&q=80&auto=format&fit=crop',
-  equipamiento: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=800&q=80&auto=format&fit=crop',
-  accesorios: 'https://images.unsplash.com/photo-1576633587382-13ddf37b1fc1?w=800&q=80&auto=format&fit=crop',
-  otros: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=800&q=80&auto=format&fit=crop',
-};
-
-const CATEGORY_ICONS_MAP = {
-  suplementos: 'flask-outline',
-  ropa: 'shirt-outline',
-  deportiva: 'shirt-outline',
-  equipamiento: 'barbell-outline',
-  accesorios: 'watch-outline',
-  otros: 'fitness-outline',
-};
-
-function getCategoryImage(name) {
-  const lower = (name || '').toLowerCase();
-  for (const key of Object.keys(CATEGORY_IMAGES)) {
-    if (lower.includes(key)) return CATEGORY_IMAGES[key];
-  }
-  return CATEGORY_IMAGES.otros;
-}
-
-function getCategoryIcon(name) {
-  const lower = (name || '').toLowerCase();
-  for (const key of Object.keys(CATEGORY_ICONS_MAP)) {
-    if (lower.includes(key)) return CATEGORY_ICONS_MAP[key];
-  }
-  return 'grid-outline';
-}
 
 export default function CategoriesScreen() {
   const { theme } = useTheme();
   const { token } = useAuth();
+  const { width: screenWidth, isDesktop, isTablet } = useResponsive();
   const navigation = useNavigation();
+
+  const numColumns = isDesktop ? 4 : (isTablet ? 3 : 2);
+  const cardWidth = (screenWidth - PADDING * 2 - CARD_GAP * (numColumns - 1)) / numColumns;
 
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);

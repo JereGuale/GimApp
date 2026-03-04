@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert,
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
+import { useResponsive } from '../../hooks/useResponsive';
 import { SuperAdminService } from '../../services/adminApi';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
@@ -10,6 +11,7 @@ import * as Sharing from 'expo-sharing';
 export default function AdminReportsScreen() {
     const { theme, isDark } = useTheme();
     const { token } = useAuth();
+    const { isSmallScreen } = useResponsive();
 
     const [activeTab, setActiveTab] = useState('Panel Principal');
     const [refreshing, setRefreshing] = useState(false);
@@ -402,10 +404,25 @@ export default function AdminReportsScreen() {
     };
 
     return (
-        <View style={[styles.container, { backgroundColor: isDark ? '#0F172A' : '#F8FAFC' }]}>
+        <View style={[styles.container, { backgroundColor: isDark ? '#0F172A' : '#F8FAFC', flexDirection: isSmallScreen ? 'column' : 'row' }]}>
             {/* Sidebar */}
-            <View style={[styles.sidebar, { backgroundColor: theme.colors.surface, borderRightColor: theme.colors.border }]}>
-                <Text style={[styles.logoText, { color: theme.colors.text }]}>Fit<Text style={{ color: '#2563EB' }}>Admin</Text></Text>
+            <View style={[
+                styles.sidebar,
+                {
+                    backgroundColor: theme.colors.surface,
+                    borderRightWidth: isSmallScreen ? 0 : 1,
+                    borderBottomWidth: isSmallScreen ? 1 : 0,
+                    borderRightColor: theme.colors.border,
+                    borderBottomColor: theme.colors.border,
+                    width: isSmallScreen ? '100%' : 220,
+                    paddingTop: isSmallScreen ? 20 : 40,
+                    flexDirection: isSmallScreen ? 'row' : 'column',
+                    flexWrap: isSmallScreen ? 'wrap' : 'nowrap',
+                    justifyContent: isSmallScreen ? 'center' : 'flex-start',
+                    gap: isSmallScreen ? 10 : 0
+                }
+            ]}>
+                {!isSmallScreen && <Text style={[styles.logoText, { color: theme.colors.text }]}>Fit<Text style={{ color: '#2563EB' }}>Admin</Text></Text>}
 
                 <TouchableOpacity
                     style={[styles.navItem, activeTab === 'Panel Principal' && styles.navItemActive]}
@@ -565,7 +582,7 @@ export default function AdminReportsScreen() {
                                 </TouchableOpacity>
                             </View>
 
-                            <View style={styles.formRow}>
+                            <View style={[styles.formRow, { flexDirection: isSmallScreen ? 'column' : 'row', alignItems: isSmallScreen ? 'stretch' : 'flex-end' }]}>
                                 <View style={styles.inputGroup}>
                                     <Text style={[styles.label, { color: theme.colors.textSecondary }]}>Nombre del cliente</Text>
                                     <TextInput
@@ -576,7 +593,7 @@ export default function AdminReportsScreen() {
                                         onChangeText={setClientName}
                                     />
                                 </View>
-                                <View style={[styles.inputGroup, { flex: 0.6 }]}>
+                                <View style={[styles.inputGroup, { flex: isSmallScreen ? 1 : 0.6 }]}>
                                     <Text style={[styles.label, { color: theme.colors.textSecondary }]}>Valor pagado</Text>
                                     <TextInput
                                         style={[styles.input, { borderColor: theme.colors.border, color: theme.colors.text }]}
@@ -587,7 +604,7 @@ export default function AdminReportsScreen() {
                                         onChangeText={setAmount}
                                     />
                                 </View>
-                                <View style={[styles.inputGroup, { flex: 0.8 }]}>
+                                <View style={[styles.inputGroup, { flex: isSmallScreen ? 1 : 0.8 }]}>
                                     <Text style={[styles.label, { color: theme.colors.textSecondary }]}>Fecha Seleccionada</Text>
                                     <View style={styles.dateSelectorContainer}>
                                         <TouchableOpacity onPress={handlePreviousDay} style={styles.dateNavBtn}>
@@ -603,8 +620,8 @@ export default function AdminReportsScreen() {
                                         </TouchableOpacity>
                                     </View>
                                 </View>
-                                <View style={styles.btnWrapper}>
-                                    <TouchableOpacity style={styles.primaryBtn} onPress={handleRegisterIncome}>
+                                <View style={[styles.btnWrapper, isSmallScreen && { marginTop: 10 }]}>
+                                    <TouchableOpacity style={[styles.primaryBtn, isSmallScreen && { width: '100%', height: 50 }]} onPress={handleRegisterIncome}>
                                         <Ionicons name="add-circle-outline" size={20} color="#fff" style={{ marginRight: 5 }} />
                                         <Text style={styles.primaryBtnText}>Registrar</Text>
                                     </TouchableOpacity>

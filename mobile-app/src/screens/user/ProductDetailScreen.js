@@ -8,16 +8,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
 import { useCart } from '../../context/CartContext';
+import { useResponsive } from '../../hooks/useResponsive';
 import { API_URL } from '../../services/api';
 
 const BASE_URL = API_URL.replace('/api', '');
 
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
-const isWide = screenWidth > 600;
+const { height: screenHeight, width: screenWidth } = Dimensions.get('window');
 
 export default function ProductDetailScreen() {
   const { theme } = useTheme();
   const { addToCart } = useCart();
+  const { isDesktop: isWide } = useResponsive();
   const navigation = useNavigation();
   const route = useRoute();
   const product = route.params?.product || null;

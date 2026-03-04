@@ -6,19 +6,20 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { ProfileAPI } from '../../services/notificationService';
 import { SubscriptionAPI } from '../../services/subscriptionService';
+import { useResponsive } from '../../hooks/useResponsive';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useState, useRef, useCallback } from 'react';
 
 import { API_URL } from '../../services/api';
-const BASE_URL = API_URL.replace('/api', ''); // e.g. https://gym-backend-api.onrender.com
-
-const { width } = Dimensions.get('window');
-const DRAWER_WIDTH = width * 0.75 > 300 ? 300 : width * 0.75;
+const BASE_URL = API_URL.replace('/api', '');
 
 export default function ProfileScreen() {
   const { user, logout, updateUser } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigation = useNavigation();
+  const { width, isDesktop } = useResponsive();
+
+  const DRAWER_WIDTH = width * 0.75 > 300 ? 300 : width * 0.75;
 
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);

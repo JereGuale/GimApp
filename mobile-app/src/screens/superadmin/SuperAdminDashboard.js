@@ -7,14 +7,14 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useResponsive } from '../../hooks/useResponsive';
 import { SuperAdminService, CategoryService } from '../../services/adminApi';
 
 export default function SuperAdminDashboard() {
   const { token } = useAuth();
   const { theme } = useTheme();
   const navigation = useNavigation();
-  const { width: winWidth } = useWindowDimensions();
-  const isWide = winWidth > 700;
+  const { isDesktop: isWide } = useResponsive();
 
   const [metrics, setMetrics] = useState({
     totalUsers: 0, activeSubscriptions: 0, monthlyIncome: 0, expiringSoon: 0,
@@ -181,7 +181,7 @@ export default function SuperAdminDashboard() {
   // Use daily chart from API (real daily earnings this week)
   const revenueData = metrics.dailyChart.length > 0
     ? metrics.dailyChart.map(d => ({ label: d.label, value: Number(d.value) }))
-    : [{ label: 'D', value: 0 },{ label: 'L', value: 0 },{ label: 'M', value: 0 },{ label: 'X', value: 0 },{ label: 'J', value: 0 },{ label: 'V', value: 0 },{ label: 'S', value: 0 }];
+    : [{ label: 'D', value: 0 }, { label: 'L', value: 0 }, { label: 'M', value: 0 }, { label: 'X', value: 0 }, { label: 'J', value: 0 }, { label: 'V', value: 0 }, { label: 'S', value: 0 }];
   const weeklyTotal = metrics.weeklyIncome;
 
   return (

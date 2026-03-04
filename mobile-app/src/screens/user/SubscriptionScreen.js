@@ -8,9 +8,12 @@ import PaymentMethodModal from '../../components/PaymentMethodModal';
 import CardPaymentForm from '../../components/CardPaymentForm';
 import ReceiptUploader from '../../components/ReceiptUploader';
 import { useNavigation } from '@react-navigation/native';
+import { useResponsive } from '../../hooks/useResponsive';
+
 
 export default function SubscriptionScreen() {
   const { theme } = useTheme();
+  const { isSmallScreen } = useResponsive();
   const navigation = useNavigation();
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -147,14 +150,14 @@ export default function SubscriptionScreen() {
           Elige el plan ideal para tu progreso
         </Text>
 
-        <View style={Platform.OS === 'web' ? styles.plansWebRow : styles.plansMobileCol}>
+        <View style={!isSmallScreen ? styles.plansWebRow : styles.plansMobileCol}>
           {plans.map((plan) => (
             <TouchableOpacity
               key={plan.id}
               style={[
                 styles.planCard,
                 { backgroundColor: theme.isDark ? theme.colors.surface : '#FFFFFF', borderColor: plan.color },
-                Platform.OS === 'web' && { flex: 1, marginHorizontal: 12 }
+                !isSmallScreen && { flex: 1, marginHorizontal: 12 }
               ]}
               onPress={() => handlePlanPress(plan)}
               activeOpacity={0.85}
