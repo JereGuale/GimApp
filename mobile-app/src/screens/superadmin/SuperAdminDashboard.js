@@ -414,6 +414,7 @@ const styles = StyleSheet.create({
   bottomRow: { gap: 16, marginBottom: 16 },
   bottomCardHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16,
+    flexWrap: 'wrap', gap: 10
   },
   createBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,

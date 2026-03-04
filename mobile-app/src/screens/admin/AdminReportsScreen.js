@@ -444,9 +444,12 @@ export default function AdminReportsScreen() {
                     </Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.navItem}>
-                    <Ionicons name="people-outline" size={18} color={theme.colors.textSecondary} />
-                    <Text style={[styles.navText, { color: theme.colors.textSecondary }]}>Clientes Mensuales</Text>
+                <TouchableOpacity
+                    style={[styles.navItem, activeTab === 'Clientes Mensuales' && styles.navItemActive]}
+                    onPress={() => setActiveTab('Clientes Mensuales')}
+                >
+                    <Ionicons name="people-outline" size={18} color={activeTab === 'Clientes Mensuales' ? '#fff' : theme.colors.textSecondary} />
+                    <Text style={[styles.navText, activeTab === 'Clientes Mensuales' ? { color: '#fff', fontWeight: 'bold' } : { color: theme.colors.textSecondary }]}>Clientes Mensuales</Text>
                 </TouchableOpacity>
             </View>
 
@@ -455,7 +458,7 @@ export default function AdminReportsScreen() {
                 style={styles.mainScrollView}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reloadAll} />}
             >
-                {activeTab === 'Reporte Mensual' ? (
+                {activeTab === 'Reporte Mensual' || activeTab === 'Clientes Mensuales' ? (
                     <View style={styles.contentContainer}>
                         <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Reportes Mensuales</Text>
 
@@ -533,9 +536,9 @@ export default function AdminReportsScreen() {
                                     <Text style={[styles.metricLabel, { color: theme.colors.textSecondary }]}>Ingresos Hoy</Text>
                                     <View style={styles.iconCircle}><Ionicons name="cash-outline" size={16} color="#374151" /></View>
                                 </View>
-                                <Text style={[styles.metricValue, { color: theme.colors.text }]}>${Number(dashboardData?.ingresosHoy || 0).toFixed(2)}</Text>
+                                <Text style={[styles.metricValue, { color: theme.colors.text }]}>${Number(dashboardData?.ingresosHoy || dailyTotal).toFixed(2)}</Text>
                                 <Text style={[styles.metricSub, { color: '#10B981' }]}>
-                                    <Ionicons name="trending-up" size={12} /> {dashboardData?.clientesDiariosHoy || 0} clientes diarios hoy
+                                    <Ionicons name="trending-up" size={12} /> {dailyReports.length} clientes diarios hoy
                                 </Text>
                             </View>
 
@@ -555,9 +558,9 @@ export default function AdminReportsScreen() {
                                     <Text style={[styles.metricLabel, { color: theme.colors.textSecondary }]}>Clientes Atendidos (Mes)</Text>
                                     <View style={styles.iconCircle}><Ionicons name="people-outline" size={16} color="#374151" /></View>
                                 </View>
-                                <Text style={[styles.metricValue, { color: theme.colors.text }]}>{dashboardData?.clientesAtendidosMes || 0}</Text>
+                                <Text style={[styles.metricValue, { color: theme.colors.text }]}>{monthlyReports.length}</Text>
                                 <Text style={[styles.metricSub, { color: theme.colors.textSecondary }]}>
-                                    Diarios
+                                    Mensuales
                                 </Text>
                             </View>
 
@@ -725,7 +728,7 @@ const styles = StyleSheet.create({
     sidebar: { width: 220, padding: 16, borderRightWidth: 1, paddingTop: 40 },
     logoText: { fontSize: 22, fontWeight: '900', marginBottom: 30, textAlign: 'center' },
     navItem: { flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 8, marginBottom: 8 },
-    navItemActive: { backgroundColor: '#2563EB' },
+    navItemActive: { backgroundColor: '#FB923C' },
     navText: { marginLeft: 12, fontSize: 13, fontWeight: '500' },
 
     mainScrollView: { flex: 1 },
