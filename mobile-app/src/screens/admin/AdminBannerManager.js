@@ -11,10 +11,8 @@ import { useAuth } from '../../context/AuthContext';
 
 const { width: screenWidth } = Dimensions.get('window');
 
-// Platform-aware API URL
-import Constants from 'expo-constants';
-const DEV_BACKEND_IP = Constants.manifest?.extra?.DEV_BACKEND_IP || '127.0.0.1';
-const API_URL = `http://${DEV_BACKEND_IP}:8000/api`;
+// Import centralized API_URL (auto-switches between local and Render in production)
+import { API_URL } from '../../services/api';
 
 const apiRequest = async (url, options = {}) => {
   const res = await fetch(url, {
@@ -184,7 +182,7 @@ export default function AdminBannerManager() {
       try {
         const parsed = JSON.parse(error.message);
         if (parsed.message) msg = parsed.message;
-      } catch (e) {}
+      } catch (e) { }
       Alert.alert('Error', msg);
     } finally {
       setSaving(false);
@@ -430,171 +428,171 @@ export default function AdminBannerManager() {
       {/* ─── Create/Edit Modal ─── */}
       <Modal visible={showForm} animationType="slide" transparent={Platform.OS === 'web'}>
         <View style={[styles.modalOverlay, Platform.OS === 'web' && styles.modalOverlayWeb]}>
-        <View style={[styles.modalContainer, { backgroundColor: theme.colors.background }, Platform.OS === 'web' && styles.modalContainerWeb]}>
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[{ padding: 20 }, isWide && { maxWidth: 640, alignSelf: 'center', width: '100%' }]}>
-            {/* Modal header */}
-            <View style={styles.modalHeader}>
-              <TouchableOpacity onPress={() => setShowForm(false)} style={styles.closeBtn}>
-                <Ionicons name="close" size={24} color={theme.colors.text} />
-              </TouchableOpacity>
-              <Text style={[styles.modalTitle, { color: theme.colors.text }]}>
-                {isCreating ? 'Crear Banner' : 'Editar Banner'}
-              </Text>
-              <View style={{ width: 36 }} />
-            </View>
-
-            {/* Image Preview */}
-            <View style={[styles.imagePreviewCard, { backgroundColor: theme.colors.surface }]}>
-              <View style={styles.cardHeader}>
-                <Ionicons name="image" size={20} color="#FB923C" />
-                <Text style={[styles.cardTitle, { color: theme.colors.text }]}>Imagen del Banner</Text>
+          <View style={[styles.modalContainer, { backgroundColor: theme.colors.background }, Platform.OS === 'web' && styles.modalContainerWeb]}>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[{ padding: 20 }, isWide && { maxWidth: 640, alignSelf: 'center', width: '100%' }]}>
+              {/* Modal header */}
+              <View style={styles.modalHeader}>
+                <TouchableOpacity onPress={() => setShowForm(false)} style={styles.closeBtn}>
+                  <Ionicons name="close" size={24} color={theme.colors.text} />
+                </TouchableOpacity>
+                <Text style={[styles.modalTitle, { color: theme.colors.text }]}>
+                  {isCreating ? 'Crear Banner' : 'Editar Banner'}
+                </Text>
+                <View style={{ width: 36 }} />
               </View>
 
-              <TouchableOpacity style={styles.imagePickerArea} onPress={handlePickImage}>
-                {getImagePreview() ? (
-                  <Image source={{ uri: getImagePreview() }} style={styles.imagePreview} resizeMode="cover" />
-                ) : (
-                  <View style={styles.imagePlaceholder}>
-                    <Ionicons name="cloud-upload-outline" size={40} color="#4B5563" />
-                    <Text style={styles.imagePlaceholderText}>Toca para seleccionar imagen</Text>
-                    <Text style={styles.imageHint}>Formatos: JPG, PNG, WebP — Máx: 5MB</Text>
+              {/* Image Preview */}
+              <View style={[styles.imagePreviewCard, { backgroundColor: theme.colors.surface }]}>
+                <View style={styles.cardHeader}>
+                  <Ionicons name="image" size={20} color="#FB923C" />
+                  <Text style={[styles.cardTitle, { color: theme.colors.text }]}>Imagen del Banner</Text>
+                </View>
+
+                <TouchableOpacity style={styles.imagePickerArea} onPress={handlePickImage}>
+                  {getImagePreview() ? (
+                    <Image source={{ uri: getImagePreview() }} style={styles.imagePreview} resizeMode="cover" />
+                  ) : (
+                    <View style={styles.imagePlaceholder}>
+                      <Ionicons name="cloud-upload-outline" size={40} color="#4B5563" />
+                      <Text style={styles.imagePlaceholderText}>Toca para seleccionar imagen</Text>
+                      <Text style={styles.imageHint}>Formatos: JPG, PNG, WebP — Máx: 5MB</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+
+                {getImagePreview() && (
+                  <TouchableOpacity style={styles.changeImageBtn} onPress={handlePickImage}>
+                    <Ionicons name="refresh" size={18} color="#22D3EE" />
+                    <Text style={styles.changeImageText}>Cambiar imagen</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {/* Content Form */}
+              <View style={[styles.formCard, { backgroundColor: theme.colors.surface }]}>
+                <View style={styles.cardHeader}>
+                  <Ionicons name="create" size={20} color="#60A5FA" />
+                  <Text style={[styles.cardTitle, { color: theme.colors.text }]}>Contenido</Text>
+                </View>
+
+                <View style={styles.formGroup}>
+                  <Text style={[styles.label, { color: theme.colors.text }]}>
+                    Título <Text style={{ color: '#6B7280' }}>(opcional)</Text>
+                  </Text>
+                  <TextInput
+                    style={[styles.input, { backgroundColor: theme.colors.background, color: theme.colors.text, borderColor: theme.colors.border || '#333' }]}
+                    value={title}
+                    onChangeText={setTitle}
+                    placeholder="Ej: Oferta Especial de Verano"
+                    placeholderTextColor="#666"
+                  />
+                </View>
+
+                <View style={styles.formGroup}>
+                  <Text style={[styles.label, { color: theme.colors.text }]}>Descripción</Text>
+                  <TextInput
+                    style={[styles.input, styles.textArea, { backgroundColor: theme.colors.background, color: theme.colors.text, borderColor: theme.colors.border || '#333' }]}
+                    value={description}
+                    onChangeText={setDescription}
+                    placeholder="Descripción breve del banner"
+                    placeholderTextColor="#666"
+                    multiline
+                    numberOfLines={3}
+                  />
+                </View>
+
+                <View style={styles.formRow}>
+                  <View style={[styles.formGroup, { flex: 1 }]}>
+                    <Text style={[styles.label, { color: theme.colors.text }]}>Precio (Bs.)</Text>
+                    <TextInput
+                      style={[styles.input, { backgroundColor: theme.colors.background, color: theme.colors.text, borderColor: theme.colors.border || '#333' }]}
+                      value={price}
+                      onChangeText={setPrice}
+                      placeholder="0.00"
+                      placeholderTextColor="#666"
+                      keyboardType="decimal-pad"
+                    />
                   </View>
+                  <View style={[styles.formGroup, { flex: 1 }]}>
+                    <Text style={[styles.label, { color: theme.colors.text }]}>Orden</Text>
+                    <TextInput
+                      style={[styles.input, { backgroundColor: theme.colors.background, color: theme.colors.text, borderColor: theme.colors.border || '#333' }]}
+                      value={displayOrder}
+                      onChangeText={setDisplayOrder}
+                      placeholder="0"
+                      placeholderTextColor="#666"
+                      keyboardType="number-pad"
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.formRow}>
+                  <View style={[styles.formGroup, { flex: 1 }]}>
+                    <Text style={[styles.label, { color: theme.colors.text }]}>Texto del Botón</Text>
+                    <TextInput
+                      style={[styles.input, { backgroundColor: theme.colors.background, color: theme.colors.text, borderColor: theme.colors.border || '#333' }]}
+                      value={buttonText}
+                      onChangeText={setButtonText}
+                      placeholder="Comprar Ahora"
+                      placeholderTextColor="#666"
+                    />
+                  </View>
+                  <View style={[styles.formGroup, { flex: 1 }]}>
+                    <Text style={[styles.label, { color: theme.colors.text }]}>Acción</Text>
+                    <View style={styles.actionPicker}>
+                      {['subscription', 'explore'].map((action) => (
+                        <TouchableOpacity
+                          key={action}
+                          style={[styles.actionOption, buttonAction === action && styles.actionOptionActive]}
+                          onPress={() => setButtonAction(action)}
+                        >
+                          <Text style={[styles.actionOptionText, buttonAction === action && styles.actionOptionTextActive]}>
+                            {action === 'subscription' ? 'Suscripción' : 'Explorar'}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                </View>
+
+                {/* Toggle Active */}
+                <View style={styles.toggleRow}>
+                  <View>
+                    <Text style={[styles.label, { color: theme.colors.text, marginBottom: 2 }]}>Banner Activo</Text>
+                    <Text style={[styles.toggleHint, { color: theme.colors.textSecondary }]}>
+                      {isActive ? 'Visible en el carrusel' : 'Oculto para los usuarios'}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={[styles.toggle, isActive ? styles.toggleActive : styles.toggleInactive]}
+                    onPress={() => setIsActive(!isActive)}
+                  >
+                    <View style={[styles.toggleThumb, isActive && styles.toggleThumbActive]} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Save / Create button */}
+              <TouchableOpacity
+                style={[styles.saveButton, saving && { opacity: 0.6 }]}
+                onPress={isCreating ? handleCreateBanner : handleUpdateBanner}
+                disabled={saving}
+              >
+                {saving ? (
+                  <ActivityIndicator size="small" color="#000" />
+                ) : (
+                  <>
+                    <Ionicons name={isCreating ? 'add-circle' : 'checkmark-circle'} size={24} color="#000" />
+                    <Text style={styles.saveButtonText}>
+                      {isCreating ? 'Crear Banner' : 'Guardar Cambios'}
+                    </Text>
+                  </>
                 )}
               </TouchableOpacity>
 
-              {getImagePreview() && (
-                <TouchableOpacity style={styles.changeImageBtn} onPress={handlePickImage}>
-                  <Ionicons name="refresh" size={18} color="#22D3EE" />
-                  <Text style={styles.changeImageText}>Cambiar imagen</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {/* Content Form */}
-            <View style={[styles.formCard, { backgroundColor: theme.colors.surface }]}>
-              <View style={styles.cardHeader}>
-                <Ionicons name="create" size={20} color="#60A5FA" />
-                <Text style={[styles.cardTitle, { color: theme.colors.text }]}>Contenido</Text>
-              </View>
-
-              <View style={styles.formGroup}>
-                <Text style={[styles.label, { color: theme.colors.text }]}>
-                  Título <Text style={{ color: '#6B7280' }}>(opcional)</Text>
-                </Text>
-                <TextInput
-                  style={[styles.input, { backgroundColor: theme.colors.background, color: theme.colors.text, borderColor: theme.colors.border || '#333' }]}
-                  value={title}
-                  onChangeText={setTitle}
-                  placeholder="Ej: Oferta Especial de Verano"
-                  placeholderTextColor="#666"
-                />
-              </View>
-
-              <View style={styles.formGroup}>
-                <Text style={[styles.label, { color: theme.colors.text }]}>Descripción</Text>
-                <TextInput
-                  style={[styles.input, styles.textArea, { backgroundColor: theme.colors.background, color: theme.colors.text, borderColor: theme.colors.border || '#333' }]}
-                  value={description}
-                  onChangeText={setDescription}
-                  placeholder="Descripción breve del banner"
-                  placeholderTextColor="#666"
-                  multiline
-                  numberOfLines={3}
-                />
-              </View>
-
-              <View style={styles.formRow}>
-                <View style={[styles.formGroup, { flex: 1 }]}>
-                  <Text style={[styles.label, { color: theme.colors.text }]}>Precio (Bs.)</Text>
-                  <TextInput
-                    style={[styles.input, { backgroundColor: theme.colors.background, color: theme.colors.text, borderColor: theme.colors.border || '#333' }]}
-                    value={price}
-                    onChangeText={setPrice}
-                    placeholder="0.00"
-                    placeholderTextColor="#666"
-                    keyboardType="decimal-pad"
-                  />
-                </View>
-                <View style={[styles.formGroup, { flex: 1 }]}>
-                  <Text style={[styles.label, { color: theme.colors.text }]}>Orden</Text>
-                  <TextInput
-                    style={[styles.input, { backgroundColor: theme.colors.background, color: theme.colors.text, borderColor: theme.colors.border || '#333' }]}
-                    value={displayOrder}
-                    onChangeText={setDisplayOrder}
-                    placeholder="0"
-                    placeholderTextColor="#666"
-                    keyboardType="number-pad"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.formRow}>
-                <View style={[styles.formGroup, { flex: 1 }]}>
-                  <Text style={[styles.label, { color: theme.colors.text }]}>Texto del Botón</Text>
-                  <TextInput
-                    style={[styles.input, { backgroundColor: theme.colors.background, color: theme.colors.text, borderColor: theme.colors.border || '#333' }]}
-                    value={buttonText}
-                    onChangeText={setButtonText}
-                    placeholder="Comprar Ahora"
-                    placeholderTextColor="#666"
-                  />
-                </View>
-                <View style={[styles.formGroup, { flex: 1 }]}>
-                  <Text style={[styles.label, { color: theme.colors.text }]}>Acción</Text>
-                  <View style={styles.actionPicker}>
-                    {['subscription', 'explore'].map((action) => (
-                      <TouchableOpacity
-                        key={action}
-                        style={[styles.actionOption, buttonAction === action && styles.actionOptionActive]}
-                        onPress={() => setButtonAction(action)}
-                      >
-                        <Text style={[styles.actionOptionText, buttonAction === action && styles.actionOptionTextActive]}>
-                          {action === 'subscription' ? 'Suscripción' : 'Explorar'}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-              </View>
-
-              {/* Toggle Active */}
-              <View style={styles.toggleRow}>
-                <View>
-                  <Text style={[styles.label, { color: theme.colors.text, marginBottom: 2 }]}>Banner Activo</Text>
-                  <Text style={[styles.toggleHint, { color: theme.colors.textSecondary }]}>
-                    {isActive ? 'Visible en el carrusel' : 'Oculto para los usuarios'}
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  style={[styles.toggle, isActive ? styles.toggleActive : styles.toggleInactive]}
-                  onPress={() => setIsActive(!isActive)}
-                >
-                  <View style={[styles.toggleThumb, isActive && styles.toggleThumbActive]} />
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {/* Save / Create button */}
-            <TouchableOpacity
-              style={[styles.saveButton, saving && { opacity: 0.6 }]}
-              onPress={isCreating ? handleCreateBanner : handleUpdateBanner}
-              disabled={saving}
-            >
-              {saving ? (
-                <ActivityIndicator size="small" color="#000" />
-              ) : (
-                <>
-                  <Ionicons name={isCreating ? 'add-circle' : 'checkmark-circle'} size={24} color="#000" />
-                  <Text style={styles.saveButtonText}>
-                    {isCreating ? 'Crear Banner' : 'Guardar Cambios'}
-                  </Text>
-                </>
-              )}
-            </TouchableOpacity>
-
-            <View style={{ height: 40 }} />
-          </ScrollView>
-        </View>
+              <View style={{ height: 40 }} />
+            </ScrollView>
+          </View>
         </View>
       </Modal>
     </View>

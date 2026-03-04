@@ -1,0 +1,54 @@
+services:
+  - type: web
+    name: gym-backend-api
+    runtime: image
+    image:
+      url: docker.io/library/php:8.2-apache
+    buildCommand: |
+      apt-get update && apt-get install -y libpq-dev zip unzip curl git libzip-dev \
+      && docker-php-ext-install pdo pdo_pgsql zip \
+      && curl -sS https://getcomposer.org/installer | php \
+      && mv composer.phar /usr/local/bin/composer \
+      && composer install --no-dev --optimize-autoloader \
+      && php artisan config:cache \
+      && php artisan route:cache \
+      && php artisan view:cache \
+      && chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+    startCommand: apache2-foreground
+    envVars:
+      - key: APP_NAME
+        value: GymApp
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: APP_KEY
+        generateValue: true
+      - key: APP_URL
+        value: https://gym-backend-api.onrender.com
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        value: "5432"
+      - key: DB_DATABASE
+        value: postgres
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_SSLMODE
+        value: require
+      - key: SESSION_DRIVER
+        value: file
+      - key: CACHE_STORE
+        value: file
+      - key: QUEUE_CONNECTION
+        value: sync
+      - key: LOG_CHANNEL
+        value: stderr
+      - key: LOG_LEVEL
+        value: error
+      - key: SANCTUM_STATEFUL_DOMAINS
+        value: localhost

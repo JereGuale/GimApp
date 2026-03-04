@@ -1,28 +1,14 @@
 
-import Constants from 'expo-constants';
-import { Platform } from 'react-native';
-let AsyncStorage;
-if (Platform.OS === 'web') {
-    AsyncStorage = {
-        getItem: async (key) => Promise.resolve(window.localStorage.getItem(key)),
-        setItem: async (key, value) => Promise.resolve(window.localStorage.setItem(key, value)),
-        removeItem: async (key) => Promise.resolve(window.localStorage.removeItem(key)),
-    };
-} else {
-    AsyncStorage = require('@react-native-async-storage/async-storage').default;
-}
-const DEV_BACKEND_IP = Constants.manifest?.extra?.DEV_BACKEND_IP || '127.0.0.1';
-const DEV_HOST = DEV_BACKEND_IP;
-const API_URL = `http://${DEV_HOST}:8000/api`;
+import { API_URL } from './api';
 
 const getToken = async () => {
-        try {
-                const token = await AsyncStorage.getItem('token');
-                return token;
-        } catch (error) {
-                console.error('Error getting token:', error);
-                return null;
-        }
+    try {
+        const token = await AsyncStorage.getItem('token');
+        return token;
+    } catch (error) {
+        console.error('Error getting token:', error);
+        return null;
+    }
 };
 
 const getAuthHeaders = async () => {

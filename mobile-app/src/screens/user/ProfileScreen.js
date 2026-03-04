@@ -9,10 +9,8 @@ import { SubscriptionAPI } from '../../services/subscriptionService';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useState, useRef, useCallback } from 'react';
 
-import Constants from 'expo-constants';
-const DEV_BACKEND_IP = Constants.manifest?.extra?.DEV_BACKEND_IP || '127.0.0.1';
-const DEV_HOST = DEV_BACKEND_IP;
-const BASE_URL = `http://${DEV_HOST}:8000`;
+import { API_URL } from '../../services/api';
+const BASE_URL = API_URL.replace('/api', ''); // e.g. https://gym-backend-api.onrender.com
 
 const { width } = Dimensions.get('window');
 const DRAWER_WIDTH = width * 0.75 > 300 ? 300 : width * 0.75;

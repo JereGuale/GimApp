@@ -1,4 +1,4 @@
-import Constants from 'expo-constants';
+import { API_URL } from '../services/api';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { TouchableOpacity, View, Text, Image } from 'react-native';
@@ -17,9 +17,8 @@ export default function UserTabs() {
   const { totalItems } = useCart();
   const { user } = require('../context/AuthContext').useAuth();
   // Lógica para mostrar la foto de perfil
- 
-  const DEV_BACKEND_IP = Constants.manifest?.extra?.DEV_BACKEND_IP || '127.0.0.1';
-  const BASE_URL = `http://${DEV_BACKEND_IP}:8000`;
+
+  const BASE_URL = API_URL.replace('/api', '');
   const profilePhotoUri = user && user.profile_photo
     ? `${BASE_URL}/storage/${user.profile_photo}`
     : null;
