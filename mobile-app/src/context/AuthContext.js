@@ -23,8 +23,8 @@ export function AuthProvider({ children }) {
         const parsedUser = JSON.parse(storedUser);
         setUser(parsedUser);
 
-        // Intenta obtener los datos más recientes del backend
-        ProfileAPI.getProfile().then((res) => {
+        // Intenta obtener los datos mÃ¡s recientes del backend
+        ProfileAPI.getProfile(storedToken).then((res) => {
           if (res.success && res.data) {
             updateUser(res.data);
           }

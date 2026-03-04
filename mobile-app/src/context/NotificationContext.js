@@ -5,24 +5,24 @@ import { useAuth } from './AuthContext';
 const NotificationContext = createContext();
 
 export function NotificationProvider({ children }) {
-    const { user } = useAuth();
+    const { user, token } = useAuth();
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [loading, setLoading] = useState(false);
     const intervalRef = useRef(null);
 
     const fetchUnreadCount = useCallback(async () => {
-        if (!user) return;
-        const result = await NotificationAPI.getUnreadCount();
+        if (!user || !token) return;
+        const result = await NotificationAPI.getUnreadCount(token);
         if (result.success) {
             setUnreadCount(result.count);
         }
-    }, [user]);
+    }, [user, token]);
 
     const fetchNotifications = useCallback(async () => {
-        if (!user) return;
+        if (!user || !token) return;
         setLoading(true);
-        const result = await NotificationAPI.getNotifications();
+        const result = await NotificationAPI.getNotifications(token);
         if (result.success) {
             setNotifications(result.data);
             // Update unread count from data
@@ -30,7 +30,7 @@ export function NotificationProvider({ children }) {
             setUnreadCount(unread);
         }
         setLoading(false);
-    }, [user]);
+    }, [user, token]);
 
     const markAsRead = useCallback(async (notificationId) => {
         const result = await NotificationAPI.markAsRead(notificationId);

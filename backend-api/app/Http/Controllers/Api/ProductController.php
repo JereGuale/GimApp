@@ -14,9 +14,11 @@ class ProductController extends Controller
 {
     private function uploadImage(string $base64Image, int $index): ?string
     {
-        if (!preg_match('/^data:image\/(\w+);base64,/', $base64Image, $type)) return null;
+        if (!preg_match('/^data:image\/(\w+);base64,/', $base64Image, $type))
+            return null;
         $imageData = base64_decode(substr($base64Image, strpos($base64Image, ',') + 1));
-        if ($imageData === false) return null;
+        if ($imageData === false)
+            return null;
 
         $ext = strtolower($type[1]);
         $fileName = 'product_' . time() . '_' . $index . '.' . $ext;
@@ -26,12 +28,13 @@ class ProductController extends Controller
         $supabase = new SupabaseStorage();
         if ($supabase->isConfigured()) {
             $url = $supabase->uploadBinary($filePath, $imageData, $mime);
-            if ($url) return $url;
+            if ($url)
+                return $url;
         }
 
         // Fallback to local (ephemeral on Render)
         Storage::disk('public')->put($filePath, $imageData);
-        $appUrl = rtrim(env('APP_URL', 'https://gimapp.onrender.com'), '/');
+        $appUrl = rtrim(config('app.url', 'https://gimapp.onrender.com'), '/');
         return $appUrl . '/storage/' . $filePath;
     }
 
@@ -40,9 +43,12 @@ class ProductController extends Controller
         $cacheKey = 'products_index_' . md5(json_encode($request->all()));
         $products = Cache::remember($cacheKey, 300, function () use ($request) {
             $query = Product::with('category');
-            if ($request->has('category_id')) $query->where('category_id', $request->category_id);
-            if ($request->has('is_featured')) $query->where('is_featured', $request->is_featured);
-            if ($request->has('search')) $query->where('name', 'like', '%' . $request->search . '%');
+            if ($request->has('category_id'))
+                $query->where('category_id', $request->category_id);
+            if ($request->has('is_featured'))
+                $query->where('is_featured', $request->is_featured);
+            if ($request->has('search'))
+                $query->where('name', 'like', '%' . $request->search . '%');
             $productsData = $query->get();
             $productsData->each(fn($p) => $p->image_url = $p->image_url);
             return $productsData;
@@ -68,12 +74,13 @@ class ProductController extends Controller
         if (!empty($validated['images'])) {
             foreach ($validated['images'] as $idx => $b64) {
                 $url = $this->uploadImage($b64, $idx);
-                if ($url) $imageUrls[] = $url;
+                if ($url)
+                    $imageUrls[] = $url;
             }
         }
 
         $validated['image'] = $imageUrls[0] ?? 'https://via.placeholder.com/400';
-        $validated['images'] = !empty($imageUrls) ? json_encode($imageUrls) : null;
+        $validated['images'] = !empty($imageUrls) ? $imageUrls : null;
         $validated['status'] = $validated['status'] ?? 'active';
 
         $product = Product::create($validated);
@@ -96,7 +103,8 @@ class ProductController extends Controller
             'description' => 'nullable|string',
             'price' => 'sometimes|required|numeric|min:0',
             'image' => 'nullable|string',
-            'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
+            'images' => 'nullable|array',
+            'images.*' => 'nullable|string',
             'category_id' => 'sometimes|required|exists:categories,id',
             'stock' => 'nullable|integer|min:0',
             'is_featured' => 'nullable|boolean',
@@ -115,13 +123,31 @@ class ProductController extends Controller
                 }
                 if (!$url) {
                     $path = $image->store('products', 'public');
-                    $appUrl = rtrim(env('APP_URL', 'https://gimapp.onrender.com'), '/');
+                    $appUrl = rtrim(config('app.url', 'https://gimapp.onrender.com'), '/');
                     $url = $appUrl . '/storage/' . $path;
                 }
                 $imageUrls[] = $url;
             }
             $validated['image'] = $imageUrls[0] ?? $product->image;
             $validated['images'] = $imageUrls;
+        }
+        elseif ($request->has('images') && is_array($request->images)) {
+            $imageUrls = [];
+            foreach ($request->images as $idx => $img) {
+                if (is_string($img) && str_starts_with($img, 'data:image')) {
+                    $url = $this->uploadImage($img, $idx);
+                    if ($url)
+                        $imageUrls[] = $url;
+                }
+                elseif (is_string($img) && str_starts_with($img, 'http')) {
+                    // Mantener URLs existentes (Supabase, etc.)
+                    $imageUrls[] = $img;
+                }
+            }
+            if (!empty($imageUrls)) {
+                $validated['image'] = $imageUrls[0];
+                $validated['images'] = $imageUrls;
+            }
         }
 
         $product->update($validated);

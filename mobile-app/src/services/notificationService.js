@@ -2,16 +2,7 @@ import { Platform } from 'react-native';
 import { API_URL } from './api';
 import axios from 'axios';
 
-let AsyncStorage;
-if (Platform.OS === 'web') {
-    AsyncStorage = {
-        getItem: async (key) => Promise.resolve(window.localStorage.getItem(key)),
-        setItem: async (key, value) => Promise.resolve(window.localStorage.setItem(key, value)),
-        removeItem: async (key) => Promise.resolve(window.localStorage.removeItem(key)),
-    };
-} else {
-    AsyncStorage = require('@react-native-async-storage/async-storage').default;
-}
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const getToken = async () => {
     try {
@@ -23,8 +14,8 @@ const getToken = async () => {
     }
 };
 
-const getAuthHeaders = async () => {
-    const token = await getToken();
+const getAuthHeaders = async (tokenOverride = null) => {
+    const token = tokenOverride || await getToken();
     return {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
@@ -36,9 +27,9 @@ export const NotificationAPI = {
     /**
      * Get all notifications for the authenticated user
      */
-    async getNotifications() {
+    async getNotifications(tokenOverride = null) {
         try {
-            const headers = await getAuthHeaders();
+            const headers = await getAuthHeaders(tokenOverride);
             const response = await axios.get(`${API_URL}/notifications`, { headers });
             return { success: true, data: response.data };
         } catch (error) {
@@ -54,9 +45,9 @@ export const NotificationAPI = {
     /**
      * Get unread notification count
      */
-    async getUnreadCount() {
+    async getUnreadCount(tokenOverride = null) {
         try {
-            const headers = await getAuthHeaders();
+            const headers = await getAuthHeaders(tokenOverride);
             const response = await axios.get(`${API_URL}/notifications/unread-count`, { headers });
             return { success: true, count: response.data.count };
         } catch (error) {
@@ -112,9 +103,9 @@ export const ProfileAPI = {
     /**
      * Get user profile
      */
-    async getProfile() {
+    async getProfile(tokenOverride = null) {
         try {
-            const headers = await getAuthHeaders();
+            const headers = await getAuthHeaders(tokenOverride);
             const response = await axios.get(`${API_URL}/profile`, { headers });
             return { success: true, data: response.data.user };
         } catch (error) {

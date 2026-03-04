@@ -26,11 +26,16 @@ export default function ProductDetailScreen() {
   const images = useMemo(() => {
     if (!product) return [];
     let rawImages = [];
-    if (product.images && product.images.length > 0) {
-      rawImages = product.images;
+    if (product.images) {
+      rawImages = Array.isArray(product.images) ? product.images : (typeof product.images === 'string' ? JSON.parse(product.images) : [product.images]);
     } else if (product.image) {
       rawImages = [product.image];
     }
+
+    if (!Array.isArray(rawImages)) {
+      rawImages = [];
+    }
+
     return rawImages.map(img => {
       let url = img;
       if (url.match(/^http:\/\/(192\.168\.\d+\.\d+|localhost|127\.0\.0\.1):\d+/)) {

@@ -79,6 +79,22 @@ export default function AdminReportsScreen() {
         if (token) reloadAll();
     }, [token, activeTab, dailyDate, monthlyMonth, monthlyYear]);
 
+    const handlePreviousDay = () => {
+        const d = new Date(dailyDate + 'T12:00:00');
+        d.setDate(d.getDate() - 1);
+        setDailyDate(d.toISOString().split('T')[0]);
+    };
+
+    const handleNextDay = () => {
+        const d = new Date(dailyDate + 'T12:00:00');
+        d.setDate(d.getDate() + 1);
+        setDailyDate(d.toISOString().split('T')[0]);
+    };
+
+    const handleSetToday = () => {
+        setDailyDate(getLocalDateString());
+    };
+
     const handleRegisterIncome = async () => {
         if (!clientName.trim() || !amount.trim()) {
             Alert.alert('Error', 'Por favor ingresa nombre del cliente y valor pagado.');
@@ -542,7 +558,13 @@ export default function AdminReportsScreen() {
 
                         {/* Registrar Ingreso Diario */}
                         <View style={[styles.sectionBox, { backgroundColor: theme.colors.surface }]}>
-                            <Text style={[styles.boxTitle, { color: theme.colors.text }]}>Registrar Ingreso Diario</Text>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
+                                <Text style={[styles.boxTitle, { color: theme.colors.text }]}>Registrar Ingreso Diario</Text>
+                                <TouchableOpacity onPress={handleSetToday} style={styles.todayBtn}>
+                                    <Text style={styles.todayBtnText}>Ir a Hoy</Text>
+                                </TouchableOpacity>
+                            </View>
+
                             <View style={styles.formRow}>
                                 <View style={styles.inputGroup}>
                                     <Text style={[styles.label, { color: theme.colors.textSecondary }]}>Nombre del cliente</Text>
@@ -565,17 +587,26 @@ export default function AdminReportsScreen() {
                                         onChangeText={setAmount}
                                     />
                                 </View>
-                                <View style={[styles.inputGroup, { flex: 0.6 }]}>
-                                    <Text style={[styles.label, { color: theme.colors.textSecondary }]}>Fecha</Text>
-                                    <TextInput
-                                        style={[styles.input, { backgroundColor: isDark ? '#1F2937' : '#EFF6FF', borderColor: theme.colors.border, color: theme.colors.text }]}
-                                        value={dailyDate}
-                                        onChangeText={setDailyDate}
-                                    />
+                                <View style={[styles.inputGroup, { flex: 0.8 }]}>
+                                    <Text style={[styles.label, { color: theme.colors.textSecondary }]}>Fecha Seleccionada</Text>
+                                    <View style={styles.dateSelectorContainer}>
+                                        <TouchableOpacity onPress={handlePreviousDay} style={styles.dateNavBtn}>
+                                            <Ionicons name="chevron-back" size={20} color={theme.colors.text} />
+                                        </TouchableOpacity>
+                                        <View style={[styles.dateDisplay, { borderColor: theme.colors.border, backgroundColor: isDark ? '#1F2937' : '#F1F5F9' }]}>
+                                            <Text style={[styles.dateText, { color: theme.colors.text }]}>
+                                                {new Date(dailyDate + 'T12:00:00').toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })}
+                                            </Text>
+                                        </View>
+                                        <TouchableOpacity onPress={handleNextDay} style={styles.dateNavBtn}>
+                                            <Ionicons name="chevron-forward" size={20} color={theme.colors.text} />
+                                        </TouchableOpacity>
+                                    </View>
                                 </View>
                                 <View style={styles.btnWrapper}>
                                     <TouchableOpacity style={styles.primaryBtn} onPress={handleRegisterIncome}>
-                                        <Text style={styles.primaryBtnText}>+ Registrar</Text>
+                                        <Ionicons name="add-circle-outline" size={20} color="#fff" style={{ marginRight: 5 }} />
+                                        <Text style={styles.primaryBtnText}>Registrar</Text>
                                     </TouchableOpacity>
                                 </View>
                             </View>
@@ -598,8 +629,8 @@ export default function AdminReportsScreen() {
 
                             <View style={[styles.tableHead, { backgroundColor: isDark ? '#1E293B' : '#F1F5F9' }]}>
                                 <Text style={[styles.th, { flex: 2, color: theme.colors.textSecondary }]}>CLIENTE</Text>
-                                <Text style={[styles.th, { flex: 1.5, color: theme.colors.textSecondary }]}>HORA DE INGRESO</Text>
-                                <Text style={[styles.th, { flex: 1.5, color: theme.colors.textSecondary }]}>MONTO</Text>
+                                <Text style={[styles.th, { flex: 1.5, color: theme.colors.textSecondary }]}>HORA DE REGISTRO</Text>
+                                <Text style={[styles.th, { flex: 1.5, color: theme.colors.textSecondary }]}>MONTO PAGADO</Text>
                                 <Text style={[styles.th, { flex: 0.5, textAlign: 'center', color: theme.colors.textSecondary }]}></Text>
                             </View>
 
@@ -709,6 +740,14 @@ const styles = StyleSheet.create({
     pdfBtnDaily: { backgroundColor: '#EF4444', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, height: 40, borderRadius: 8, shadowColor: '#EF4444', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 3 },
     pdfBtnMonthly: { backgroundColor: '#10B981', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, height: 40, borderRadius: 8, shadowColor: '#10B981', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 3 },
     pdfBtnText: { color: '#fff', fontSize: 13, fontWeight: '700', marginLeft: 6 },
+
+    todayBtn: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6, backgroundColor: '#E0F2FE' },
+    todayBtnText: { color: '#0369A1', fontSize: 12, fontWeight: '700' },
+
+    dateSelectorContainer: { flexDirection: 'row', alignItems: 'center' },
+    dateNavBtn: { padding: 10 },
+    dateDisplay: { flex: 1, height: 44, borderWidth: 1, borderRadius: 8, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 10 },
+    dateText: { fontSize: 13, fontWeight: '700' },
 
     tableHead: { flexDirection: 'row', padding: 14, backgroundColor: '#F8FAFC', borderBottomWidth: 1, borderBottomColor: '#E2E8F0', borderTopLeftRadius: 12, borderTopRightRadius: 12 },
     th: { fontSize: 11, fontWeight: 'bold', letterSpacing: 0.5 },

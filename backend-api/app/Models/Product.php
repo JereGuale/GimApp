@@ -48,7 +48,7 @@ class Product extends Model
             return null;
 
         // Si es una URL de localhost (imagen vieja del entorno local), no existe en producción
-        if (preg_match('/http:\/\/(localhost|127\.0\.0\.1|192\.168\.)/', $this->image)) {
+        if (config('app.env') !== 'local' && preg_match('/http:\/\/(localhost|127\.0\.0\.1|192\.168\.)/', $this->image)) {
             return 'https://via.placeholder.com/400x400?text=Sin+imagen';
         }
 

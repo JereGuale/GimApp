@@ -130,6 +130,12 @@ export const SuperAdminService = {
     const base64Images = [];
     if (data.images && Array.isArray(data.images) && data.images.length > 0) {
       for (const imageUri of data.images) {
+        // Si ya es una URL remota de Supabase o similar, no convertir a base64
+        if (typeof imageUri === 'string' && imageUri.startsWith('http') && !imageUri.includes('192.168.')) {
+          base64Images.push(imageUri);
+          continue;
+        }
+
         try {
           const response = await fetch(imageUri);
           const blob = await response.blob();
