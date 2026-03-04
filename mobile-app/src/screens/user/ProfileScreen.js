@@ -105,7 +105,15 @@ export default function ProfileScreen() {
     setSaving(false);
   };
 
-  const profilePhotoUri = localPhotoUri || (user?.profile_photo_url ? `${user.profile_photo_url}?t=${photoKey}` : null) || (user?.profile_photo ? `${BASE_URL}/storage/${user.profile_photo}?t=${photoKey}` : null);
+  const profilePhotoUri = (() => {
+    if (localPhotoUri) return localPhotoUri;
+    const photo = user?.profile_photo_url || user?.profile_photo;
+    if (!photo) return null;
+    // Supabase or other absolute URL
+    if (photo.startsWith('http')) return `${photo}?t=${photoKey}`;
+    // Legacy relative path
+    return `${BASE_URL}/storage/${photo}?t=${photoKey}`;
+  })();
 
   const DrawerContent = () => (
     <View style={[styles.drawer, { backgroundColor: theme.colors.background }]}>
