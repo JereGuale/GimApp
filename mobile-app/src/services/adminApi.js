@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { API_URL } from './api';
 
 const withAuth = async (endpoint, token, options = {}) => {
@@ -79,17 +80,24 @@ export const SuperAdminService = {
     formData.append('is_featured', data.is_featured ? 1 : 0);
 
     if (data.images && data.images.length > 0) {
-      data.images.forEach((img, index) => {
-        if (img.uri && img.uri.startsWith('http')) {
+      for (let i = 0; i < data.images.length; i++) {
+        const img = data.images[i];
+        if (img.uri && img.uri.startsWith('http') && !img.uri.startsWith('blob:')) {
           formData.append('images[]', img.uri);
         } else if (img.uri) {
-          formData.append('images[]', {
-            uri: img.uri,
-            type: img.type || 'image/jpeg',
-            name: img.name || `photo_${index}.jpg`
-          });
+          if (Platform.OS === 'web') {
+            const res = await fetch(img.uri);
+            const blob = await res.blob();
+            formData.append('images[]', blob, img.name || `photo_${i}.jpg`);
+          } else {
+            formData.append('images[]', {
+              uri: img.uri,
+              type: img.type || 'image/jpeg',
+              name: img.name || `photo_${i}.jpg`
+            });
+          }
         }
-      });
+      }
     }
 
     const response = await fetch(`${API_URL}/admin/products`, {
@@ -128,17 +136,24 @@ export const SuperAdminService = {
     formData.append('is_featured', data.is_featured ? 1 : 0);
 
     if (data.images && data.images.length > 0) {
-      data.images.forEach((img, index) => {
-        if (img.uri && img.uri.startsWith('http')) {
+      for (let i = 0; i < data.images.length; i++) {
+        const img = data.images[i];
+        if (img.uri && img.uri.startsWith('http') && !img.uri.startsWith('blob:')) {
           formData.append('images[]', img.uri);
         } else if (img.uri) {
-          formData.append('images[]', {
-            uri: img.uri,
-            type: img.type || 'image/jpeg',
-            name: img.name || `photo_${index}.jpg`
-          });
+          if (Platform.OS === 'web') {
+            const res = await fetch(img.uri);
+            const blob = await res.blob();
+            formData.append('images[]', blob, img.name || `photo_${i}.jpg`);
+          } else {
+            formData.append('images[]', {
+              uri: img.uri,
+              type: img.type || 'image/jpeg',
+              name: img.name || `photo_${i}.jpg`
+            });
+          }
         }
-      });
+      }
     }
 
     const response = await fetch(`${API_URL}/admin/products/${id}`, {
