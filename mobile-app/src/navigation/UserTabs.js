@@ -10,13 +10,14 @@ import { Image as ExpoImage } from 'expo-image';
 import { useTheme } from '../context/ThemeContext';
 import { useCart } from '../context/CartContext';
 import { RoleGuard } from '../components/RoleGuard';
+import { useAuth } from '../context/AuthContext';
 
 const Tab = createBottomTabNavigator();
 
 export default function UserTabs() {
   const { theme, toggleTheme } = useTheme();
   const { totalItems } = useCart();
-  const { user } = require('../context/AuthContext').useAuth();
+  const { user } = useAuth();
   // Lógica para mostrar la foto de perfil
   const BASE_URL = API_URL.replace('/api', '');
 
@@ -33,7 +34,7 @@ export default function UserTabs() {
       photoUrl = `${BASE_URL}/storage/${photoUrl}`;
     }
 
-    return photoUrl.includes('?') ? photoUrl : `${photoUrl}?t=${Date.now()}`;
+    return photoUrl;
   })();
   return (
     <RoleGuard requiredRole="user">

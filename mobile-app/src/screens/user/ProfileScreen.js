@@ -79,6 +79,7 @@ export default function ProfileScreen() {
         if (uploadResult.success) {
           Alert.alert('¡Éxito!', 'Foto de perfil actualizada');
           const newTimestamp = Date.now();
+          setLocalPhotoUri(null); // Limpiar previsualización local para mostrar la URL remota actualizada
           if (updateUser) {
             updateUser({
               ...user,
