@@ -67,7 +67,7 @@ class ProductController extends Controller
             'is_featured' => 'nullable|boolean',
             'status' => 'nullable|string|in:active,inactive',
             'images' => 'nullable|array',
-            'images.*' => 'nullable|string'
+            'images.*' => 'nullable' // Allows both string and UploadedFile
         ]);
 
         $imageUrls = [];
@@ -125,7 +125,7 @@ class ProductController extends Controller
             'price' => 'sometimes|required|numeric|min:0',
             'image' => 'nullable|string',
             'images' => 'nullable|array',
-            'images.*' => 'nullable|string',
+            'images.*' => 'nullable', // Allows both string and UploadedFile
             'category_id' => 'sometimes|required|exists:categories,id',
             'stock' => 'nullable|integer|min:0',
             'is_featured' => 'nullable|boolean',
