@@ -94,6 +94,7 @@ export default function ProductDetailScreen() {
       </View>
 
       <ScrollView
+        style={{ flex: 1 }}
         contentContainerStyle={[styles.scrollContent, isWide && styles.scrollContentWide]}
         showsVerticalScrollIndicator={false}
       >
@@ -105,7 +106,7 @@ export default function ProductDetailScreen() {
             {
               backgroundColor: theme.isDark ? '#0F172A' : '#F1F5F9',
               borderColor: theme.isDark ? '#1E3A5F' : '#E2E8F0',
-              height: isWide ? Math.min(screenHeight * 0.75, 650) : screenWidth * 1.25,
+              height: isWide ? Math.min(screenHeight * 0.75, 650) : screenWidth * 1.0,
             }
           ]}>
             <Image
