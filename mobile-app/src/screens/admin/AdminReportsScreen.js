@@ -463,12 +463,12 @@ export default function AdminReportsScreen() {
                         <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Reportes Mensuales</Text>
 
                         <View style={[styles.sectionBox, { backgroundColor: theme.colors.surface }]}>
-                            <View style={styles.tableHeaderSection}>
+                            <View style={[styles.tableHeaderSection, isSmallScreen && { flexDirection: 'column', alignItems: 'flex-start', gap: 15 }]}>
                                 <View>
                                     <Text style={[styles.boxTitle, { color: theme.colors.text }]}>Reporte Mensual</Text>
                                     <Text style={[styles.boxSubtitle, { color: theme.colors.textSecondary }]}>Clientes con pago de membresía mensual activa e inactiva.</Text>
                                 </View>
-                                <View style={styles.tableActions}>
+                                <View style={[styles.tableActions, isSmallScreen && { width: '100%', justifyContent: 'space-between' }]}>
                                     <Text style={{ color: theme.colors.textSecondary, marginRight: 15, fontWeight: 'bold' }}>Mes: {monthlyMonth} / {monthlyYear}</Text>
                                     <TouchableOpacity style={styles.pdfBtnMonthly} onPress={generateMonthlyPDF}>
                                         <Ionicons name="download-outline" size={18} color="#fff" />
@@ -477,52 +477,56 @@ export default function AdminReportsScreen() {
                                 </View>
                             </View>
 
-                            <View style={[styles.tableHead, { backgroundColor: isDark ? '#1E293B' : '#F1F5F9' }]}>
-                                <Text style={[styles.th, { flex: 2, color: theme.colors.textSecondary }]}>CLIENTE</Text>
-                                <Text style={[styles.th, { flex: 1, color: theme.colors.textSecondary }]}>MONTO</Text>
-                                <Text style={[styles.th, { flex: 1.5, color: theme.colors.textSecondary }]}>FECHA DE PAGO</Text>
-                                <Text style={[styles.th, { flex: 1.5, color: theme.colors.textSecondary }]}>VENCIMIENTO</Text>
-                                <Text style={[styles.th, { flex: 1, color: theme.colors.textSecondary }]}>ESTADO</Text>
-                            </View>
-
-                            {monthlyReports.map((item, idx) => {
-                                const isExpired = new Date(item.ends_at) < new Date();
-                                return (
-                                    <View key={item.id} style={[styles.tableRow, { borderBottomColor: theme.colors.border }]}>
-                                        <View style={[styles.td, { flex: 2, flexDirection: 'row', alignItems: 'center' }]}>
-                                            <View style={styles.avatarPlaceholder}><Ionicons name="person" size={14} color="#9CA3AF" /></View>
-                                            <View>
-                                                <Text style={[styles.tdText, { color: theme.colors.text, fontWeight: '600' }]}>{item.user?.name || 'ID: ' + item.user_id}</Text>
-                                                <Text style={{ fontSize: 11, color: theme.colors.textSecondary }}>{item.plan?.name}</Text>
-                                            </View>
-                                        </View>
-                                        <Text style={[styles.td, styles.tdText, { flex: 1, color: theme.colors.text, fontWeight: '700' }]}>
-                                            ${Number(item.price).toFixed(2)}
-                                        </Text>
-                                        <Text style={[styles.td, styles.tdText, { flex: 1.5, color: theme.colors.textSecondary }]}>
-                                            {new Date(item.starts_at).toLocaleDateString()}
-                                        </Text>
-                                        <Text style={[styles.td, styles.tdText, { flex: 1.5, color: theme.colors.textSecondary }]}>
-                                            {new Date(item.ends_at).toLocaleDateString()}
-                                        </Text>
-                                        <View style={[styles.td, { flex: 1 }]}>
-                                            <View style={[styles.badge, { backgroundColor: isExpired ? '#EF4444' : '#10B981' }]}>
-                                                <Text style={styles.badgeText}>{isExpired ? 'VENCIDO' : 'ACTIVO'}</Text>
-                                            </View>
-                                        </View>
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                                <View style={{ minWidth: 700 }}>
+                                    <View style={[styles.tableHead, { backgroundColor: isDark ? '#1E293B' : '#F1F5F9' }]}>
+                                        <Text style={[styles.th, { flex: 2, color: theme.colors.textSecondary }]}>CLIENTE</Text>
+                                        <Text style={[styles.th, { flex: 1, color: theme.colors.textSecondary }]}>MONTO</Text>
+                                        <Text style={[styles.th, { flex: 1.5, color: theme.colors.textSecondary }]}>FECHA DE PAGO</Text>
+                                        <Text style={[styles.th, { flex: 1.5, color: theme.colors.textSecondary }]}>VENCIMIENTO</Text>
+                                        <Text style={[styles.th, { flex: 1, color: theme.colors.textSecondary }]}>ESTADO</Text>
                                     </View>
-                                );
-                            })}
-                            {monthlyReports.length === 0 && (
-                                <Text style={{ padding: 20, textAlign: 'center', color: theme.colors.textSecondary }}>No hay suscripciones registradas en este mes.</Text>
-                            )}
 
-                            <View style={[styles.tableFooter, { backgroundColor: isDark ? '#1E293B' : '#F1F5F9' }]}>
-                                <Text style={{ flex: 1, textAlign: 'right', fontWeight: 'bold', marginRight: 20, color: theme.colors.text }}>
-                                    Total Membresías (Mes {monthlyMonth}):
-                                </Text>
-                                <Text style={{ width: 100, fontWeight: 'bold', color: theme.colors.text }}>${Number(monthlyTotal).toFixed(2)}</Text>
-                            </View>
+                                    {monthlyReports.map((item, idx) => {
+                                        const isExpired = new Date(item.ends_at) < new Date();
+                                        return (
+                                            <View key={item.id} style={[styles.tableRow, { borderBottomColor: theme.colors.border }]}>
+                                                <View style={[styles.td, { flex: 2, flexDirection: 'row', alignItems: 'center' }]}>
+                                                    <View style={styles.avatarPlaceholder}><Ionicons name="person" size={14} color="#9CA3AF" /></View>
+                                                    <View>
+                                                        <Text style={[styles.tdText, { color: theme.colors.text, fontWeight: '600' }]}>{item.user?.name || 'ID: ' + item.user_id}</Text>
+                                                        <Text style={{ fontSize: 11, color: theme.colors.textSecondary }}>{item.plan?.name}</Text>
+                                                    </View>
+                                                </View>
+                                                <Text style={[styles.td, styles.tdText, { flex: 1, color: theme.colors.text, fontWeight: '700' }]}>
+                                                    ${Number(item.price).toFixed(2)}
+                                                </Text>
+                                                <Text style={[styles.td, styles.tdText, { flex: 1.5, color: theme.colors.textSecondary }]}>
+                                                    {new Date(item.starts_at).toLocaleDateString()}
+                                                </Text>
+                                                <Text style={[styles.td, styles.tdText, { flex: 1.5, color: theme.colors.textSecondary }]}>
+                                                    {new Date(item.ends_at).toLocaleDateString()}
+                                                </Text>
+                                                <View style={[styles.td, { flex: 1 }]}>
+                                                    <View style={[styles.badge, { backgroundColor: isExpired ? '#EF4444' : '#10B981' }]}>
+                                                        <Text style={styles.badgeText}>{isExpired ? 'VENCIDO' : 'ACTIVO'}</Text>
+                                                    </View>
+                                                </View>
+                                            </View>
+                                        );
+                                    })}
+                                    {monthlyReports.length === 0 && (
+                                        <Text style={{ padding: 20, textAlign: 'center', color: theme.colors.textSecondary }}>No hay suscripciones registradas en este mes.</Text>
+                                    )}
+
+                                    <View style={[styles.tableFooter, { backgroundColor: isDark ? '#1E293B' : '#F1F5F9' }]}>
+                                        <Text style={{ flex: 1, textAlign: 'right', fontWeight: 'bold', marginRight: 20, color: theme.colors.text }}>
+                                            Total Membresías (Mes {monthlyMonth}):
+                                        </Text>
+                                        <Text style={{ width: 100, fontWeight: 'bold', color: theme.colors.text }}>${Number(monthlyTotal).toFixed(2)}</Text>
+                                    </View>
+                                </View>
+                            </ScrollView>
                         </View>
                     </View>
                 ) : (
@@ -634,12 +638,12 @@ export default function AdminReportsScreen() {
 
                         {/* Daily Report Table Section */}
                         <View style={[styles.sectionBox, { backgroundColor: theme.colors.surface }]}>
-                            <View style={styles.tableHeaderSection}>
+                            <View style={[styles.tableHeaderSection, isSmallScreen && { flexDirection: 'column', alignItems: 'flex-start', gap: 15 }]}>
                                 <View>
                                     <Text style={[styles.boxTitle, { color: theme.colors.text }]}>Reporte Diario</Text>
                                     <Text style={[styles.boxSubtitle, { color: theme.colors.textSecondary }]}>Lista de clientes registrados con pase de un día.</Text>
                                 </View>
-                                <View style={styles.tableActions}>
+                                <View style={[styles.tableActions, isSmallScreen && { width: '100%', justifyContent: 'flex-end' }]}>
                                     <TouchableOpacity style={styles.pdfBtnDaily} onPress={generateDailyPDF}>
                                         <Ionicons name="download-outline" size={18} color="#fff" />
                                         <Text style={styles.pdfBtnText}>Descargar Reporte PDF</Text>
@@ -647,38 +651,42 @@ export default function AdminReportsScreen() {
                                 </View>
                             </View>
 
-                            <View style={[styles.tableHead, { backgroundColor: isDark ? '#1E293B' : '#F1F5F9' }]}>
-                                <Text style={[styles.th, { flex: 2, color: theme.colors.textSecondary }]}>CLIENTE</Text>
-                                <Text style={[styles.th, { flex: 1.5, color: theme.colors.textSecondary }]}>HORA DE REGISTRO</Text>
-                                <Text style={[styles.th, { flex: 1.5, color: theme.colors.textSecondary }]}>MONTO PAGADO</Text>
-                                <Text style={[styles.th, { flex: 0.5, textAlign: 'center', color: theme.colors.textSecondary }]}></Text>
-                            </View>
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                                <View style={{ minWidth: 600 }}>
+                                    <View style={[styles.tableHead, { backgroundColor: isDark ? '#1E293B' : '#F1F5F9' }]}>
+                                        <Text style={[styles.th, { flex: 2, color: theme.colors.textSecondary }]}>CLIENTE</Text>
+                                        <Text style={[styles.th, { flex: 1.5, color: theme.colors.textSecondary }]}>HORA DE REGISTRO</Text>
+                                        <Text style={[styles.th, { flex: 1.5, color: theme.colors.textSecondary }]}>MONTO PAGADO</Text>
+                                        <Text style={[styles.th, { flex: 0.5, textAlign: 'center', color: theme.colors.textSecondary }]}></Text>
+                                    </View>
 
-                            {dailyReports.map((item, idx) => (
-                                <View key={item.id} style={[styles.tableRow, { borderBottomColor: theme.colors.border }]}>
-                                    <View style={[styles.td, { flex: 2, flexDirection: 'row', alignItems: 'center' }]}>
-                                        <View style={styles.avatarPlaceholder}><Ionicons name="person" size={14} color="#9CA3AF" /></View>
-                                        <Text style={[styles.tdText, { color: theme.colors.text, fontWeight: '600' }]}>{item.client_name}</Text>
-                                    </View>
-                                    <Text style={[styles.td, styles.tdText, { flex: 1.5, color: theme.colors.textSecondary }]}>
-                                        {new Date(item.entry_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                    </Text>
-                                    <Text style={[styles.td, styles.tdText, { flex: 1.5, color: theme.colors.text, fontWeight: '700' }]}>
-                                        ${Number(item.amount).toFixed(2)}
-                                    </Text>
-                                    <View style={[styles.td, { flex: 0.5, alignItems: 'center' }]}>
-                                        <TouchableOpacity
-                                            onPress={() => handleDeleteDaily(item.id)}
-                                            style={{ padding: 8 }}
-                                        >
-                                            <Ionicons name="trash-outline" size={18} color="#EF4444" />
-                                        </TouchableOpacity>
-                                    </View>
+                                    {dailyReports.map((item, idx) => (
+                                        <View key={item.id} style={[styles.tableRow, { borderBottomColor: theme.colors.border }]}>
+                                            <View style={[styles.td, { flex: 2, flexDirection: 'row', alignItems: 'center' }]}>
+                                                <View style={styles.avatarPlaceholder}><Ionicons name="person" size={14} color="#9CA3AF" /></View>
+                                                <Text style={[styles.tdText, { color: theme.colors.text, fontWeight: '600' }]}>{item.client_name}</Text>
+                                            </View>
+                                            <Text style={[styles.td, styles.tdText, { flex: 1.5, color: theme.colors.textSecondary }]}>
+                                                {new Date(item.entry_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </Text>
+                                            <Text style={[styles.td, styles.tdText, { flex: 1.5, color: theme.colors.text, fontWeight: '700' }]}>
+                                                ${Number(item.amount).toFixed(2)}
+                                            </Text>
+                                            <View style={[styles.td, { flex: 0.5, alignItems: 'center' }]}>
+                                                <TouchableOpacity
+                                                    onPress={() => handleDeleteDaily(item.id)}
+                                                    style={{ padding: 8 }}
+                                                >
+                                                    <Ionicons name="trash-outline" size={18} color="#EF4444" />
+                                                </TouchableOpacity>
+                                            </View>
+                                        </View>
+                                    ))}
+                                    {dailyReports.length === 0 && (
+                                        <Text style={{ padding: 20, textAlign: 'center', color: theme.colors.textSecondary }}>No hay ingresos registrados para esta fecha.</Text>
+                                    )}
                                 </View>
-                            ))}
-                            {dailyReports.length === 0 && (
-                                <Text style={{ padding: 20, textAlign: 'center', color: theme.colors.textSecondary }}>No hay ingresos registrados para esta fecha.</Text>
-                            )}
+                            </ScrollView>
                         </View>
                     </View>
                 )}
