@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\SupabaseStorage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
@@ -27,21 +28,15 @@ class AuthController extends Controller
         ]);
 
         $userRole = \App\Models\Role::where('name', 'user')->first();
-        if ($userRole) {
-            $user->assignRole($userRole);
-        }
+        if ($userRole) $user->assignRole($userRole);
 
         $token = $user->createToken('auth')->plainTextToken;
         $user->load('roles.permissions');
-        $permissions = $user->roles->flatMap(function ($role) {
-            return $role->permissions;
-        })->unique('id')->values();
+        $permissions = $user->roles->flatMap(fn($r) => $r->permissions)->unique('id')->values();
 
         return response()->json([
-            'user' => $user,
-            'token' => $token,
-            'roles' => $user->roles,
-            'permissions' => $permissions
+            'user' => $user, 'token' => $token,
+            'roles' => $user->roles, 'permissions' => $permissions
         ], 201);
     }
 
@@ -53,36 +48,26 @@ class AuthController extends Controller
         ]);
 
         $user = User::where('email', $validated['email'])->first();
-
         if (!$user || !Hash::check($validated['password'], $user->password)) {
             return response()->json(['message' => 'Invalid credentials'], 401);
         }
 
         $token = $user->createToken('auth')->plainTextToken;
         $user->load('roles.permissions');
-        $permissions = $user->roles->flatMap(function ($role) {
-            return $role->permissions;
-        })->unique('id')->values();
+        $permissions = $user->roles->flatMap(fn($r) => $r->permissions)->unique('id')->values();
 
         return response()->json([
-            'user' => $user,
-            'token' => $token,
-            'roles' => $user->roles,
-            'permissions' => $permissions
+            'user' => $user, 'token' => $token,
+            'roles' => $user->roles, 'permissions' => $permissions
         ]);
     }
 
     public function permissions(Request $request)
     {
         $user = $request->user();
-        if (!$user) {
-            return response()->json(['success' => false, 'message' => 'No autenticado'], 401);
-        }
+        if (!$user) return response()->json(['success' => false, 'message' => 'No autenticado'], 401);
         $user->load('roles.permissions');
-        $permissions = $user->roles->flatMap(function ($role) {
-            return $role->permissions;
-        })->unique('id')->values();
-
+        $permissions = $user->roles->flatMap(fn($r) => $r->permissions)->unique('id')->values();
         return response()->json(['success' => true, 'data' => ['roles' => $user->roles, 'permissions' => $permissions]]);
     }
 
@@ -90,11 +75,7 @@ class AuthController extends Controller
     {
         $user = $request->user();
         $user->load('roles.permissions');
-        return response()->json([
-            'success' => true,
-            'user' => $user,
-            'profile_photo_url' => $user->profile_photo_url
-        ]);
+        return response()->json(['success' => true, 'user' => $user, 'profile_photo_url' => $user->profile_photo_url]);
     }
 
     public function updateProfile(Request $request)
@@ -111,20 +92,22 @@ class AuthController extends Controller
     public function uploadPhoto(Request $request)
     {
         $request->validate(['photo' => 'required|image|max:5120']);
-
         $user = $request->user();
+
         $ext = $request->file('photo')->getClientOriginalExtension();
         $fileName = 'profile_' . $user->id . '_' . time() . '.' . $ext;
+        $filePath = 'profile_photos/' . $fileName;
 
-        try {
-            // Upload to Supabase Storage
-            Storage::disk('supabase')->putFileAs('profile_photos', $request->file('photo'), $fileName, 'public');
-            $photoUrl = Storage::disk('supabase')->url('profile_photos/' . $fileName);
-        } catch (\Exception $e) {
-            Log::error('Supabase photo upload failed: ' . $e->getMessage());
-            // Fallback to local
-            $path = $request->file('photo')->storeAs('profile_photos', $fileName, 'public');
-            $photoUrl = Storage::disk('public')->url($path);
+        $supabase = new SupabaseStorage();
+        if ($supabase->isConfigured()) {
+            $photoUrl = $supabase->uploadFile($request->file('photo'), $filePath);
+        }
+
+        if (empty($photoUrl)) {
+            // Fallback to local storage
+            $request->file('photo')->storeAs('profile_photos', $fileName, 'public');
+            $appUrl = rtrim(env('APP_URL', 'https://gimapp.onrender.com'), '/');
+            $photoUrl = $appUrl . '/storage/' . $filePath;
         }
 
         $user->update(['profile_photo' => $photoUrl]);

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Product;
+use App\Services\SupabaseStorage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Cache;
@@ -11,53 +12,41 @@ use Illuminate\Support\Facades\Log;
 
 class ProductController extends Controller
 {
-    private function uploadImageToSupabase(string $base64Image, int $index): ?string
+    private function uploadImage(string $base64Image, int $index): ?string
     {
-        if (!preg_match('/^data:image\/(\w+);base64,/', $base64Image, $type)) {
-            return null;
-        }
+        if (!preg_match('/^data:image\/(\w+);base64,/', $base64Image, $type)) return null;
         $imageData = base64_decode(substr($base64Image, strpos($base64Image, ',') + 1));
         if ($imageData === false) return null;
 
         $ext = strtolower($type[1]);
         $fileName = 'product_' . time() . '_' . $index . '.' . $ext;
         $filePath = 'products/' . $fileName;
+        $mime = $ext === 'png' ? 'image/png' : ($ext === 'gif' ? 'image/gif' : 'image/jpeg');
 
-        try {
-            Storage::disk('supabase')->put($filePath, $imageData, 'public');
-            return Storage::disk('supabase')->url($filePath);
-        } catch (\Exception $e) {
-            Log::error('Supabase upload failed: ' . $e->getMessage());
-            // Fallback to local
-            Storage::disk('public')->put($filePath, $imageData);
-            return Storage::disk('public')->url($filePath);
+        $supabase = new SupabaseStorage();
+        if ($supabase->isConfigured()) {
+            $url = $supabase->uploadBinary($filePath, $imageData, $mime);
+            if ($url) return $url;
         }
+
+        // Fallback to local (ephemeral on Render)
+        Storage::disk('public')->put($filePath, $imageData);
+        $appUrl = rtrim(env('APP_URL', 'https://gimapp.onrender.com'), '/');
+        return $appUrl . '/storage/' . $filePath;
     }
 
     public function index(Request $request)
     {
         $cacheKey = 'products_index_' . md5(json_encode($request->all()));
-
         $products = Cache::remember($cacheKey, 300, function () use ($request) {
             $query = Product::with('category');
-
-            if ($request->has('category_id')) {
-                $query->where('category_id', $request->category_id);
-            }
-            if ($request->has('is_featured')) {
-                $query->where('is_featured', $request->is_featured);
-            }
-            if ($request->has('search')) {
-                $query->where('name', 'like', '%' . $request->search . '%');
-            }
-
+            if ($request->has('category_id')) $query->where('category_id', $request->category_id);
+            if ($request->has('is_featured')) $query->where('is_featured', $request->is_featured);
+            if ($request->has('search')) $query->where('name', 'like', '%' . $request->search . '%');
             $productsData = $query->get();
-            $productsData->each(function($product) {
-                $product->image_url = $product->image_url;
-            });
+            $productsData->each(fn($p) => $p->image_url = $p->image_url);
             return $productsData;
         });
-
         return response()->json($products);
     }
 
@@ -76,9 +65,9 @@ class ProductController extends Controller
         ]);
 
         $imageUrls = [];
-        if (isset($validated['images']) && is_array($validated['images'])) {
-            foreach ($validated['images'] as $index => $base64Image) {
-                $url = $this->uploadImageToSupabase($base64Image, $index);
+        if (!empty($validated['images'])) {
+            foreach ($validated['images'] as $idx => $b64) {
+                $url = $this->uploadImage($b64, $idx);
                 if ($url) $imageUrls[] = $url;
             }
         }
@@ -102,7 +91,6 @@ class ProductController extends Controller
     public function update(Request $request, string $id)
     {
         $product = Product::findOrFail($id);
-
         $validated = $request->validate([
             'name' => 'sometimes|required|string|max:255',
             'description' => 'nullable|string',
@@ -116,16 +104,21 @@ class ProductController extends Controller
         ]);
 
         if ($request->hasFile('images')) {
+            $supabase = new SupabaseStorage();
             $imageUrls = [];
             foreach ($request->file('images') as $image) {
-                try {
-                    $fileName = 'product_' . time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
-                    Storage::disk('supabase')->putFileAs('products', $image, $fileName, 'public');
-                    $imageUrls[] = Storage::disk('supabase')->url('products/' . $fileName);
-                } catch (\Exception $e) {
-                    $path = $image->store('products', 'public');
-                    $imageUrls[] = Storage::disk('public')->url($path);
+                $fileName = 'product_' . time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
+                $filePath = 'products/' . $fileName;
+                $url = null;
+                if ($supabase->isConfigured()) {
+                    $url = $supabase->uploadFile($image, $filePath);
                 }
+                if (!$url) {
+                    $path = $image->store('products', 'public');
+                    $appUrl = rtrim(env('APP_URL', 'https://gimapp.onrender.com'), '/');
+                    $url = $appUrl . '/storage/' . $path;
+                }
+                $imageUrls[] = $url;
             }
             $validated['image'] = $imageUrls[0] ?? $product->image;
             $validated['images'] = $imageUrls;
