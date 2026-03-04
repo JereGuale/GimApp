@@ -32,6 +32,7 @@ export default function AdminSubscriptionManagement() {
     const [rejectModalVisible, setRejectModalVisible] = useState(false);
     const [selectedSubscription, setSelectedSubscription] = useState(null);
     const [rejectReason, setRejectReason] = useState('');
+    const [isRejecting, setIsRejecting] = useState(false);
 
     useFocusEffect(
         useCallback(() => {
@@ -89,16 +90,22 @@ export default function AdminSubscriptionManagement() {
 
     const confirmReject = async () => {
         if (!selectedSubscription) return;
+        setIsRejecting(true);
         const result = await TrainerSubscriptionAPI.rejectSubscription(
             selectedSubscription.id,
             rejectReason || 'Comprobante no válido'
         );
+        setIsRejecting(false);
         if (result.success) {
-            Alert.alert('Suscripción Rechazada', result.message);
             setRejectModalVisible(false);
             setRejectReason('');
             setSelectedSubscription(null);
-            loadSubscriptions();
+
+            // Allow modal dismiss animation to complete on iOS before alerting
+            setTimeout(() => {
+                Alert.alert('Suscripción Rechazada', result.message);
+                loadSubscriptions();
+            }, 300);
         } else {
             Alert.alert('Error', result.error);
         }
@@ -213,8 +220,8 @@ export default function AdminSubscriptionManagement() {
                     </TouchableOpacity>
                 )}
                 <View style={styles.actionRow}>
-                    <TouchableOpacity style={[styles.rejectBtn, { backgroundColor: theme.colors.surface, borderColor: theme.isDark ? 'rgba(239, 68, 68, 0.4)' : '#FECACA' }]} onPress={() => handleReject(subscription)}>
-                        <Ionicons name="close" size={20} color="#EF4444" />
+                    <TouchableOpacity style={[styles.rejectBtn, { backgroundColor: '#EF4444', borderColor: '#EF4444' }]} onPress={() => handleReject(subscription)}>
+                        <Ionicons name="close" size={20} color="#fff" />
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.approveBtn} onPress={() => handleApprove(subscription)}>
                         <Ionicons name="checkmark" size={20} color="#fff" />
@@ -415,8 +422,12 @@ export default function AdminSubscriptionManagement() {
                             >
                                 <Text style={[styles.rejectModalBtnText, { color: theme.colors.text }]}>Cancelar</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity style={[styles.rejectModalBtn, { backgroundColor: '#EF4444' }]} onPress={confirmReject}>
-                                <Text style={[styles.rejectModalBtnText, { color: '#fff' }]}>Rechazar</Text>
+                            <TouchableOpacity style={[styles.rejectModalBtn, { backgroundColor: '#EF4444' }]} onPress={confirmReject} disabled={isRejecting}>
+                                {isRejecting ? (
+                                    <ActivityIndicator color="#fff" size="small" />
+                                ) : (
+                                    <Text style={[styles.rejectModalBtnText, { color: '#fff' }]}>Rechazar</Text>
+                                )}
                             </TouchableOpacity>
                         </View>
                     </View>
