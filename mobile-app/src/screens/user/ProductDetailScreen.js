@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
   headerTitle: { flex: 1, fontSize: 17, fontWeight: '700', textAlign: 'center' },
 
   /* Content */
-  scrollContent: { padding: 16, paddingBottom: 40 },
+  scrollContent: { padding: 16, paddingBottom: 120 },
   scrollContentWide: { flexDirection: 'row', gap: 24 },
 
   /* Gallery */

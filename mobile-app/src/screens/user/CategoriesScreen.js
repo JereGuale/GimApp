@@ -18,6 +18,24 @@ const BASE_URL = API_URL.replace('/api', '');
 const PADDING = 16;
 const CARD_GAP = 12;
 
+const BUTTON_COLORS = ['#38BDF8', '#FBBF24', '#A78BFA', '#34D399', '#FB7185', '#818CF8'];
+
+const getCategoryImage = (name = '') => {
+  const n = name.toLowerCase();
+  if (n.includes('suplemento') || n.includes('proteína')) return 'https://images.unsplash.com/photo-1593095948071-474c5cc2989d?q=80&w=600&auto=format&fit=crop';
+  if (n.includes('ropa') || n.includes('vestimenta')) return 'https://images.unsplash.com/photo-1571902943202-507ec2618e8f?q=80&w=600&auto=format&fit=crop';
+  if (n.includes('equipo') || n.includes('accesorio') || n.includes('pesa')) return 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=600&auto=format&fit=crop';
+  return 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=600&auto=format&fit=crop';
+};
+
+const getCategoryIcon = (name = '') => {
+  const n = name.toLowerCase();
+  if (n.includes('suplemento') || n.includes('proteína')) return 'nutrition-outline';
+  if (n.includes('ropa')) return 'shirt-outline';
+  if (n.includes('equipo') || n.includes('pesa')) return 'barbell-outline';
+  return 'grid-outline';
+};
+
 export default function CategoriesScreen() {
   const { theme } = useTheme();
   const { token } = useAuth();
