@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, TextInput, Image, FlatList, Alert, Switch } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, TextInput, Image, FlatList, Alert, Switch, ActivityIndicator } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../../context/AuthContext';
@@ -21,6 +21,8 @@ export default function AdminProducts({ route }) {
   const [editingProduct, setEditingProduct] = useState(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState(null);
   const [isFeatured, setIsFeatured] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const loadCategories = async () => {
     try {
@@ -92,12 +94,14 @@ export default function AdminProducts({ route }) {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsMultiple: true,
-        quality: 0.8,
+        quality: 0.6,
+        base64: true,
       });
 
       if (!result.canceled) {
         const newImages = result.assets.map(asset => ({
           uri: asset.uri,
+          base64: asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : null,
           id: Math.random().toString()
         }));
         setSelectedImages([...selectedImages, ...newImages]);
@@ -136,6 +140,7 @@ export default function AdminProducts({ route }) {
     console.log('[AdminProducts] Confirming deletion:', { productId, productName });
 
     try {
+      setIsDeleting(true);
       await SuperAdminService.deleteProduct(token, productId);
       console.log('[AdminProducts] Product deleted successfully');
 
@@ -150,6 +155,8 @@ export default function AdminProducts({ route }) {
       console.error('[AdminProducts] Delete error:', error);
       Alert.alert('Error', `No se pudo eliminar el producto: ${error.message}`);
       setDeleteConfirmation(null);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -164,6 +171,7 @@ export default function AdminProducts({ route }) {
       return;
     }
     try {
+      setIsSaving(true);
       console.log('[AdminProducts] publish start', {
         name: productName,
         price: productPrice,
@@ -172,7 +180,7 @@ export default function AdminProducts({ route }) {
       });
 
       const images = selectedImages.length > 0
-        ? selectedImages.map(img => img.uri)
+        ? selectedImages.map(img => img.base64 || img.uri)
         : [];
 
       if (editingProduct) {
@@ -210,6 +218,8 @@ export default function AdminProducts({ route }) {
       const message = error?.message || 'No se pudo publicar el producto';
       Alert.alert('Error', message);
       console.error('[AdminProducts] publish error:', error);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -339,7 +349,7 @@ export default function AdminProducts({ route }) {
                     /* Has images — show main image + thumbnails + add button */
                     <View>
                       {/* Main image preview */}
-                      <View style={[styles.mainImageBox, { backgroundColor: theme.isDark ? '#111827' : '#F3F4F6', borderColor: theme.colors.border }]}> 
+                      <View style={[styles.mainImageBox, { backgroundColor: theme.isDark ? '#111827' : '#F3F4F6', borderColor: theme.colors.border }]}>
                         <Image source={{ uri: selectedImages[0].uri }} style={styles.mainImagePreview} />
                         <TouchableOpacity
                           style={styles.removeMainImageBtn}
@@ -468,16 +478,24 @@ export default function AdminProducts({ route }) {
 
               {/* Publish Button */}
               <TouchableOpacity
-                style={styles.publishButton}
+                style={[styles.publishButton, isSaving && { opacity: 0.7 }]}
                 onPress={() => {
                   console.log('[AdminProducts] publish button pressed');
                   handleSaveProduct();
                 }}
                 activeOpacity={0.85}
+                disabled={isSaving}
               >
-                <Text style={styles.publishButtonText}>
-                  {editingProduct ? 'Guardar Cambios' : 'Publicar Producto'}
-                </Text>
+                {isSaving ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <ActivityIndicator size="small" color="#fff" />
+                    <Text style={styles.publishButtonText}>Publicando...</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.publishButtonText}>
+                    {editingProduct ? 'Guardar Cambios' : 'Publicar Producto'}
+                  </Text>
+                )}
               </TouchableOpacity>
             </View>
           </ScrollView>
@@ -498,14 +516,20 @@ export default function AdminProducts({ route }) {
               <TouchableOpacity
                 style={[styles.deleteModalButton, styles.cancelButton]}
                 onPress={() => setDeleteConfirmation(null)}
+                disabled={isDeleting}
               >
                 <Text style={styles.cancelButtonText}>Cancelar</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.deleteModalButton, styles.deleteButtonConfirm]}
+                style={[styles.deleteModalButton, styles.deleteButtonConfirm, isDeleting && { opacity: 0.7 }]}
                 onPress={confirmDelete}
+                disabled={isDeleting}
               >
-                <Text style={styles.deleteButtonConfirmText}>Eliminar</Text>
+                {isDeleting ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.deleteButtonConfirmText}>Eliminar</Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>

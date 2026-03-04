@@ -348,8 +348,8 @@ export default function AdminDashboard() {
         </View>
 
         {/* Products Table Header */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={true} style={{ width: '100%' }}>
-          <View style={{ minWidth: 700, width: '100%' }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={true} style={{ width: '100%' }} contentContainerStyle={{ flexGrow: 1 }}>
+          <View style={{ minWidth: 700, width: '100%', flex: 1 }}>
             <View style={[styles.tableHeader, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
               <Text style={[styles.thCell, styles.thImage, { color: isDark ? '#FFFFFF' : theme.colors.textSecondary }]}>Imagen</Text>
               <Text style={[styles.thCell, styles.thName, { color: isDark ? '#FFFFFF' : theme.colors.textSecondary }]}>Nombre</Text>

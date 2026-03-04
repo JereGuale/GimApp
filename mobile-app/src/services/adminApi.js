@@ -71,33 +71,13 @@ export const SuperAdminService = {
     body: JSON.stringify(data)
   }),
   createProduct: async (token, data) => {
-    // Convertir imágenes a base64
-    const base64Images = [];
-    if (data.images && Array.isArray(data.images) && data.images.length > 0) {
-      for (const imageUri of data.images) {
-        try {
-          const response = await fetch(imageUri);
-          const blob = await response.blob();
-          const base64 = await new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result);
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-          });
-          base64Images.push(base64);
-        } catch (error) {
-          console.error('[AdminApi] Error converting image to base64:', error);
-        }
-      }
-    }
-
     const payload = {
       name: data.name,
       price: data.price,
       description: data.description || '',
       category_id: data.category_id,
       is_featured: data.is_featured ? 1 : 0,
-      images: base64Images
+      images: data.images || []
     };
 
     const response = await fetch(`${API_URL}/admin/products`, {
@@ -127,38 +107,13 @@ export const SuperAdminService = {
     return response.json();
   },
   updateProduct: async (token, id, data) => {
-    const base64Images = [];
-    if (data.images && Array.isArray(data.images) && data.images.length > 0) {
-      for (const imageUri of data.images) {
-        // Si ya es una URL remota de Supabase o similar, no convertir a base64
-        if (typeof imageUri === 'string' && imageUri.startsWith('http') && !imageUri.includes('192.168.')) {
-          base64Images.push(imageUri);
-          continue;
-        }
-
-        try {
-          const response = await fetch(imageUri);
-          const blob = await response.blob();
-          const base64 = await new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result);
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-          });
-          base64Images.push(base64);
-        } catch (error) {
-          console.error('[AdminApi] Error converting image to base64:', error);
-        }
-      }
-    }
-
     const payload = {
       name: data.name,
       price: data.price,
       description: data.description || '',
       category_id: data.category_id,
       is_featured: data.is_featured ? 1 : 0,
-      images: base64Images
+      images: data.images || []
     };
 
     const response = await fetch(`${API_URL}/admin/products/${id}`, {

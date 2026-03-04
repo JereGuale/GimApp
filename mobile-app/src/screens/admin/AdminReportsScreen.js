@@ -149,6 +149,23 @@ export default function AdminReportsScreen() {
     // Helpert function to handle HTML printing exclusively via iframe for Web 
     // This avoids `window.print()` capturing the entire browser viewport (Sidebars, UI buttons, etc)
     const printHtmlToWebIframe = (htmlContent) => {
+        // Method 1: Clean popup window (Works perfectly on mobile Chrome/Safari without inherit CSS issues)
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+            printWindow.document.open();
+            printWindow.document.write(htmlContent);
+            printWindow.document.close();
+            printWindow.focus();
+
+            // Wait for images/fonts to load before printing
+            setTimeout(() => {
+                printWindow.print();
+                printWindow.close();
+            }, 500);
+            return;
+        }
+
+        // Method 2: Fallback to invisible iframe if popups are blocked
         const iframe = document.createElement('iframe');
         iframe.style.position = 'fixed';
         iframe.style.right = '0';
@@ -163,12 +180,12 @@ export default function AdminReportsScreen() {
         iframe.contentWindow.document.close();
 
         iframe.contentWindow.focus();
-        iframe.contentWindow.print();
-
-        // Remove iframe after printing
         setTimeout(() => {
-            document.body.removeChild(iframe);
-        }, 1000);
+            iframe.contentWindow.print();
+            setTimeout(() => {
+                document.body.removeChild(iframe);
+            }, 1000);
+        }, 500);
     };
 
     const generateDailyPDF = async () => {
@@ -330,7 +347,7 @@ export default function AdminReportsScreen() {
 
         try {
             if (Platform.OS === 'web') {
-                await Print.printAsync({ html: htmlContent });
+                printHtmlToWebIframe(htmlContent);
             } else {
                 const { uri } = await Print.printToFileAsync({ html: htmlContent });
                 await Sharing.shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
@@ -359,30 +376,154 @@ export default function AdminReportsScreen() {
       </tr>
     `}).join('');
 
+        const downloadDate = new Date();
+        const formattedDate = downloadDate.toLocaleDateString();
+        const formattedTime = downloadDate.toLocaleTimeString();
+
         const htmlContent = `
       <html>
         <head>
           <style>
-            body { font-family: 'Helvetica'; padding: 20px; color: #333; }
-            h1 { color: #2563EB; text-align: center; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th, td { border: 1px solid #ddd; padding: 10px; text-align: left; font-size: 14px; }
-            th { background-color: #F3F4F6; color: #374151; }
-            .total { text-align: right; font-size: 18px; font-weight: bold; margin-top: 20px; }
+            body { 
+                font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+                padding: 40px; 
+                color: #1F2937; 
+                background-color: #FFFFFF;
+            }
+            .header-container {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                margin-bottom: 30px;
+                padding-bottom: 20px;
+                border-bottom: 2px solid #E5E7EB;
+            }
+            h1 { 
+                color: #1E3A8A; 
+                margin: 0 0 10px 0;
+                font-size: 28px;
+                font-weight: 800;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                text-align: center;
+            }
+            .meta-info {
+                color: #6B7280;
+                font-size: 14px;
+                text-align: center;
+                margin-bottom: 5px;
+            }
+            
+            .summary-box {
+                background-color: #F8FAFC;
+                border: 1px solid #E2E8F0;
+                border-radius: 12px;
+                padding: 20px;
+                margin-bottom: 30px;
+                display: flex;
+                justify-content: space-around;
+            }
+            .summary-item {
+                text-align: center;
+            }
+            .summary-label {
+                font-size: 13px;
+                color: #64748B;
+                text-transform: uppercase;
+                font-weight: 600;
+                letter-spacing: 0.5px;
+                margin-bottom: 5px;
+            }
+            .summary-value {
+                font-size: 24px;
+                color: #0F172A;
+                font-weight: 700;
+            }
+            .summary-value.highlight {
+                color: #10B981;
+            }
+
+            table { 
+                width: 100%; 
+                border-collapse: separate; 
+                border-spacing: 0;
+                margin-top: 20px; 
+                border-radius: 8px;
+                overflow: hidden;
+                border: 1px solid #E2E8F0;
+            }
+            th, td { 
+                padding: 14px 16px; 
+                text-align: left; 
+                border-bottom: 1px solid #E2E8F0;
+                font-size: 14px;
+            }
+            th { 
+                background-color: #F8FAFC; 
+                color: #475569; 
+                font-weight: 600;
+                font-size: 13px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+            tr:last-child td {
+                border-bottom: none;
+            }
+            .amount {
+                font-weight: 600;
+                color: #0F172A;
+            }
+            
+            .footer {
+                margin-top: 50px;
+                padding-top: 20px;
+                border-top: 1px solid #E5E7EB;
+                text-align: center;
+                font-size: 12px;
+                color: #9CA3AF;
+            }
           </style>
         </head>
         <body>
-          <h1>Reporte Mensual Suscripciones - FitAdmin</h1>
-          <p>Período: Mes ${monthlyMonth} - Año ${monthlyYear}</p>
+          <div class="header-container">
+            <h1>Reporte Mensual de Suscripciones</h1>
+            <div class="meta-info"><b>FitAdmin</b> - Sistema de Gestión de Gimnasio</div>
+            <div class="meta-info">Generado el ${formattedDate} a las ${formattedTime}</div>
+          </div>
+
+          <div class="summary-box">
+             <div class="summary-item">
+                <div class="summary-label">Período Seleccionado</div>
+                <div class="summary-value">Mes ${monthlyMonth} / ${monthlyYear}</div>
+             </div>
+             <div class="summary-item">
+                <div class="summary-label">Total Suscripciones</div>
+                <div class="summary-value">${monthlyReports.length}</div>
+             </div>
+             <div class="summary-item">
+                <div class="summary-label">Monto Mensual</div>
+                <div class="summary-value highlight">$${Number(monthlyTotal).toFixed(2)}</div>
+             </div>
+          </div>
+
           <table>
             <thead>
-              <tr><th>Cliente / Plan</th><th>Monto</th><th>Fecha de Pago</th><th>Vencimiento</th><th>Estado</th></tr>
+              <tr>
+                <th style="width: 35%;">Cliente / Plan</th>
+                <th style="width: 15%;">Monto</th>
+                <th style="width: 20%;">Fecha de Pago</th>
+                <th style="width: 20%;">Vencimiento</th>
+                <th style="width: 10%;">Estado</th>
+              </tr>
             </thead>
             <tbody>
-              ${htmlRows}
+              ${htmlRows.length > 0 ? htmlRows : '<tr><td colspan="5" style="text-align:center; color:#9CA3AF;">No hay registros para este mes.</td></tr>'}
             </tbody>
           </table>
-          <div class="total">Total Suscripciones: $${Number(monthlyTotal).toFixed(2)}</div>
+
+          <div class="footer">
+            Documento generado automáticamente por FitAdmin.
+          </div>
         </body>
       </html>
     `;
@@ -477,8 +618,8 @@ export default function AdminReportsScreen() {
                                 </View>
                             </View>
 
-                            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                                <View style={{ minWidth: 800 }}>
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
+                                <View style={{ minWidth: 800, flex: 1 }}>
                                     <View style={[styles.tableHead, { backgroundColor: isDark ? '#1E293B' : '#F1F5F9' }]}>
                                         <Text style={[styles.th, { flex: 2, color: theme.colors.textSecondary }]}>CLIENTE</Text>
                                         <Text style={[styles.th, { flex: 1, color: theme.colors.textSecondary }]}>MONTO</Text>
@@ -651,8 +792,8 @@ export default function AdminReportsScreen() {
                                 </View>
                             </View>
 
-                            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                                <View style={{ minWidth: 700 }}>
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
+                                <View style={{ minWidth: 700, flex: 1 }}>
                                     <View style={[styles.tableHead, { backgroundColor: isDark ? '#1E293B' : '#F1F5F9' }]}>
                                         <Text style={[styles.th, { flex: 2, color: theme.colors.textSecondary }]}>CLIENTE</Text>
                                         <Text style={[styles.th, { flex: 1.5, color: theme.colors.textSecondary }]}>HORA DE REGISTRO</Text>
