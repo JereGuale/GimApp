@@ -43,7 +43,7 @@ export default function ThemeToggleFAB() {
 const styles = StyleSheet.create({
     fab: {
         position: 'absolute',
-        bottom: 30, // Bottom corner
+        bottom: 90, // Raised to clear bottom navigation tabs
         left: 20,   // Left side
         width: 38,
         height: 38,
