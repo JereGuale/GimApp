@@ -1,0 +1,47 @@
+FROM php:8.2-apache
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    libpq-dev \
+    libzip-dev \
+    zip \
+    unzip \
+    git \
+    curl \
+    && docker-php-ext-install pdo pdo_pgsql zip \
+    && apt-get clean
+
+# Install Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Set working directory
+WORKDIR /var/www/html
+
+# Copy project files
+COPY . .
+
+# Install PHP dependencies
+RUN composer install --no-dev --optimize-autoloader --no-interaction
+
+# Configure Apache to serve from /public
+RUN sed -i 's|/var/www/html|/var/www/html/public|g' /etc/apache2/sites-available/000-default.conf \
+    && a2enmod rewrite
+
+# Set permissions
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
+    && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+
+# Create .htaccess for Laravel
+RUN echo '<IfModule mod_rewrite.c>\n\
+    Options -MultiViews -Indexes\n\
+    RewriteEngine On\n\
+    RewriteCond %{HTTP:Authorization} .\n\
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]\n\
+    RewriteCond %{REQUEST_FILENAME} !-f\n\
+    RewriteCond %{REQUEST_FILENAME} !-d\n\
+    RewriteRule ^ index.php [L]\n\
+</IfModule>' > /var/www/html/public/.htaccess
+
+EXPOSE 80
+
+CMD bash -c "php artisan config:cache && php artisan route:cache && php artisan migrate --force && apache2-foreground"
