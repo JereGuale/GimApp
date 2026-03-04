@@ -78,17 +78,37 @@ export default function RegisterScreen({ navigation }) {
 
     } catch (error) {
       console.error('Register error:', error);
-      let errorMsg = 'No se pudo crear la cuenta';
-      if (error.message) {
-        if (error.message.includes('email has already been taken') || error.message.includes('correo ya ha sido registrado')) {
+      let errorMsg = 'No se pudo crear la cuenta. Intenta de nuevo';
+      const raw = error.message || '';
+      // Intentar parsear el JSON de error de Laravel
+      try {
+        const parsed = JSON.parse(raw);
+        const errors = parsed.errors || {};
+        const firstField = Object.keys(errors)[0];
+        if (firstField) {
+          const firstMsg = errors[firstField][0] || '';
+          if (firstField === 'email' || firstMsg.includes('email')) {
+            errorMsg = firstMsg.includes('taken') || firstMsg.includes('already')
+              ? 'Ese correo ya está registrado'
+              : 'El correo no es válido';
+          } else if (firstField === 'password') {
+            errorMsg = 'La contraseña debe tener al menos 8 caracteres';
+          } else if (firstField === 'name') {
+            errorMsg = 'El nombre no es válido';
+          } else {
+            errorMsg = firstMsg || errorMsg;
+          }
+        } else if (parsed.message) {
+          if (parsed.message.includes('taken') || parsed.message.includes('already')) {
+            errorMsg = 'Ese correo ya está registrado';
+          }
+        }
+      } catch (_) {
+        // Si no es JSON, verificar texto plano
+        if (raw.includes('email') && (raw.includes('taken') || raw.includes('already'))) {
           errorMsg = 'Ese correo ya está registrado';
-        } else if (error.message.includes('JSON')) {
-          try {
-            let parsed = JSON.parse(error.message);
-            if (parsed.errors && parsed.errors.email) {
-              errorMsg = 'Ese correo ya está registrado';
-            }
-          } catch (e) { }
+        } else if (raw.includes('Network') || raw.includes('fetch')) {
+          errorMsg = 'Sin conexión. Espera un momento y vuelve a intentar';
         }
       }
       showToast(errorMsg, 'error');

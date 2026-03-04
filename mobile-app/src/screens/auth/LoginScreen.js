@@ -1,5 +1,5 @@
 
-import { View, Text, TouchableOpacity, StyleSheet, Image, TextInput, KeyboardAvoidingView, Platform, Animated } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image, TextInput, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
@@ -9,6 +9,7 @@ export default function LoginScreen({ navigation }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [keepLoggedIn, setKeepLoggedIn] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState('error');
@@ -26,24 +27,29 @@ export default function LoginScreen({ navigation }) {
   };
 
   const handleLogin = async () => {
+    if (!username.trim() || !password.trim()) {
+      showToast('Ingresa correo y contraseña', 'error');
+      return;
+    }
     try {
-      if (!username.trim() || !password.trim()) {
-        showToast('Ingresa correo y contraseña', 'error');
-        return;
-      }
+      setLoading(true);
       const { user, token } = await authLogin(username.trim(), password);
-      console.log('[LoginScreen] Response from backend:', { user, token });
-      console.log('[LoginScreen] User role:', user?.role);
-
       showToast('¡Inicio de sesión exitoso!', 'success');
-
       setTimeout(async () => {
         await login(user, token, keepLoggedIn);
       }, 1000);
-
     } catch (error) {
-      showToast('Credenciales inválidas o cuenta no existe', 'error');
+      const msg = error.message || '';
+      if (msg.includes('401') || msg.includes('credentials') || msg.includes('Invalid')) {
+        showToast('Correo o contraseña incorrectos', 'error');
+      } else if (msg.includes('Network') || msg.includes('fetch')) {
+        showToast('Sin conexión al servidor. Intenta en un momento', 'error');
+      } else {
+        showToast('Error al iniciar sesión. Intenta de nuevo', 'error');
+      }
       console.error('Login error:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -102,8 +108,11 @@ export default function LoginScreen({ navigation }) {
             <Text style={styles.checkboxLabel}>Guardar inicio de sesión</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.btn} onPress={handleLogin}>
-            <Text style={styles.btnText}>INICIAR SESION</Text>
+          <TouchableOpacity style={[styles.btn, loading && { opacity: 0.6 }]} onPress={handleLogin} disabled={loading}>
+            {loading
+              ? <ActivityIndicator color="#FFFFFF" />
+              : <Text style={styles.btnText}>INICIAR SESION</Text>
+            }
           </TouchableOpacity>
 
           <View style={styles.linksRow}>
