@@ -619,7 +619,7 @@ export default function AdminReportsScreen() {
                             </View>
 
                             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
-                                <View style={{ minWidth: 800, flex: 1 }}>
+                                <View style={{ minWidth: 800 }}>
                                     <View style={[styles.tableHead, { backgroundColor: isDark ? '#1E293B' : '#F1F5F9' }]}>
                                         <Text style={[styles.th, { flex: 2, color: theme.colors.textSecondary }]}>CLIENTE</Text>
                                         <Text style={[styles.th, { flex: 1, color: theme.colors.textSecondary }]}>MONTO</Text>
@@ -793,7 +793,7 @@ export default function AdminReportsScreen() {
                             </View>
 
                             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
-                                <View style={{ minWidth: 700, flex: 1 }}>
+                                <View style={{ minWidth: 700 }}>
                                     <View style={[styles.tableHead, { backgroundColor: isDark ? '#1E293B' : '#F1F5F9' }]}>
                                         <Text style={[styles.th, { flex: 2, color: theme.colors.textSecondary }]}>CLIENTE</Text>
                                         <Text style={[styles.th, { flex: 1.5, color: theme.colors.textSecondary }]}>HORA DE REGISTRO</Text>
