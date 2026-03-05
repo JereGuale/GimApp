@@ -35,16 +35,21 @@ class ProductController extends Controller
                 if (!is_string($base64Image)) {
                     continue;
                 }
-                if (preg_match('/^data:image\/(\w+);base64,/', $base64Image, $type)) {
-                    $base64Image = substr($base64Image, strpos($base64Image, ',') + 1);
-                    $type = strtolower($type[1]);
 
-                    $imageData = base64_decode($base64Image);
+                if (preg_match('/^data:image\/(\w+);base64,/', $base64Image, $type)) {
+                    $base64String = substr($base64Image, strpos($base64Image, ',') + 1);
+                    $extension = strtolower($type[1]);
+
+                    // Aseguramos extensiones válidas
+                    if ($extension === 'jpeg')
+                        $extension = 'jpg';
+
+                    $imageData = base64_decode($base64String);
                     if ($imageData === false) {
                         continue;
                     }
 
-                    $fileName = 'product_' . time() . '_' . $index . '.' . $type;
+                    $fileName = 'product_' . time() . '_' . uniqid() . '.' . $extension;
                     $filePath = 'products/' . $fileName;
                     Storage::disk('public')->put($filePath, $imageData);
                     $imageUrls[] = $baseUrl . Storage::url($filePath);
@@ -90,16 +95,20 @@ class ProductController extends Controller
                 if (!is_string($base64Image)) {
                     continue;
                 }
-                if (preg_match('/^data:image\/(\w+);base64,/', $base64Image, $type)) {
-                    $base64Image = substr($base64Image, strpos($base64Image, ',') + 1);
-                    $type = strtolower($type[1]);
 
-                    $imageData = base64_decode($base64Image);
+                if (preg_match('/^data:image\/(\w+);base64,/', $base64Image, $type)) {
+                    $base64String = substr($base64Image, strpos($base64Image, ',') + 1);
+                    $extension = strtolower($type[1]);
+
+                    if ($extension === 'jpeg')
+                        $extension = 'jpg';
+
+                    $imageData = base64_decode($base64String);
                     if ($imageData === false) {
                         continue;
                     }
 
-                    $fileName = 'product_' . time() . '_' . $index . '.' . $type;
+                    $fileName = 'product_' . time() . '_' . uniqid() . '.' . $extension;
                     $filePath = 'products/' . $fileName;
                     Storage::disk('public')->put($filePath, $imageData);
                     $imageUrls[] = $baseUrl . Storage::url($filePath);
