@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 
 class ProductController extends Controller
 {
@@ -31,12 +32,17 @@ class ProductController extends Controller
         $imageUrls = [];
         $baseUrl = rtrim(config('app.url'), '/');
         if (isset($validated['images']) && is_array($validated['images'])) {
+            Log::info('Processing ' . count($validated['images']) . ' images for product creation.');
             foreach ($validated['images'] as $index => $base64Image) {
                 if (!is_string($base64Image)) {
+                    Log::info('Image at index ' . $index . ' is not a string!');
                     continue;
                 }
 
-                if (preg_match('/^data:image\/(\w+);base64,/', $base64Image, $type)) {
+                Log::info('Image prefix incoming: ' . substr($base64Image, 0, 50));
+
+                if (preg_match('/^data:image\/([^;]+);base64,/', $base64Image, $type)) {
+                    Log::info('Regex match successful for type: ' . $type[1]);
                     $base64String = substr($base64Image, strpos($base64Image, ',') + 1);
                     $extension = strtolower($type[1]);
 
@@ -46,6 +52,7 @@ class ProductController extends Controller
 
                     $imageData = base64_decode($base64String);
                     if ($imageData === false) {
+                        Log::error('Base64 decode failed!');
                         continue;
                     }
 
@@ -53,11 +60,19 @@ class ProductController extends Controller
                     $filePath = 'products/' . $fileName;
                     Storage::disk('public')->put($filePath, $imageData);
                     $imageUrls[] = $baseUrl . Storage::url($filePath);
+                    Log::info('Image successfully saved: ' . $fileName);
                 }
                 elseif (filter_var($base64Image, FILTER_VALIDATE_URL) || str_starts_with($base64Image, '/')) {
                     $imageUrls[] = $base64Image;
+                    Log::info('Image matched as standard URL: ' . $base64Image);
+                }
+                else {
+                    Log::warning('Image failed all checks. Preview: ' . substr($base64Image, 0, 100));
                 }
             }
+        }
+        else {
+            Log::info('No images key in validated data or not an array.');
         }
 
         $validated['image'] = $imageUrls[0] ?? ($validated['image'] ?? null);

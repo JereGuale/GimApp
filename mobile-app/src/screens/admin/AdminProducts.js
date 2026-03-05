@@ -100,19 +100,31 @@ export default function AdminProducts({ route }) {
       if (!result.canceled) {
         const newImages = await Promise.all(result.assets.map(async (asset) => {
           let base64String = null;
+          const fallbackMime = asset.mimeType || 'image/jpeg';
 
           if (asset.base64) {
             // App Nativa: ya tenemos base64
-            base64String = `data:${asset.mimeType || 'image/jpeg'};base64,${asset.base64}`;
+            base64String = `data:${fallbackMime};base64,${asset.base64}`;
           } else if (Platform.OS === 'web') {
-            if (asset.uri && asset.uri.startsWith('data:image')) {
-              // Web: ya es data URI
-              base64String = asset.uri;
+            if (asset.uri && asset.uri.startsWith('data:')) {
+              // Web: ya es data URI, asegurarnos de que sea image/
+              base64String = asset.uri.replace(/^data:(.*);base64,/, (match, mime) => {
+                if (!mime.startsWith('image/')) {
+                  return `data:${fallbackMime};base64,`;
+                }
+                return match;
+              });
             } else if (asset.uri && asset.uri.startsWith('blob:')) {
               // Web: blob URL (Safari/Chrome móvil web)
               try {
                 const response = await fetch(asset.uri);
-                const blob = await response.blob();
+                let blob = await response.blob();
+
+                // Forzar tipo de imagen para evitar que FileReader genere 'application/octet-stream'
+                if (!blob.type || !blob.type.startsWith('image/')) {
+                  blob = new Blob([blob], { type: fallbackMime });
+                }
+
                 base64String = await new Promise((resolve, reject) => {
                   const reader = new FileReader();
                   reader.onloadend = () => resolve(reader.result);
@@ -128,7 +140,7 @@ export default function AdminProducts({ route }) {
           return {
             uri: asset.uri,
             base64: base64String,
-            type: asset.mimeType || 'image/jpeg',
+            type: fallbackMime,
             name: asset.fileName || `photo_${Date.now()}.jpg`,
             id: Math.random().toString()
           };
