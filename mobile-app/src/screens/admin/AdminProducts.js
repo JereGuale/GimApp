@@ -103,37 +103,42 @@ export default function AdminProducts({ route }) {
           const fallbackMime = asset.mimeType || 'image/jpeg';
 
           if (asset.base64) {
-            // App Nativa: ya tenemos base64
+            // App Nativa o Web cuando expo-image-picker decide dar el base64
             base64String = `data:${fallbackMime};base64,${asset.base64}`;
           } else if (Platform.OS === 'web') {
             if (asset.uri && asset.uri.startsWith('data:')) {
-              // Web: ya es data URI, asegurarnos de que sea image/
+              // Web: ya es data URI
               base64String = asset.uri.replace(/^data:(.*);base64,/, (match, mime) => {
-                if (!mime.startsWith('image/')) {
-                  return `data:${fallbackMime};base64,`;
-                }
+                if (!mime.startsWith('image/')) return `data:${fallbackMime};base64,`;
                 return match;
               });
             } else if (asset.uri && asset.uri.startsWith('blob:')) {
-              // Web: blob URL (Safari/Chrome móvil web)
-              try {
-                const response = await fetch(asset.uri);
-                let blob = await response.blob();
-
-                // Forzar tipo de imagen para evitar que FileReader genere 'application/octet-stream'
-                if (!blob.type || !blob.type.startsWith('image/')) {
-                  blob = new Blob([blob], { type: fallbackMime });
+              // Web: blob URL (Safari/Chrome móvil web restringen fetch en blobs locales a veces)
+              // Usamos HTMLImageElement + Canvas para asegurar la extracción sin CORS/Fetch errors
+              base64String = await new Promise((resolve, reject) => {
+                try {
+                  const img = new window.Image();
+                  img.crossOrigin = 'Anonymous';
+                  img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0);
+                    // Exportamos forzosamente como jpeg comprimido para la red
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
+                    resolve(dataUrl);
+                  };
+                  img.onerror = () => {
+                    console.error("Error cargando imagen blob en canvas");
+                    resolve(null);
+                  };
+                  img.src = asset.uri;
+                } catch (e) {
+                  console.error("Error en fallback de canvas", e);
+                  resolve(null);
                 }
-
-                base64String = await new Promise((resolve, reject) => {
-                  const reader = new FileReader();
-                  reader.onloadend = () => resolve(reader.result);
-                  reader.onerror = reject;
-                  reader.readAsDataURL(blob);
-                });
-              } catch (e) {
-                console.error("Error converting blob to base64", e);
-              }
+              });
             }
           }
 
