@@ -95,12 +95,13 @@ export default function AdminProducts({ route }) {
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsMultiple: true,
         quality: 0.8,
-        base64: false,
+        base64: true,
       });
 
       if (!result.canceled) {
         const newImages = result.assets.map(asset => ({
           uri: asset.uri,
+          base64: asset.base64 ? `data:${asset.mimeType || 'image/jpeg'};base64,${asset.base64}` : null,
           type: asset.mimeType || 'image/jpeg',
           name: asset.fileName || `photo_${Date.now()}.jpg`,
           id: Math.random().toString()

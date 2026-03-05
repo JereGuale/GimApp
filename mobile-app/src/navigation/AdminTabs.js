@@ -55,17 +55,6 @@ export default function AdminTabs() {
           },
           headerRight: () => (
             <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 8 }}>
-              <TouchableOpacity
-                onPress={toggleTheme}
-                style={{ marginRight: 8, padding: 8 }}
-              >
-                <Ionicons
-                  name={theme.isDark ? 'sunny' : 'moon'}
-                  size={24}
-                  color={theme.isDark ? '#FB923C' : '#FFD700'}
-                />
-              </TouchableOpacity>
-
               {/* Notification Bell */}
               <TouchableOpacity
                 onPress={() => setNotificationVisible(true)}

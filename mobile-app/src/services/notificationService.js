@@ -96,6 +96,25 @@ export const NotificationAPI = {
                 error: error.response?.data?.message || 'Error al marcar como leÃ­das'
             };
         }
+    },
+    /**
+     * Delete a notification
+     */
+    async deleteNotification(notificationId) {
+        try {
+            const headers = await getAuthHeaders();
+            const response = await axios.delete(
+                `${API_URL}/notifications/${notificationId}`,
+                { headers }
+            );
+            return { success: true, data: response.data };
+        } catch (error) {
+            console.error('Error deleting notification:', error.response?.data || error.message);
+            return {
+                success: false,
+                error: error.response?.data?.message || 'Error al eliminar notificación'
+            };
+        }
     }
 };
 

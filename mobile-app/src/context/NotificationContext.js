@@ -19,9 +19,9 @@ export function NotificationProvider({ children }) {
         }
     }, [user, token]);
 
-    const fetchNotifications = useCallback(async () => {
+    const fetchNotifications = useCallback(async (silent = false) => {
         if (!user || !token) return;
-        setLoading(true);
+        if (!silent) setLoading(true);
         const result = await NotificationAPI.getNotifications(token);
         if (result.success) {
             setNotifications(result.data);
@@ -29,7 +29,7 @@ export function NotificationProvider({ children }) {
             const unread = result.data.filter(n => !n.read_at).length;
             setUnreadCount(unread);
         }
-        setLoading(false);
+        if (!silent) setLoading(false);
     }, [user, token]);
 
     const markAsRead = useCallback(async (notificationId) => {
@@ -50,6 +50,19 @@ export function NotificationProvider({ children }) {
                 prev.map(n => ({ ...n, read_at: n.read_at || new Date().toISOString() }))
             );
             setUnreadCount(0);
+        }
+        return result;
+    }, []);
+
+    const deleteNotification = useCallback(async (notificationId) => {
+        const result = await NotificationAPI.deleteNotification(notificationId);
+        if (result.success) {
+            setNotifications(prev => {
+                const next = prev.filter(n => n.id !== notificationId);
+                const unread = next.filter(n => !n.read_at).length;
+                setUnreadCount(unread);
+                return next;
+            });
         }
         return result;
     }, []);
@@ -79,7 +92,8 @@ export function NotificationProvider({ children }) {
             fetchNotifications,
             fetchUnreadCount,
             markAsRead,
-            markAllAsRead
+            markAllAsRead,
+            deleteNotification
         }}>
             {children}
         </NotificationContext.Provider>

@@ -47,7 +47,7 @@ class Notification extends Model
      */
     public static function notifyTrainers($subscription)
     {
-        $trainers = User::role('trainer')->get();
+        $trainers = User::role(['trainer', 'admin', 'super_admin'])->get();
 
         foreach ($trainers as $trainer) {
             self::create([

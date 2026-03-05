@@ -46,13 +46,6 @@ export default function SuperAdminTabs() {
           headerTitleStyle: { fontWeight: '700', fontSize: 18 },
           headerRight: () => (
             <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 8 }}>
-              <TouchableOpacity onPress={toggleTheme} style={{ padding: 8 }}>
-                <Ionicons
-                  name={theme.isDark ? 'sunny' : 'moon'}
-                  size={24}
-                  color={theme.isDark ? '#FB923C' : '#FFD700'}
-                />
-              </TouchableOpacity>
               <TouchableOpacity onPress={handleLogout} style={{ padding: 8 }}>
                 <Ionicons name="log-out-outline" size={22} color="#EF4444" />
               </TouchableOpacity>

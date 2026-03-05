@@ -62,4 +62,19 @@ class NotificationController extends Controller
             'message' => 'Todas las notificaciones marcadas como leídas'
         ]);
     }
+
+    /**
+     * Delete a notification
+     */
+    public function destroy(Request $request, $id)
+    {
+        $notification = Notification::where('user_id', $request->user()->id)
+            ->findOrFail($id);
+
+        $notification->delete();
+
+        return response()->json([
+            'message' => 'Notificación eliminada'
+        ]);
+    }
 }

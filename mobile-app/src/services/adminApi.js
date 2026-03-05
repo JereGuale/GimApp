@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import { API_URL } from './api';
+import { API_URL, CategoryService as PublicCategoryService } from './api';
 
 const withAuth = async (endpoint, token, options = {}) => {
   console.log('[withAuth] Request:', { endpoint, method: options.method || 'GET', hasToken: !!token });
@@ -67,139 +67,81 @@ export const SuperAdminService = {
   deleteDailyIncome: (token, id) => withAuth(`${API_URL}/admin/reports/daily/${id}`, token, {
     method: 'DELETE'
   }),
-  createCategory: (token, data) => withAuth(`${API_URL}/admin/categories`, token, {
-    method: 'POST',
-    body: JSON.stringify(data)
-  }),
-  createProduct: async (token, data) => {
-    const formData = new FormData();
-    formData.append('name', data.name);
-    formData.append('price', data.price);
-    formData.append('description', data.description || '');
-    formData.append('category_id', data.category_id);
-    formData.append('is_featured', data.is_featured ? 1 : 0);
-
-    if (data.images && data.images.length > 0) {
-      for (let i = 0; i < data.images.length; i++) {
-        const img = data.images[i];
-        if (img.uri && img.uri.startsWith('http') && !img.uri.startsWith('blob:')) {
-          formData.append('images[]', img.uri);
-        } else if (img.uri) {
-          if (Platform.OS === 'web') {
-            const res = await fetch(img.uri);
-            const blob = await res.blob();
-            formData.append('images[]', blob, img.name || `photo_${i}.jpg`);
-          } else {
-            formData.append('images[]', {
-              uri: img.uri,
-              type: img.type || 'image/jpeg',
-              name: img.name || `photo_${i}.jpg`
-            });
-          }
-        }
-      }
-    }
-
-    const response = await fetch(`${API_URL}/admin/products`, {
+  createCategory: async (token, data) => {
+    const res = await withAuth(`${API_URL}/admin/categories`, token, {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: 'application/json'
-        // Content-Type is generated automatically by fetch for FormData
-      },
-      body: formData
+      body: JSON.stringify(data)
     });
-
-    if (!response.ok) {
-      const message = await response.text();
-      console.error('[AdminApi] createProduct failed', {
-        status: response.status,
-        statusText: response.statusText,
-        message
-      });
-      throw new Error(message || `HTTP error! status: ${response.status}`);
-    }
-
-    if (response.status === 204) {
-      return null;
-    }
-
-    return response.json();
+    PublicCategoryService.clearCache();
+    return res;
+  },
+  createProduct: async (token, data) => {
+    const payload = {
+      name: data.name,
+      price: data.price,
+      description: data.description || '',
+      category_id: data.category_id,
+      is_featured: data.is_featured ? 1 : 0,
+      images: data.images ? data.images.map(img => img.base64 || img.uri) : [],
+    };
+    const res = await withAuth(`${API_URL}/admin/products`, token, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    PublicCategoryService.clearCache();
+    return res;
   },
   updateProduct: async (token, id, data) => {
-    const formData = new FormData();
-    formData.append('_method', 'PUT'); // Required by Laravel for multipart/form-data via PUT
-    formData.append('name', data.name);
-    formData.append('price', data.price);
-    formData.append('description', data.description || '');
-    formData.append('category_id', data.category_id);
-    formData.append('is_featured', data.is_featured ? 1 : 0);
-
-    if (data.images && data.images.length > 0) {
-      for (let i = 0; i < data.images.length; i++) {
-        const img = data.images[i];
-        if (img.uri && img.uri.startsWith('http') && !img.uri.startsWith('blob:')) {
-          formData.append('images[]', img.uri);
-        } else if (img.uri) {
-          if (Platform.OS === 'web') {
-            const res = await fetch(img.uri);
-            const blob = await res.blob();
-            formData.append('images[]', blob, img.name || `photo_${i}.jpg`);
-          } else {
-            formData.append('images[]', {
-              uri: img.uri,
-              type: img.type || 'image/jpeg',
-              name: img.name || `photo_${i}.jpg`
-            });
-          }
-        }
-      }
-    }
-
-    const response = await fetch(`${API_URL}/admin/products/${id}`, {
-      method: 'POST', // We send as POST because Laravel needs _method inside FormData for PUT requests
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: 'application/json'
-      },
-      body: formData
+    const payload = {
+      name: data.name,
+      price: data.price,
+      description: data.description || '',
+      category_id: data.category_id,
+      is_featured: data.is_featured ? 1 : 0,
+      images: data.images ? data.images.map(img => img.base64 || img.uri) : [],
+    };
+    const res = await withAuth(`${API_URL}/admin/products/${id}`, token, {
+      method: 'PUT',
+      body: JSON.stringify(payload)
     });
-
-    if (!response.ok) {
-      const message = await response.text();
-      console.error('[AdminApi] updateProduct failed', {
-        status: response.status,
-        statusText: response.statusText,
-        message
-      });
-      throw new Error(message || `HTTP error! status: ${response.status}`);
-    }
-
-    if (response.status === 204) {
-      return null;
-    }
-
-    return response.json();
+    PublicCategoryService.clearCache();
+    return res;
   },
-  deleteProduct: (token, id) => withAuth(`${API_URL}/admin/products/${id}`, token, {
-    method: 'DELETE'
-  })
+  deleteProduct: async (token, id) => {
+    const res = await withAuth(`${API_URL}/admin/products/${id}`, token, {
+      method: 'DELETE'
+    });
+    PublicCategoryService.clearCache();
+    return res;
+  }
 };
 
 export const CategoryService = {
   getCategories: (token) => withAuth(`${API_URL}/categories`, token),
   getAll: (token) => withAuth(`${API_URL}/admin/categories`, token),
-  create: (token, data) => withAuth(`${API_URL}/admin/categories`, token, {
-    method: 'POST',
-    body: JSON.stringify(data)
-  }),
-  update: (token, id, data) => withAuth(`${API_URL}/admin/categories/${id}`, token, {
-    method: 'PUT',
-    body: JSON.stringify(data)
-  }),
-  remove: (token, id) => withAuth(`${API_URL}/admin/categories/${id}`, token, {
-    method: 'DELETE'
-  })
+  create: async (token, data) => {
+    const res = await withAuth(`${API_URL}/admin/categories`, token, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+    PublicCategoryService.clearCache();
+    return res;
+  },
+  update: async (token, id, data) => {
+    const res = await withAuth(`${API_URL}/admin/categories/${id}`, token, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+    PublicCategoryService.clearCache();
+    return res;
+  },
+  remove: async (token, id) => {
+    const res = await withAuth(`${API_URL}/admin/categories/${id}`, token, {
+      method: 'DELETE'
+    });
+    PublicCategoryService.clearCache();
+    return res;
+  }
 };
 
 export const ProductService = {

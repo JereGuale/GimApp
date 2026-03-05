@@ -76,8 +76,10 @@ class SubscriptionController extends Controller
 
         // Si es transferencia, notificar a los trainers
         if ($request->payment_method === 'transfer') {
-            // La notificación se enviará cuando suba el comprobante
-        } elseif ($request->payment_method === 'card') {
+            $subscription->load(['plan', 'user']);
+            Notification::notifyTrainers($subscription);
+        }
+        elseif ($request->payment_method === 'card') {
             // Tarjeta: auto-aprobada, notificar al usuario
             Notification::create([
                 'user_id' => $request->user()->id,

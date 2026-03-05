@@ -24,18 +24,50 @@ export const ENDPOINTS = {
   activeOffer: `${API_URL}/offers/active`,
 };
 
-const fetchWithAuth = async (endpoint, token) => {
+// In-memory cache for API GET requests to reduce load times
+const apiCache = {};
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+const getCachedResponse = (key) => {
+  const cached = apiCache[key];
+  if (cached && (Date.now() - cached.timestamp < CACHE_DURATION)) {
+    return cached.data;
+  }
+  return null;
+};
+
+const setCachedResponse = (key, data) => {
+  apiCache[key] = {
+    data,
+    timestamp: Date.now()
+  };
+};
+
+const fetchWithAuth = async (endpoint, token, options = {}) => {
+  const isCacheableGet = !options.method || options.method === 'GET';
+
+  if (isCacheableGet) {
+    const cachedData = getCachedResponse(endpoint);
+    if (cachedData) return cachedData;
+  }
+
   try {
     const response = await fetch(endpoint, {
+      ...options,
       headers: {
         Authorization: `Bearer ${token}`,
-        Accept: 'application/json'
+        Accept: 'application/json',
+        ...options.headers
       }
     });
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    return response.json();
+    const data = await response.json();
+    if (isCacheableGet) {
+      setCachedResponse(endpoint, data);
+    }
+    return data;
   } catch (error) {
     console.error('Error fetching auth data:', error);
     throw error;
@@ -44,12 +76,16 @@ const fetchWithAuth = async (endpoint, token) => {
 
 // Helper function para hacer peticiones GET
 export const fetchData = async (endpoint) => {
+  const cachedData = getCachedResponse(endpoint);
+  if (cachedData) return cachedData;
+
   try {
     const response = await fetch(endpoint);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     const data = await response.json();
+    setCachedResponse(endpoint, data);
     return data;
   } catch (error) {
     console.error('Error fetching data:', error);
@@ -164,15 +200,33 @@ export const CategoryService = {
   getProductsByCategory: (categoryId, token) =>
     token
       ? fetchWithAuth(`${ENDPOINTS.categories}/${categoryId}/products`, token)
-      : fetchData(`${ENDPOINTS.categories}/${categoryId}/products`)
+      : fetchData(`${ENDPOINTS.categories}/${categoryId}/products`),
+  clearCache: () => {
+    delete apiCache[ENDPOINTS.categories];
+  }
 };
 
 export const SubscriptionService = {
   getAll: () => fetchData(ENDPOINTS.subscriptions),
   getById: (id) => fetchData(`${ENDPOINTS.subscriptions}/${id}`),
-  create: (data) => postData(ENDPOINTS.subscriptions, data),
-  update: (id, data) => updateData(`${ENDPOINTS.subscriptions}/${id}`, data),
-  delete: (id) => deleteData(`${ENDPOINTS.subscriptions}/${id}`),
+  create: async (data) => {
+    const res = await postData(ENDPOINTS.subscriptions, data);
+    delete apiCache[ENDPOINTS.subscriptions];
+    return res;
+  },
+  update: async (id, data) => {
+    const res = await updateData(`${ENDPOINTS.subscriptions}/${id}`, data);
+    delete apiCache[ENDPOINTS.subscriptions];
+    return res;
+  },
+  delete: async (id) => {
+    const res = await deleteData(`${ENDPOINTS.subscriptions}/${id}`);
+    delete apiCache[ENDPOINTS.subscriptions];
+    return res;
+  },
+  clearCache: () => {
+    delete apiCache[ENDPOINTS.subscriptions];
+  }
 };
 
 export const OfferService = {
@@ -198,6 +252,8 @@ export const BannerService = {
       body: formData,
     });
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    delete apiCache[`${API_URL}/banners/active`];
+    delete apiCache[`${API_URL}/admin/banners`];
     return response.json();
   },
 
@@ -213,6 +269,8 @@ export const BannerService = {
       body: JSON.stringify(data),
     });
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    delete apiCache[`${API_URL}/banners/active`];
+    delete apiCache[`${API_URL}/admin/banners`];
     return response.json();
   },
 
@@ -227,6 +285,8 @@ export const BannerService = {
       body: formData,
     });
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    delete apiCache[`${API_URL}/banners/active`];
+    delete apiCache[`${API_URL}/admin/banners`];
     return response.json();
   },
 
@@ -240,6 +300,8 @@ export const BannerService = {
       },
     });
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    delete apiCache[`${API_URL}/banners/active`];
+    delete apiCache[`${API_URL}/admin/banners`];
     return response.json();
   },
 };

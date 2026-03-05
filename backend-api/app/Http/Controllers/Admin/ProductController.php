@@ -49,6 +49,9 @@ class ProductController extends Controller
                     Storage::disk('public')->put($filePath, $imageData);
                     $imageUrls[] = $baseUrl . Storage::url($filePath);
                 }
+                elseif (filter_var($base64Image, FILTER_VALIDATE_URL) || str_starts_with($base64Image, '/')) {
+                    $imageUrls[] = $base64Image;
+                }
             }
         }
 
@@ -100,6 +103,9 @@ class ProductController extends Controller
                     $filePath = 'products/' . $fileName;
                     Storage::disk('public')->put($filePath, $imageData);
                     $imageUrls[] = $baseUrl . Storage::url($filePath);
+                }
+                elseif (filter_var($base64Image, FILTER_VALIDATE_URL) || str_starts_with($base64Image, '/')) {
+                    $imageUrls[] = $base64Image;
                 }
             }
         }

@@ -49,12 +49,14 @@ export default function NotificationPanel({ visible, onClose, onNotificationPres
         loading,
         fetchNotifications,
         markAsRead,
-        markAllAsRead
+        markAllAsRead,
+        deleteNotification
     } = useNotifications();
 
     React.useEffect(() => {
         if (visible) {
-            fetchNotifications();
+            // Pass true if we already have notifications, to avoid flashing the loader
+            fetchNotifications(notifications.length > 0);
         }
     }, [visible]);
 
@@ -203,9 +205,21 @@ export default function NotificationPanel({ visible, onClose, onNotificationPres
                                                     </View>
                                                 )}
 
-                                                <Text style={[styles.notificationTime, { color: theme.colors.textSecondary }]}>
-                                                    {getTimeAgo(notification.created_at)}
-                                                </Text>
+                                                {/* Meta Row (Time + Delete) */}
+                                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
+                                                    <Text style={[styles.notificationTime, { color: theme.colors.textSecondary, marginTop: 0 }]}>
+                                                        {getTimeAgo(notification.created_at)}
+                                                    </Text>
+                                                    <TouchableOpacity
+                                                        onPress={(e) => {
+                                                            e.stopPropagation(); // Prevent triggering row press
+                                                            deleteNotification(notification.id);
+                                                        }}
+                                                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                                    >
+                                                        <Ionicons name="close" size={18} color={theme.colors.textSecondary} />
+                                                    </TouchableOpacity>
+                                                </View>
                                             </View>
                                         </View>
                                     </TouchableOpacity>

@@ -506,7 +506,6 @@ const styles = StyleSheet.create({
   cardGradient: {
     padding: 20,
     width: '100%',
-    height: '100%',
   },
   metricHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, zIndex: 1 },
   metricLabel: { fontSize: 13, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
