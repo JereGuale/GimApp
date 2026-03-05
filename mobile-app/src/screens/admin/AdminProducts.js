@@ -1,6 +1,5 @@
-
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, TextInput, Image, FlatList, Alert, Switch, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, TextInput, Image, FlatList, Alert, Switch, ActivityIndicator, Platform } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../../context/AuthContext';
@@ -99,13 +98,24 @@ export default function AdminProducts({ route }) {
       });
 
       if (!result.canceled) {
-        const newImages = result.assets.map(asset => ({
-          uri: asset.uri,
-          base64: asset.base64 ? `data:${asset.mimeType || 'image/jpeg'};base64,${asset.base64}` : null,
-          type: asset.mimeType || 'image/jpeg',
-          name: asset.fileName || `photo_${Date.now()}.jpg`,
-          id: Math.random().toString()
-        }));
+        const newImages = result.assets.map(asset => {
+          // On web, `asset.uri` is already a base64 data URL.
+          // On native, `asset.base64` contains the raw base64 string without the data URI prefix.
+          let base64String = null;
+          if (asset.base64) {
+            base64String = `data:${asset.mimeType || 'image/jpeg'};base64,${asset.base64}`;
+          } else if (Platform.OS === 'web' && asset.uri && asset.uri.startsWith('data:image')) {
+            base64String = asset.uri;
+          }
+
+          return {
+            uri: asset.uri,
+            base64: base64String,
+            type: asset.mimeType || 'image/jpeg',
+            name: asset.fileName || `photo_${Date.now()}.jpg`,
+            id: Math.random().toString()
+          };
+        });
         setSelectedImages([...selectedImages, ...newImages]);
       }
     } catch (error) {
