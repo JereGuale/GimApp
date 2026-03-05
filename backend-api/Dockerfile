@@ -11,6 +11,11 @@ RUN apt-get update && apt-get install -y \
     && docker-php-ext-install pdo pdo_pgsql zip \
     && apt-get clean
 
+# Increase PHP memory and upload limits
+RUN echo "memory_limit=256M" > /usr/local/etc/php/conf.d/memory-limit.ini \
+    && echo "upload_max_filesize=64M" > /usr/local/etc/php/conf.d/upload-limit.ini \
+    && echo "post_max_size=64M" > /usr/local/etc/php/conf.d/post-limit.ini
+
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 

@@ -93,7 +93,7 @@ export default function AdminProducts({ route }) {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsMultiple: true,
-        quality: 0.8,
+        quality: 0.2, // Reduce aggressive weight for Base64 over network
         base64: true,
       });
 
