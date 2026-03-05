@@ -98,14 +98,31 @@ export default function AdminProducts({ route }) {
       });
 
       if (!result.canceled) {
-        const newImages = result.assets.map(asset => {
-          // On web, `asset.uri` is already a base64 data URL.
-          // On native, `asset.base64` contains the raw base64 string without the data URI prefix.
+        const newImages = await Promise.all(result.assets.map(async (asset) => {
           let base64String = null;
+
           if (asset.base64) {
+            // App Nativa: ya tenemos base64
             base64String = `data:${asset.mimeType || 'image/jpeg'};base64,${asset.base64}`;
-          } else if (Platform.OS === 'web' && asset.uri && asset.uri.startsWith('data:image')) {
-            base64String = asset.uri;
+          } else if (Platform.OS === 'web') {
+            if (asset.uri && asset.uri.startsWith('data:image')) {
+              // Web: ya es data URI
+              base64String = asset.uri;
+            } else if (asset.uri && asset.uri.startsWith('blob:')) {
+              // Web: blob URL (Safari/Chrome móvil web)
+              try {
+                const response = await fetch(asset.uri);
+                const blob = await response.blob();
+                base64String = await new Promise((resolve, reject) => {
+                  const reader = new FileReader();
+                  reader.onloadend = () => resolve(reader.result);
+                  reader.onerror = reject;
+                  reader.readAsDataURL(blob);
+                });
+              } catch (e) {
+                console.error("Error converting blob to base64", e);
+              }
+            }
           }
 
           return {
@@ -115,7 +132,7 @@ export default function AdminProducts({ route }) {
             name: asset.fileName || `photo_${Date.now()}.jpg`,
             id: Math.random().toString()
           };
-        });
+        }));
         setSelectedImages([...selectedImages, ...newImages]);
       }
     } catch (error) {
