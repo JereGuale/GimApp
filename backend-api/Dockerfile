@@ -49,4 +49,4 @@ RUN echo '<IfModule mod_rewrite.c>\n\
 
 EXPOSE 80
 
-CMD bash -c "php artisan config:cache && php artisan route:cache && php artisan migrate --force && apache2-foreground"
+CMD bash -c "php artisan config:cache && php artisan route:cache && php artisan migrate --force && php artisan storage:link && apache2-foreground"
