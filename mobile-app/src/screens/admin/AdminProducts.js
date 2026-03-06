@@ -102,44 +102,64 @@ export default function AdminProducts({ route }) {
           let base64String = null;
           const fallbackMime = asset.mimeType || 'image/jpeg';
 
-          if (asset.base64) {
-            // App Nativa o Web cuando expo-image-picker decide dar el base64
-            base64String = `data:${fallbackMime};base64,${asset.base64}`;
-          } else if (Platform.OS === 'web') {
-            if (asset.uri && asset.uri.startsWith('data:')) {
-              // Web: ya es data URI
-              base64String = asset.uri.replace(/^data:(.*);base64,/, (match, mime) => {
-                if (!mime.startsWith('image/')) return `data:${fallbackMime};base64,`;
-                return match;
-              });
-            } else if (asset.uri && asset.uri.startsWith('blob:')) {
-              // Web: blob URL (Safari/Chrome móvil web restringen fetch en blobs locales a veces)
-              // Usamos HTMLImageElement + Canvas para asegurar la extracción sin CORS/Fetch errors
-              base64String = await new Promise((resolve, reject) => {
-                try {
+          if (Platform.OS === 'web') {
+            if (asset.uri) {
+              if (asset.uri.startsWith('data:')) {
+                // Web ya nos dio un base64 (Data URI)
+                base64String = asset.uri.replace(/^data:(.*);base64,/, (match, mime) => {
+                  if (!mime.startsWith('image/')) return `data:${fallbackMime};base64,`;
+                  return match;
+                });
+              } else if (asset.uri.startsWith('blob:')) {
+                // Blob URL generado por cámara web Móvil
+                // 1) Sin crossOrigin para evitar Safari CORS bloqueando
+                // 2) Redimensionado Canvas porque web NO usa expo-image `quality`, evitando crashes de memoria
+                base64String = await new Promise((resolve) => {
                   const img = new window.Image();
-                  img.crossOrigin = 'Anonymous';
                   img.onload = () => {
+                    const MAX_DIMENSION = 1200;
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > height && width > MAX_DIMENSION) {
+                      height *= MAX_DIMENSION / width;
+                      width = MAX_DIMENSION;
+                    } else if (height > MAX_DIMENSION) {
+                      width *= MAX_DIMENSION / height;
+                      height = MAX_DIMENSION;
+                    }
+
                     const canvas = document.createElement('canvas');
-                    canvas.width = img.width;
-                    canvas.height = img.height;
+                    canvas.width = width;
+                    canvas.height = height;
                     const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0);
-                    // Exportamos forzosamente como jpeg comprimido para la red
-                    const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
-                    resolve(dataUrl);
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // Forzar jpeg compreso al 60% para backend API
+                    resolve(canvas.toDataURL('image/jpeg', 0.6));
                   };
-                  img.onerror = () => {
-                    console.error("Error cargando imagen blob en canvas");
+                  img.onerror = (e) => {
+                    console.error("Error cargando blob en canvas", e);
                     resolve(null);
                   };
                   img.src = asset.uri;
-                } catch (e) {
-                  console.error("Error en fallback de canvas", e);
-                  resolve(null);
-                }
-              });
+                });
+              }
             }
+          } else {
+            // App Nativa: usar la variable nativa base64 pura
+            if (asset.base64) {
+              if (asset.base64.startsWith('data:')) {
+                base64String = asset.base64;
+              } else {
+                base64String = `data:${fallbackMime};base66,${asset.base64}`;
+              }
+            }
+          }
+
+          if (Platform.OS === 'web') {
+            // FOR DEBUGGING THE USER ISSUE IN MOBILE BROWSER
+            Alert.alert('Info de Imagen Generada', `Original: ${asset.uri ? asset.uri.substring(0, 15) : 'n'}\nBytes listos para nube: ${base64String ? base64String.length : 'Fallo total (0)'}`);
           }
 
           return {
