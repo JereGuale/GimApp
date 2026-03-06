@@ -102,3 +102,14 @@ Route::middleware('auth:sanctum')->group(function () {
         }
         );
     });
+
+Route::get('/debug/logs', function () {
+    $path = storage_path('logs/laravel.log');
+    if (!file_exists($path))
+        return response()->json(['error' => 'No log file']);
+
+    // Get last N lines
+    $lines = file($path);
+    $lastLines = array_slice($lines, -300);
+    return response()->json(['logs' => $lastLines]);
+});
