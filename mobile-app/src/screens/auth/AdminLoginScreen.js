@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, StyleSheet, ImageBackground, TextInput, KeyboardAvoidingView, Platform, Animated } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ImageBackground, TextInput, KeyboardAvoidingView, Platform, Animated, ActivityIndicator } from 'react-native';
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
@@ -8,6 +8,7 @@ export default function AdminLoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [keepLoggedIn, setKeepLoggedIn] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState('error');
@@ -25,16 +26,18 @@ export default function AdminLoginScreen({ navigation }) {
   };
 
   const handleLogin = async () => {
+    if (!email.trim() || !password.trim()) {
+      showToast('Ingresa correo y contraseña', 'error');
+      return;
+    }
     try {
-      if (!email.trim() || !password.trim()) {
-        showToast('Ingresa correo y contraseña', 'error');
-        return;
-      }
+      setLoading(true);
       const { user, token } = await authLogin(email.trim(), password);
 
       // Validar que el usuario sea admin
       if (user.role !== 'admin') {
         showToast('Solo administradores pueden acceder aquí', 'error');
+        setLoading(false);
         return;
       }
 
@@ -47,8 +50,16 @@ export default function AdminLoginScreen({ navigation }) {
       }, 1000);
 
     } catch (error) {
-      showToast('Credenciales inválidas o cuenta no existe', 'error');
+      const msg = error.message || '';
+      if (msg.includes('401') || msg.includes('credentials') || msg.includes('Invalid')) {
+        showToast('Correo o contraseña incorrectos', 'error');
+      } else if (msg.includes('Network') || msg.includes('fetch')) {
+        showToast('Sin conexión al servidor. Intenta en un momento', 'error');
+      } else {
+        showToast('Error al iniciar sesión. Intenta de nuevo', 'error');
+      }
       console.error('Admin login error:', error);
+      setLoading(false);
     }
   };
 
@@ -122,8 +133,12 @@ export default function AdminLoginScreen({ navigation }) {
             <Text style={styles.checkboxLabel}>Guardar inicio de sesión</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.btn} onPress={handleLogin}>
-            <Text style={styles.btnText}>INICIAR SESIÓN</Text>
+          <TouchableOpacity style={[styles.btn, loading && { opacity: 0.6 }]} onPress={handleLogin} disabled={loading}>
+            {loading ? (
+              <ActivityIndicator color="#000000" />
+            ) : (
+              <Text style={styles.btnText}>INICIAR SESIÓN</Text>
+            )}
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>

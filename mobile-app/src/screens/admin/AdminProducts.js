@@ -117,30 +117,35 @@ export default function AdminProducts({ route }) {
                 base64String = await new Promise((resolve) => {
                   const img = new window.Image();
                   img.onload = () => {
-                    const MAX_DIMENSION = 1200;
-                    let width = img.width;
-                    let height = img.height;
+                    try {
+                      const MAX_DIMENSION = 1200;
+                      let width = img.width;
+                      let height = img.height;
 
-                    if (width > height && width > MAX_DIMENSION) {
-                      height *= MAX_DIMENSION / width;
-                      width = MAX_DIMENSION;
-                    } else if (height > MAX_DIMENSION) {
-                      width *= MAX_DIMENSION / height;
-                      height = MAX_DIMENSION;
+                      if (width > height && width > MAX_DIMENSION) {
+                        height *= MAX_DIMENSION / width;
+                        width = MAX_DIMENSION;
+                      } else if (height > MAX_DIMENSION) {
+                        width *= MAX_DIMENSION / height;
+                        height = MAX_DIMENSION;
+                      }
+
+                      const canvas = document.createElement('canvas');
+                      canvas.width = width;
+                      canvas.height = height;
+                      const ctx = canvas.getContext('2d');
+                      ctx.drawImage(img, 0, 0, width, height);
+
+                      // Forzar jpeg compreso al 60% para backend API
+                      resolve(canvas.toDataURL('image/jpeg', 0.6));
+                    } catch (errCanvas) {
+                      console.error("Canvas error:", errCanvas);
+                      resolve(`ERROR: ${errCanvas.message}`);
                     }
-
-                    const canvas = document.createElement('canvas');
-                    canvas.width = width;
-                    canvas.height = height;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, width, height);
-
-                    // Forzar jpeg compreso al 60% para backend API
-                    resolve(canvas.toDataURL('image/jpeg', 0.6));
                   };
                   img.onerror = (e) => {
                     console.error("Error cargando blob en canvas", e);
-                    resolve(null);
+                    resolve('ERROR: img.onerror triggereado');
                   };
                   img.src = asset.uri;
                 });
@@ -158,8 +163,12 @@ export default function AdminProducts({ route }) {
           }
 
           if (Platform.OS === 'web') {
-            // FOR DEBUGGING THE USER ISSUE IN MOBILE BROWSER
-            Alert.alert('Info de Imagen Generada', `Original: ${asset.uri ? asset.uri.substring(0, 15) : 'n'}\nBytes listos para nube: ${base64String ? base64String.length : 'Fallo total (0)'}`);
+            // Si el base64 es un error generado por el try/catch del Canvas, lo anulamos
+            // y mostramos una alerta limpia al usuario.
+            if (base64String && base64String.startsWith('ERROR')) {
+              Alert.alert('Aviso', 'Una de las imágenes no se pudo procesar correctamente en este navegador. Intenta con otra foto.');
+              base64String = null;
+            }
           }
 
           return {
