@@ -103,49 +103,25 @@ export default function AdminProducts({ route }) {
           let base64String = null;
           const fallbackMime = asset.mimeType || 'image/jpeg';
 
-          if (Platform.OS === 'web') {
-            if (asset.uri) {
-              if (asset.uri.startsWith('data:')) {
-                // Web ya nos dio un base64 (Data URI)
-                base64String = asset.uri.replace(/^data:(.*);base64,/, (match, mime) => {
-                  if (!mime.startsWith('image/')) return `data:${fallbackMime};base64,`;
-                  return match;
-                });
-              } else if (asset.uri.startsWith('blob:')) {
-                // Usar FileReader para obtener Base64 puro y evitar crashes de Canvas (Memoria/CORS) en Mobile Safari
-                base64String = await new Promise(async (resolve) => {
-                  try {
-                    const response = await fetch(asset.uri);
-                    const blob = await response.blob();
-                    const reader = new FileReader();
-                    reader.onloadend = () => resolve(reader.result);
-                    reader.onerror = () => {
-                      console.error('Error FileReader:', reader.error);
-                      resolve('ERROR: FileReader falló');
-                    };
-                    reader.readAsDataURL(blob);
-                  } catch (e) {
-                    console.error('Error fetching blob:', e);
-                    resolve(`ERROR: fetch blob falló - ${e.message}`);
-                  }
-                });
-              }
+          // Tanto en App Nativa como en Web (con expo-image-picker base64: true),
+          // obtenemos el string base64 puro en asset.base64
+          if (asset.base64) {
+            if (asset.base64.startsWith('data:')) {
+              base64String = asset.base64;
+            } else {
+              base64String = `data:${fallbackMime};base64,${asset.base64}`;
             }
-          } else {
-            // App Nativa: usar la variable nativa base64 pura
-            if (asset.base64) {
-              if (asset.base64.startsWith('data:')) {
-                base64String = asset.base64;
-              } else {
-                base64String = `data:${fallbackMime};base66,${asset.base64}`;
-              }
-            }
+          } else if (Platform.OS === 'web' && asset.uri && asset.uri.startsWith('data:')) {
+            // Fallback por si en web devuelve el base64 directamente en la URI
+            base64String = asset.uri.replace(/^data:(.*);base64,/, (match, mime) => {
+              if (!mime.startsWith('image/')) return `data:${fallbackMime};base64,`;
+              return match;
+            });
           }
 
           if (Platform.OS === 'web') {
-            if (base64String && base64String.startsWith('ERROR')) {
-              setFormError('No se pudo leer la imagen seleccionada. Intenta con otra foto u otro navegador.');
-              base64String = null;
+            if (!base64String) {
+              setFormError('La foto es demasiado pesada o no se pudo procesar. Intenta con otra imagen.');
             }
           }
 
