@@ -219,11 +219,16 @@ export default function AdminProducts({ route }) {
       price: productPrice,
       category_id: selectedCategory
     });
-    if (!productName.trim() || !String(productPrice).trim() || !selectedCategory) {
-      setFormError('Por favor completa Nombre, Categoría y Precio.');
-      if (Platform.OS !== 'web') {
-        Alert.alert('Error', 'Por favor completa todos los campos requeridos');
-      }
+    if (!productName.trim()) {
+      setFormError('Indica el nombre del producto');
+      return;
+    }
+    if (!selectedCategory) {
+      setFormError('Selecciona una categoría');
+      return;
+    }
+    if (!String(productPrice).trim()) {
+      setFormError('Indica el precio del producto');
       return;
     }
     setFormError('');
