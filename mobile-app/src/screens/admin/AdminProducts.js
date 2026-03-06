@@ -22,6 +22,7 @@ export default function AdminProducts({ route }) {
   const [isFeatured, setIsFeatured] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [formError, setFormError] = useState('');
 
   const loadCategories = async () => {
     try {
@@ -241,10 +242,14 @@ export default function AdminProducts({ route }) {
       price: productPrice,
       category_id: selectedCategory
     });
-    if (!productName.trim() || !productPrice.trim() || !selectedCategory) {
-      Alert.alert('Error', 'Por favor completa todos los campos requeridos');
+    if (!productName.trim() || !String(productPrice).trim() || !selectedCategory) {
+      setFormError('Por favor completa Nombre, Categoría y Precio.');
+      if (Platform.OS !== 'web') {
+        Alert.alert('Error', 'Por favor completa todos los campos requeridos');
+      }
       return;
     }
+    setFormError('');
     try {
       setIsSaving(true);
       console.log('[AdminProducts] publish start', {
@@ -314,6 +319,7 @@ export default function AdminProducts({ route }) {
       existingImages.push({ uri: product.image, id: 'existing_main' });
     }
     setSelectedImages(existingImages);
+    setFormError('');
     setShowProductModal(true);
   };
 
@@ -321,7 +327,10 @@ export default function AdminProducts({ route }) {
     <ScrollView style={[styles.container, { backgroundColor: theme.colors.background }]} contentContainerStyle={styles.content}>
       <View style={styles.headerRow}>
         <Text style={[styles.title, { color: theme.colors.text }]}>Productos</Text>
-        <TouchableOpacity style={styles.primaryButton} onPress={() => setShowProductModal(true)}>
+        <TouchableOpacity style={styles.primaryButton} onPress={() => {
+          setFormError('');
+          setShowProductModal(true);
+        }}>
           <Text style={styles.primaryButtonText}>+ Nuevo producto</Text>
         </TouchableOpacity>
       </View>
@@ -393,6 +402,7 @@ export default function AdminProducts({ route }) {
                     setSelectedImages([]);
                     setEditingProduct(null);
                     setIsFeatured(false);
+                    setFormError('');
                   }}
                 >
                   <Ionicons name="arrow-back" size={24} color={theme.colors.text} />
@@ -550,11 +560,18 @@ export default function AdminProducts({ route }) {
                 />
               </View>
 
+              {formError ? (
+                <View style={{ backgroundColor: '#FEE2E2', padding: 12, borderRadius: 8, marginBottom: 12 }}>
+                  <Text style={{ color: '#DC2626', fontSize: 13, textAlign: 'center', fontWeight: 'bold' }}>{formError}</Text>
+                </View>
+              ) : null}
+
               {/* Publish Button */}
               <TouchableOpacity
                 style={[styles.publishButton, isSaving && { opacity: 0.7 }]}
                 onPress={() => {
                   console.log('[AdminProducts] publish button pressed');
+                  setFormError('');
                   handleSaveProduct();
                 }}
                 activeOpacity={0.85}
