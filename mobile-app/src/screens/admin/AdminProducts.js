@@ -112,43 +112,22 @@ export default function AdminProducts({ route }) {
                   return match;
                 });
               } else if (asset.uri.startsWith('blob:')) {
-                // Blob URL generado por cámara web Móvil
-                // 1) Sin crossOrigin para evitar Safari CORS bloqueando
-                // 2) Redimensionado Canvas porque web NO usa expo-image `quality`, evitando crashes de memoria
-                base64String = await new Promise((resolve) => {
-                  const img = new window.Image();
-                  img.onload = () => {
-                    try {
-                      const MAX_DIMENSION = 1200;
-                      let width = img.width;
-                      let height = img.height;
-
-                      if (width > height && width > MAX_DIMENSION) {
-                        height *= MAX_DIMENSION / width;
-                        width = MAX_DIMENSION;
-                      } else if (height > MAX_DIMENSION) {
-                        width *= MAX_DIMENSION / height;
-                        height = MAX_DIMENSION;
-                      }
-
-                      const canvas = document.createElement('canvas');
-                      canvas.width = width;
-                      canvas.height = height;
-                      const ctx = canvas.getContext('2d');
-                      ctx.drawImage(img, 0, 0, width, height);
-
-                      // Forzar jpeg compreso al 60% para backend API
-                      resolve(canvas.toDataURL('image/jpeg', 0.6));
-                    } catch (errCanvas) {
-                      console.error("Canvas error:", errCanvas);
-                      resolve(`ERROR: ${errCanvas.message}`);
-                    }
-                  };
-                  img.onerror = (e) => {
-                    console.error("Error cargando blob en canvas", e);
-                    resolve('ERROR: img.onerror triggereado');
-                  };
-                  img.src = asset.uri;
+                // Usar FileReader para obtener Base64 puro y evitar crashes de Canvas (Memoria/CORS) en Mobile Safari
+                base64String = await new Promise(async (resolve) => {
+                  try {
+                    const response = await fetch(asset.uri);
+                    const blob = await response.blob();
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result);
+                    reader.onerror = () => {
+                      console.error('Error FileReader:', reader.error);
+                      resolve('ERROR: FileReader falló');
+                    };
+                    reader.readAsDataURL(blob);
+                  } catch (e) {
+                    console.error('Error fetching blob:', e);
+                    resolve(`ERROR: fetch blob falló - ${e.message}`);
+                  }
                 });
               }
             }
@@ -164,10 +143,8 @@ export default function AdminProducts({ route }) {
           }
 
           if (Platform.OS === 'web') {
-            // Si el base64 es un error generado por el try/catch del Canvas, lo anulamos
-            // y mostramos una alerta limpia al usuario.
             if (base64String && base64String.startsWith('ERROR')) {
-              Alert.alert('Aviso', 'Una de las imágenes no se pudo procesar correctamente en este navegador. Intenta con otra foto.');
+              setFormError('No se pudo leer la imagen seleccionada. Intenta con otra foto u otro navegador.');
               base64String = null;
             }
           }
