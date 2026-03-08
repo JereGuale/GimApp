@@ -99,28 +99,8 @@ export default function AdminProducts({ route }) {
       });
 
       if (!result.canceled) {
-        const newImages = await Promise.all(result.assets.map(async (asset) => {
-          let base64String = null;
+        const newImages = result.assets.map((asset) => {
           const fallbackMime = asset.mimeType || 'image/jpeg';
-
-          // Tanto en App Nativa como en Web (con expo-image-picker base64: true),
-          // obtenemos el string base64 puro en asset.base64
-          if (asset.base64) {
-            // Ensure proper data URI prefix
-            if (asset.base64.startsWith('data:')) {
-              base64String = asset.base64;
-            } else {
-              base64String = `data:${fallbackMime};base64,${asset.base64}`;
-            }
-          } else if (asset.uri && asset.uri.startsWith('data:')) {
-            base64String = asset.uri;
-          }
-
-          if (Platform.OS === 'web') {
-            if (!base64String) {
-              setFormError('La foto es demasiado pesada o no se pudo procesar. Intenta con otra imagen.');
-            }
-          }
 
           return {
             uri: asset.uri,
@@ -128,7 +108,7 @@ export default function AdminProducts({ route }) {
             name: asset.fileName || `photo_${Date.now()}.jpg`,
             id: Math.random().toString()
           };
-        }));
+        });
         setSelectedImages([...selectedImages, ...newImages]);
       }
     } catch (error) {
