@@ -78,17 +78,25 @@ class ProductController extends Controller
             'images.*' => 'nullable' // Allows both string and UploadedFile
         ]);
 
+        Log::info('Product store request received', [
+            'has_files' => $request->hasFile('images'),
+            'file_keys' => array_keys($request->allFiles()),
+            'all_keys' => $request->keys(),
+            'images_raw' => $request->input('images')
+        ]);
+
         $imageUrls = [];
 
         if ($request->hasFile('images')) {
-            Log::info('Processing uploaded files', ['count' => count($request->file('images'))]);
+            $files = $request->file('images');
+            Log::info('Processing uploaded files', ['count' => count($files)]);
             $supabase = new SupabaseStorage();
             if (!$supabase->isConfigured()) {
-                Log::warning('Supabase is NOT configured. Falling back to local storage (ephemeral).');
+                Log::warning('Supabase is NOT configured. Fallback used.');
             }
-            foreach ($request->file('images') as $image) {
+            foreach ($files as $idx => $image) {
                 $ext = $image->getClientOriginalExtension() ?: 'jpg';
-                $fileName = 'product_' . time() . '_' . uniqid() . '.' . $ext;
+                $fileName = 'product_' . time() . '_' . $idx . '_' . uniqid() . '.' . $ext;
                 $filePath = 'products/' . $fileName;
                 $url = null;
                 if ($supabase->isConfigured()) {
@@ -102,7 +110,10 @@ class ProductController extends Controller
                 $imageUrls[] = $url;
             }
         }
-        elseif (!empty($validated['images'])) {
+
+        // Si no hay archivos, buscar en el input 'images' (base64 o URLs)
+        if (empty($imageUrls) && !empty($validated['images'])) {
+            Log::info('No files found, checking input images array', ['count' => count($validated['images'])]);
             foreach ($validated['images'] as $idx => $img) {
                 if (is_string($img) && str_starts_with($img, 'data:image')) {
                     $url = $this->uploadImage($img, $idx);
@@ -110,10 +121,26 @@ class ProductController extends Controller
                         $imageUrls[] = $url;
                 }
                 elseif (is_string($img) && str_starts_with($img, 'http')) {
-                    // Pre-saved or externally hosted URLs
                     $imageUrls[] = $img;
                 }
             }
+        }
+
+        if (empty($imageUrls) && ($request->hasFile('images') || ($request->has('images') && is_array($request->images) && count($request->images) > 0))) {
+            Log::error('Product creation failed: No valid images processed', [
+                'has_images_key' => $request->has('images'),
+                'images_count' => is_array($request->images) ? count($request->images) : 'not an array',
+                'files_count' => $request->hasFile('images') ? count($request->file('images')) : 0
+            ]);
+            return response()->json([
+                'message' => 'Error: No se pudieron procesar las imágenes. Asegúrate de seleccionar al menos una foto válida (formato base64, URL o archivo subido).',
+                'debug' => [
+                    'has_files' => $request->hasFile('images'),
+                    'files_received' => count($request->allFiles()),
+                    'supabase_configured' => (new SupabaseStorage())->isConfigured(),
+                    'input_images_count' => is_array($request->input('images')) ? count($request->input('images')) : 'not array'
+                ]
+            ], 422);
         }
 
         if (empty($imageUrls)) {
@@ -152,16 +179,24 @@ class ProductController extends Controller
             'status' => 'nullable|string|in:active,inactive'
         ]);
 
+        Log::info('Product update request received', [
+            'id' => $id,
+            'has_files' => $request->hasFile('images'),
+            'file_keys' => array_keys($request->allFiles()),
+            'images_raw' => $request->input('images')
+        ]);
+
         if ($request->hasFile('images')) {
-            Log::info('Processing updated files', ['count' => count($request->file('images'))]);
+            $files = $request->file('images');
+            Log::info('Processing updated files', ['count' => count($files)]);
             $supabase = new SupabaseStorage();
             if (!$supabase->isConfigured()) {
-                Log::warning('Supabase is NOT configured for update. Falling back to local storage.');
+                Log::warning('Supabase is NOT configured for update. Fallback used.');
             }
             $imageUrls = [];
-            foreach ($request->file('images') as $image) {
+            foreach ($files as $idx => $image) {
                 $ext = $image->getClientOriginalExtension() ?: 'jpg';
-                $fileName = 'product_' . time() . '_' . uniqid() . '.' . $ext;
+                $fileName = 'product_' . time() . '_' . $idx . '_' . uniqid() . '.' . $ext;
                 $filePath = 'products/' . $fileName;
                 $url = null;
                 if ($supabase->isConfigured()) {
@@ -178,6 +213,7 @@ class ProductController extends Controller
             $validated['images'] = $imageUrls;
         }
         elseif ($request->has('images') && is_array($request->images)) {
+            Log::info('Updating with existing images array', ['count' => count($request->images)]);
             $imageUrls = [];
             foreach ($request->images as $idx => $img) {
                 if (is_string($img) && str_starts_with($img, 'data:image')) {
@@ -186,13 +222,19 @@ class ProductController extends Controller
                         $imageUrls[] = $url;
                 }
                 elseif (is_string($img) && str_starts_with($img, 'http')) {
-                    // Mantener URLs existentes (Supabase, etc.)
                     $imageUrls[] = $img;
                 }
             }
             if (!empty($imageUrls)) {
                 $validated['image'] = $imageUrls[0];
                 $validated['images'] = $imageUrls;
+            }
+            else if (count($request->images) > 0) {
+                Log::error('Product update failed: Images array sent but no valid URLs/Base64 found.');
+                return response()->json([
+                    'message' => 'Error: No se pudieron procesar las imágenes enviadas.',
+                    'debug' => ['received_count' => count($request->images)]
+                ], 422);
             }
         }
 
