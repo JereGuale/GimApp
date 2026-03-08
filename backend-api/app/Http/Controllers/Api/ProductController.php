@@ -14,13 +14,21 @@ class ProductController extends Controller
 {
     private function uploadImage(string $base64Image, int $index): ?string
     {
-        if (!preg_match('/^data:image\/(\w+);base64,/', $base64Image, $type))
+        // Robust regex for Data URIs
+        if (!preg_match('/^data:image\/(\w+);base64,(.*)$/s', $base64Image, $matches)) {
+            Log::warning("UploadImage: Invalid base64 format at index $index");
             return null;
-        $imageData = base64_decode(substr($base64Image, strpos($base64Image, ',') + 1));
-        if ($imageData === false)
-            return null;
+        }
 
-        $ext = strtolower($type[1]);
+        $extension = strtolower($matches[1]);
+        $imageData = base64_decode($matches[2]);
+
+        if ($imageData === false) {
+            Log::error("UploadImage: Failed to decode base64 data at index $index");
+            return null;
+        }
+
+        $ext = $extension;
         $fileName = 'product_' . time() . '_' . $index . '.' . $ext;
         $filePath = 'products/' . $fileName;
         $mime = $ext === 'png' ? 'image/png' : ($ext === 'gif' ? 'image/gif' : 'image/jpeg');
@@ -90,17 +98,24 @@ class ProductController extends Controller
             }
         }
         elseif (!empty($validated['images'])) {
-            // Fallback for older base64 JSON requests
-            foreach ($validated['images'] as $idx => $b64) {
-                if (is_string($b64) && str_starts_with($b64, 'data:image')) {
-                    $url = $this->uploadImage($b64, $idx);
+            foreach ($validated['images'] as $idx => $img) {
+                if (is_string($img) && str_starts_with($img, 'data:image')) {
+                    $url = $this->uploadImage($img, $idx);
                     if ($url)
                         $imageUrls[] = $url;
+                }
+                elseif (is_string($img) && str_starts_with($img, 'http')) {
+                    // Pre-saved or externally hosted URLs
+                    $imageUrls[] = $img;
                 }
             }
         }
 
-        $validated['image'] = $imageUrls[0] ?? 'https://via.placeholder.com/400';
+        if (empty($imageUrls)) {
+            Log::warning('Product creation attempt without images, using placeholder');
+        }
+
+        $validated['image'] = $imageUrls[0] ?? 'https://via.placeholder.com/400x400?text=No+Image';
         $validated['images'] = !empty($imageUrls) ? $imageUrls : null;
         $validated['status'] = $validated['status'] ?? 'active';
 

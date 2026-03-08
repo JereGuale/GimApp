@@ -4,14 +4,20 @@ import { API_URL, CategoryService as PublicCategoryService } from './api';
 const withAuth = async (endpoint, token, options = {}) => {
   console.log('[withAuth] Request:', { endpoint, method: options.method || 'GET', hasToken: !!token });
 
+  const headers = {
+    Accept: 'application/json',
+    Authorization: `Bearer ${token}`,
+    ...(options.headers || {})
+  };
+
+  // Only add Content-Type: application/json if not FormData
+  if (!(options.body instanceof FormData) && !headers['Content-Type']) {
+    headers['Content-Type'] = 'application/json';
+  }
+
   const response = await fetch(endpoint, {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-      Authorization: `Bearer ${token}`,
-      ...(options.headers || {})
-    }
+    headers
   });
 
   console.log('[withAuth] Response:', { status: response.status, statusText: response.statusText, endpoint });
@@ -76,33 +82,68 @@ export const SuperAdminService = {
     return res;
   },
   createProduct: async (token, data) => {
-    const payload = {
-      name: data.name,
-      price: data.price,
-      description: data.description || '',
-      category_id: data.category_id,
-      is_featured: data.is_featured ? 1 : 0,
-      images: data.images ? data.images.map(img => img.base64 || img.uri) : [],
-    };
+    const formData = new FormData();
+    formData.append('name', data.name);
+    formData.append('price', data.price);
+    formData.append('description', data.description || '');
+    formData.append('category_id', data.category_id);
+    formData.append('is_featured', data.is_featured ? '1' : '0');
+    formData.append('condition', data.condition || 'nuevo');
+
+    if (data.images && Array.isArray(data.images)) {
+      data.images.forEach((img, index) => {
+        if (img.uri && !img.uri.startsWith('http')) {
+          // New image file
+          const name = img.name || `product_${index}_${Date.now()}.jpg`;
+          const type = img.type || 'image/jpeg';
+          formData.append('images[]', {
+            uri: img.uri,
+            name: name,
+            type: type
+          });
+        } else if (typeof img === 'string') {
+          // Existing URL or base64 (fallback)
+          formData.append('images[]', img);
+        } else if (img.uri) {
+          formData.append('images[]', img.uri);
+        }
+      });
+    }
+
     const res = await withAuth(`${API_URL}/admin/products`, token, {
       method: 'POST',
-      body: JSON.stringify(payload)
+      body: formData
     });
     PublicCategoryService.clearCache();
     return res;
   },
   updateProduct: async (token, id, data) => {
-    const payload = {
-      name: data.name,
-      price: data.price,
-      description: data.description || '',
-      category_id: data.category_id,
-      is_featured: data.is_featured ? 1 : 0,
-      images: data.images ? data.images.map(img => img.base64 || img.uri) : [],
-    };
+    // Laravel PUT doesn't always handle FormData well, so we use POST with _method spoofing
+    const formData = new FormData();
+    formData.append('_method', 'PUT');
+    formData.append('name', data.name);
+    formData.append('price', data.price);
+    formData.append('description', data.description || '');
+    formData.append('category_id', data.category_id);
+    formData.append('is_featured', data.is_featured ? '1' : '0');
+
+    if (data.images && Array.isArray(data.images)) {
+      data.images.forEach((img, index) => {
+        if (img.uri && !img.uri.startsWith('http')) {
+          formData.append('images[]', {
+            uri: img.uri,
+            name: img.name || `product_${index}.jpg`,
+            type: img.type || 'image/jpeg'
+          });
+        } else {
+          formData.append('images[]', img.uri || img);
+        }
+      });
+    }
+
     const res = await withAuth(`${API_URL}/admin/products/${id}`, token, {
-      method: 'PUT',
-      body: JSON.stringify(payload)
+      method: 'POST', // Use POST with _method spoofing for Multipart reliability
+      body: formData
     });
     PublicCategoryService.clearCache();
     return res;

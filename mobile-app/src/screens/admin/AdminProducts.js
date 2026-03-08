@@ -94,8 +94,8 @@ export default function AdminProducts({ route }) {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsMultiple: true,
-        quality: 0.2, // Reduce aggressive weight for Base64 over network
-        base64: true,
+        quality: 0.7, // Better quality now that we use FormData
+        base64: false, // Don't need base64 for FormData, it's faster
       });
 
       if (!result.canceled) {
@@ -106,17 +106,14 @@ export default function AdminProducts({ route }) {
           // Tanto en App Nativa como en Web (con expo-image-picker base64: true),
           // obtenemos el string base64 puro en asset.base64
           if (asset.base64) {
+            // Ensure proper data URI prefix
             if (asset.base64.startsWith('data:')) {
               base64String = asset.base64;
             } else {
               base64String = `data:${fallbackMime};base64,${asset.base64}`;
             }
-          } else if (Platform.OS === 'web' && asset.uri && asset.uri.startsWith('data:')) {
-            // Fallback por si en web devuelve el base64 directamente en la URI
-            base64String = asset.uri.replace(/^data:(.*);base64,/, (match, mime) => {
-              if (!mime.startsWith('image/')) return `data:${fallbackMime};base64,`;
-              return match;
-            });
+          } else if (asset.uri && asset.uri.startsWith('data:')) {
+            base64String = asset.uri;
           }
 
           if (Platform.OS === 'web') {
@@ -127,7 +124,6 @@ export default function AdminProducts({ route }) {
 
           return {
             uri: asset.uri,
-            base64: base64String,
             type: fallbackMime,
             name: asset.fileName || `photo_${Date.now()}.jpg`,
             id: Math.random().toString()
