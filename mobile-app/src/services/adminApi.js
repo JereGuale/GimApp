@@ -13,10 +13,10 @@ if (hostUri) {
   DEV_BACKEND_IP = hostUri.split(':')[0];
 }
 
-// Ensure API_URL is correct for local testing
-const API_URL = (__DEV__ || Platform.OS === 'web')
-  ? (process.env.EXPO_PUBLIC_API_URL || `http://${DEV_BACKEND_IP}:8000/api`)
-  : PRODUCTION_URL;
+// Ensure API_URL is correct for local testing and production
+const API_URL = !__DEV__
+  ? PRODUCTION_URL
+  : (process.env.EXPO_PUBLIC_API_URL || `http://${DEV_BACKEND_IP}:8000/api`);
 
 console.log('[adminApi] Using API_URL:', API_URL);
 
