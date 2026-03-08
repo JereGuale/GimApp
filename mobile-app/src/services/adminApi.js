@@ -1,5 +1,30 @@
 import { Platform } from 'react-native';
-import { API_URL, CategoryService as PublicCategoryService } from './api';
+import Constants from 'expo-constants';
+import { DEV_BACKEND_IP as HARDCODED_IP } from '../../.env.js';
+import { CategoryService as PublicCategoryService } from './api';
+
+// Production URL
+const PRODUCTION_URL = 'https://gimapp.onrender.com/api';
+
+// Simple dev backend detection
+let DEV_BACKEND_IP = HARDCODED_IP;
+const hostUri = Constants.expoConfig?.hostUri || Constants.manifest?.hostUri;
+if (hostUri) {
+  DEV_BACKEND_IP = hostUri.split(':')[0];
+}
+
+// Ensure API_URL is correct for local testing
+const API_URL = (__DEV__ || Platform.OS === 'web')
+  ? (process.env.EXPO_PUBLIC_API_URL || `http://${DEV_BACKEND_IP}:8000/api`)
+  : PRODUCTION_URL;
+
+console.log('[adminApi] Using API_URL:', API_URL);
+
+// Helper for Web FormData
+const getBlobFromUri = async (uri) => {
+  const resp = await fetch(uri);
+  return await resp.blob();
+};
 
 const withAuth = async (endpoint, token, options = {}) => {
   console.log('[withAuth] Request:', { endpoint, method: options.method || 'GET', hasToken: !!token });
@@ -91,23 +116,27 @@ export const SuperAdminService = {
     formData.append('condition', data.condition || 'nuevo');
 
     if (data.images && Array.isArray(data.images)) {
-      data.images.forEach((img, index) => {
+      for (let i = 0; i < data.images.length; i++) {
+        const img = data.images[i];
         if (img.uri && !img.uri.startsWith('http')) {
-          // New image file
-          const name = img.name || `product_${index}_${Date.now()}.jpg`;
-          const type = img.type || 'image/jpeg';
-          formData.append('images[]', {
-            uri: img.uri,
-            name: name,
-            type: type
-          });
-        } else if (typeof img === 'string') {
-          // Existing URL or base64 (fallback)
-          formData.append('images[]', img);
-        } else if (img.uri) {
-          formData.append('images[]', img.uri);
+          if (Platform.OS === 'web') {
+            try {
+              const blob = await getBlobFromUri(img.uri);
+              formData.append('images[]', blob, img.name || `product_${i}.jpg`);
+            } catch (e) {
+              console.error('Error converting URI to blob:', e);
+            }
+          } else {
+            formData.append('images[]', {
+              uri: img.uri,
+              name: img.name || `product_${i}.jpg`,
+              type: img.type || 'image/jpeg'
+            });
+          }
+        } else {
+          formData.append('images[]', img.uri || img);
         }
-      });
+      }
     }
 
     const res = await withAuth(`${API_URL}/admin/products`, token, {
@@ -118,7 +147,6 @@ export const SuperAdminService = {
     return res;
   },
   updateProduct: async (token, id, data) => {
-    // Laravel PUT doesn't always handle FormData well, so we use POST with _method spoofing
     const formData = new FormData();
     formData.append('_method', 'PUT');
     formData.append('name', data.name);
@@ -128,21 +156,31 @@ export const SuperAdminService = {
     formData.append('is_featured', data.is_featured ? '1' : '0');
 
     if (data.images && Array.isArray(data.images)) {
-      data.images.forEach((img, index) => {
+      for (let i = 0; i < data.images.length; i++) {
+        const img = data.images[i];
         if (img.uri && !img.uri.startsWith('http')) {
-          formData.append('images[]', {
-            uri: img.uri,
-            name: img.name || `product_${index}.jpg`,
-            type: img.type || 'image/jpeg'
-          });
+          if (Platform.OS === 'web') {
+            try {
+              const blob = await getBlobFromUri(img.uri);
+              formData.append('images[]', blob, img.name || `product_${i}.jpg`);
+            } catch (e) {
+              console.error('Error converting URI to blob:', e);
+            }
+          } else {
+            formData.append('images[]', {
+              uri: img.uri,
+              name: img.name || `product_${i}.jpg`,
+              type: img.type || 'image/jpeg'
+            });
+          }
         } else {
           formData.append('images[]', img.uri || img);
         }
-      });
+      }
     }
 
     const res = await withAuth(`${API_URL}/admin/products/${id}`, token, {
-      method: 'POST', // Use POST with _method spoofing for Multipart reliability
+      method: 'POST',
       body: formData
     });
     PublicCategoryService.clearCache();
