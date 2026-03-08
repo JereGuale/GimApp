@@ -81,16 +81,21 @@ class ProductController extends Controller
         $imageUrls = [];
 
         if ($request->hasFile('images')) {
+            Log::info('Processing uploaded files', ['count' => count($request->file('images'))]);
             $supabase = new SupabaseStorage();
+            if (!$supabase->isConfigured()) {
+                Log::warning('Supabase is NOT configured. Falling back to local storage (ephemeral).');
+            }
             foreach ($request->file('images') as $image) {
-                $fileName = 'product_' . time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
+                $ext = $image->getClientOriginalExtension() ?: 'jpg';
+                $fileName = 'product_' . time() . '_' . uniqid() . '.' . $ext;
                 $filePath = 'products/' . $fileName;
                 $url = null;
                 if ($supabase->isConfigured()) {
                     $url = $supabase->uploadFile($image, $filePath);
                 }
                 if (!$url) {
-                    $path = $image->store('products', 'public');
+                    $path = $image->storeAs('products', $fileName, 'public');
                     $appUrl = rtrim(config('app.url', 'https://gimapp.onrender.com'), '/');
                     $url = $appUrl . '/storage/' . $path;
                 }
@@ -148,17 +153,22 @@ class ProductController extends Controller
         ]);
 
         if ($request->hasFile('images')) {
+            Log::info('Processing updated files', ['count' => count($request->file('images'))]);
             $supabase = new SupabaseStorage();
+            if (!$supabase->isConfigured()) {
+                Log::warning('Supabase is NOT configured for update. Falling back to local storage.');
+            }
             $imageUrls = [];
             foreach ($request->file('images') as $image) {
-                $fileName = 'product_' . time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
+                $ext = $image->getClientOriginalExtension() ?: 'jpg';
+                $fileName = 'product_' . time() . '_' . uniqid() . '.' . $ext;
                 $filePath = 'products/' . $fileName;
                 $url = null;
                 if ($supabase->isConfigured()) {
                     $url = $supabase->uploadFile($image, $filePath);
                 }
                 if (!$url) {
-                    $path = $image->store('products', 'public');
+                    $path = $image->storeAs('products', $fileName, 'public');
                     $appUrl = rtrim(config('app.url', 'https://gimapp.onrender.com'), '/');
                     $url = $appUrl . '/storage/' . $path;
                 }
@@ -193,8 +203,14 @@ class ProductController extends Controller
 
     public function destroy(string $id)
     {
-        $product = Product::findOrFail($id);
+        Log::info('Attempting to delete product', ['id' => $id]);
+        $product = Product::find($id);
+        if (!$product) {
+            Log::error('Product not found for deletion', ['id' => $id]);
+            return response()->json(['message' => 'Product not found (ID: ' . $id . ')'], 404);
+        }
         $product->delete();
+        Log::info('Product deleted successfully', ['id' => $id]);
         return response()->json(['message' => 'Product deleted successfully'], 200);
     }
 }
