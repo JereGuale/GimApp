@@ -1,0 +1,40 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root.dark {
+  --bg: #0B0F14;
+  --card: #141821;
+  --text: #E5E7EB;
+  --text-secondary: #9CA3AF;
+  --border: #1F2937;
+  --input-bg: rgba(255, 255, 255, 0.04);
+  --thead-bg: rgba(255, 255, 255, 0.02);
+  --modal-overlay: rgba(0, 0, 0, 0.8);
+}
+
+:root.light {
+  --bg: #F9FAFB;
+  --card: #FFFFFF;
+  --text: #111827;
+  --text-secondary: #6B7280;
+  --border: #E5E7EB;
+  --input-bg: #FFFFFF;
+  --thead-bg: rgba(0, 0, 0, 0.02);
+  --modal-overlay: rgba(0, 0, 0, 0.5);
+}
+
+body, html, #root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+

@@ -1,0 +1,354 @@
+import { useMemo, useState } from 'react';
+import {
+  View, Text, StyleSheet, TouchableOpacity,
+  ScrollView, Dimensions, Alert
+} from 'react-native';
+import { Image } from 'expo-image';
+import { Ionicons } from '@expo/vector-icons';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import { useTheme } from '../../context/ThemeContext';
+import { useCart } from '../../context/CartContext';
+import { useResponsive } from '../../hooks/useResponsive';
+import { API_URL } from '../../services/api';
+
+const BASE_URL = API_URL.replace('/api', '');
+
+const { height: screenHeight, width: screenWidth } = Dimensions.get('window');
+
+export default function ProductDetailScreen() {
+  const { theme } = useTheme();
+  const { addToCart } = useCart();
+  const { isDesktop: isWide } = useResponsive();
+  const navigation = useNavigation();
+  const route = useRoute();
+  const product = route.params?.product || null;
+  const [activeTab, setActiveTab] = useState('description');
+
+  const categoryName = (product?.category_name || product?.category?.name || '').toLowerCase();
+  const isClothing = categoryName.includes('ropa') || categoryName.includes('vestimenta') || categoryName.includes('clothing') || categoryName.includes('wear');
+  const isSupplement = categoryName.includes('suplemento') || categoryName.includes('supplement') || categoryName.includes('proteina') || categoryName.includes('whey');
+
+  const [selectedOption, setSelectedOption] = useState(
+    isClothing ? 'M' : (isSupplement ? '1kg' : null)
+  );
+
+  const images = useMemo(() => {
+    if (!product) return [];
+    let rawImages = [];
+    if (product.images) {
+      rawImages = Array.isArray(product.images) ? product.images : (typeof product.images === 'string' ? JSON.parse(product.images) : [product.images]);
+    } else if (product.image) {
+      rawImages = [product.image];
+    }
+
+    if (!Array.isArray(rawImages)) {
+      rawImages = [];
+    }
+
+    return rawImages.map(img => {
+      let url = img;
+      if (url.match(/^http:\/\/(192\.168\.\d+\.\d+|localhost|127\.0\.0\.1):\d+/)) {
+        const pathPart = url.split('/storage/')[1];
+        if (pathPart) {
+          url = `${BASE_URL}/storage/${pathPart}`;
+        }
+      } else if (!url.startsWith('http')) {
+        url = `${BASE_URL}/storage/${url}`;
+      }
+      return url;
+    });
+  }, [product]);
+  const [activeImage, setActiveImage] = useState(images[0] || null);
+
+  if (!product) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.floatingBackBtn, { backgroundColor: theme.isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }]}>
+          <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
+        </TouchableOpacity>
+        <View style={styles.emptyContainer}>
+          <Ionicons name="cube-outline" size={64} color={theme.colors.textSecondary} />
+          <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>Producto no disponible</Text>
+        </View>
+      </View>
+    );
+  }
+
+  const handleAddToCart = () => {
+    addToCart({ ...product, selectedOption }, 1);
+    navigation.navigate('Cart');
+  };
+
+  const handleBuyNow = () => {
+    addToCart({ ...product, selectedOption }, 1);
+    navigation.navigate('Cart');
+  };
+
+  return (
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      {/* Floating Header Buttons */}
+      <View style={styles.floatingHeaderArea}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.floatingBackBtn, { backgroundColor: theme.isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }]}>
+          <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.floatingBackBtn, { backgroundColor: theme.isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }]}>
+          <Ionicons name="share-outline" size={20} color={theme.colors.text} />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={[styles.scrollContent, isWide && styles.scrollContentWide]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Left: Image gallery */}
+        <View style={[styles.gallerySection, isWide && { flex: 1 }]}>
+          {/* Main image */}
+          <View style={[
+            styles.mainImageContainer,
+            {
+              backgroundColor: theme.isDark ? '#0F172A' : '#F1F5F9',
+              borderColor: theme.isDark ? '#1E3A5F' : '#E2E8F0',
+              height: isWide ? Math.min(screenHeight * 0.75, 650) : screenWidth * 1.0,
+            }
+          ]}>
+            <Image
+              source={{ uri: activeImage || images[0] || 'https://via.placeholder.com/400' }}
+              style={styles.mainImage}
+              contentFit="contain"
+              transition={300}
+              cachePolicy="memory-disk"
+            />
+            <TouchableOpacity style={[styles.favBtn, { backgroundColor: theme.isDark ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.8)' }]}>
+              <Ionicons name="star-outline" size={22} color="#FBBF24" />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Right: Product info */}
+        <View style={[styles.infoSection, isWide && { flex: 1 }]}>
+          <Text style={[styles.productName, { color: theme.colors.text }]}>{product.name}</Text>
+          <Text style={styles.productPrice}>${Number(product.price).toFixed(2)}</Text>
+          {/* Thumbnails horizontally below price */}
+          {images.length > 1 && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 8 }}>
+              {images.map((img, idx) => (
+                <TouchableOpacity
+                  key={img + idx}
+                  style={{ width: 70, height: 70, borderRadius: 12, overflow: 'hidden', borderWidth: 2, borderColor: activeImage === img ? '#FB923C' : '#E2E8F0', marginRight: idx !== images.length - 1 ? 8 : 0 }}
+                  onPress={() => setActiveImage(img)}
+                >
+                  <Image
+                    source={{ uri: img }}
+                    style={{ width: '100%', height: '100%' }}
+                    contentFit="cover"
+                    transition={300}
+                    cachePolicy="memory-disk"
+                  />
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
+          {/* Options selector (Sizes for clothing, Presentacion for supplements, none for others) */}
+          {isClothing && (
+            <View style={styles.optionGroup}>
+              <Text style={[styles.optionLabel, { color: theme.colors.textSecondary }]}>Talla</Text>
+              <View style={styles.selectorRow}>
+                {['S', 'M', 'L', 'XL'].map((size) => (
+                  <TouchableOpacity
+                    key={size}
+                    style={[
+                      styles.optionSelectorItem,
+                      { borderColor: selectedOption === size ? '#FB923C' : (theme.isDark ? '#1E3A5F' : '#E2E8F0'),
+                        backgroundColor: selectedOption === size ? 'rgba(251, 146, 60, 0.1)' : 'transparent' }
+                    ]}
+                    onPress={() => setSelectedOption(size)}
+                  >
+                    <Text style={{ color: selectedOption === size ? '#FB923C' : theme.colors.text, fontWeight: 'bold' }}>{size}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
+
+          {isSupplement && (
+            <View style={styles.optionGroup}>
+              <Text style={[styles.optionLabel, { color: theme.colors.textSecondary }]}>Presentación</Text>
+              <View style={styles.selectorRow}>
+                {['500g', '1kg', '2kg'].map((weight) => (
+                  <TouchableOpacity
+                    key={weight}
+                    style={[
+                      styles.optionSelectorItem,
+                      { width: 'auto', paddingHorizontal: 12 },
+                      { borderColor: selectedOption === weight ? '#FB923C' : (theme.isDark ? '#1E3A5F' : '#E2E8F0'),
+                        backgroundColor: selectedOption === weight ? 'rgba(251, 146, 60, 0.1)' : 'transparent' }
+                    ]}
+                    onPress={() => setSelectedOption(weight)}
+                  >
+                    <Text style={{ color: selectedOption === weight ? '#FB923C' : theme.colors.text, fontWeight: 'bold' }}>{weight}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
+
+          {/* Action buttons */}
+          <View style={styles.actionBtns}>
+            <TouchableOpacity style={styles.addToCartBtn} onPress={handleAddToCart}>
+              <Ionicons name="cart-outline" size={20} color="#000" />
+              <Text style={styles.addToCartText}>Añadir al Carrito</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.buyNowBtn, { borderColor: '#FB923C' }]} onPress={handleBuyNow}>
+              <Text style={styles.buyNowText}>Comprar Ahora</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Description / Reviews tabs */}
+          <View style={[styles.tabBar, { borderColor: theme.isDark ? '#1E3A5F' : '#E2E8F0' }]}>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === 'description' && styles.tabActive]}
+              onPress={() => setActiveTab('description')}
+            >
+              <Text style={[styles.tabText, { color: activeTab === 'description' ? '#FB923C' : theme.colors.textSecondary }]}>
+                Descripción
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === 'reviews' && styles.tabActive]}
+              onPress={() => setActiveTab('reviews')}
+            >
+              <Text style={[styles.tabText, { color: activeTab === 'reviews' ? '#FB923C' : theme.colors.textSecondary }]}>
+                Reseñas
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.tabContent}>
+            {activeTab === 'description' ? (
+              <Text style={[styles.descText, { color: theme.colors.text }]}>
+                {product.description || 'Sin descripción disponible para este producto.'}
+              </Text>
+            ) : (
+              <View style={styles.reviewsEmpty}>
+                <Ionicons name="chatbubble-ellipses-outline" size={36} color={theme.colors.textSecondary} />
+                <Text style={[styles.reviewsEmptyText, { color: theme.colors.textSecondary }]}>
+                  Aún no hay reseñas
+                </Text>
+              </View>
+            )}
+          </View>
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, position: 'relative' },
+
+  /* Floating Header */
+  floatingHeaderArea: {
+    position: 'absolute',
+    top: 50,
+    left: 16,
+    right: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    zIndex: 10,
+  },
+  floatingBackBtn: {
+    width: 44, height: 44, borderRadius: 22,
+    alignItems: 'center', justifyContent: 'center',
+    backdropFilter: 'blur(10px)',
+  },
+
+  /* Content */
+  scrollContent: { padding: 16, paddingTop: 16, paddingBottom: 160, flexGrow: 1 },
+  scrollContentWide: { flexDirection: 'row', gap: 24, paddingTop: 80 },
+
+  /* Gallery */
+  gallerySection: { marginBottom: 20 },
+  mainImageContainer: {
+    width: '100%', borderRadius: 18,
+    overflow: 'hidden', borderWidth: 1.5,
+    marginBottom: 12, position: 'relative',
+  },
+  mainImage: { width: '100%', height: '100%' },
+  favBtn: {
+    position: 'absolute', bottom: 12, right: 12,
+    width: 40, height: 40, borderRadius: 20,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  thumbRow: { gap: 10, paddingVertical: 4 },
+  thumbContainer: {
+    width: 70, height: 70, borderRadius: 12,
+    overflow: 'hidden', borderWidth: 2,
+  },
+  thumbImage: { width: '100%', height: '100%' },
+
+  /* Info */
+  infoSection: {},
+  productName: { fontSize: 26, fontWeight: '800', marginBottom: 6, letterSpacing: 0.3 },
+  productPrice: { fontSize: 28, fontWeight: '900', color: '#FB923C', marginBottom: 20 },
+
+  /* Options */
+  optionGroup: { marginBottom: 18 },
+  optionLabel: { fontSize: 13, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 },
+  colorRow: { flexDirection: 'row', gap: 10 },
+  colorThumb: {
+    width: 50, height: 50, borderRadius: 10,
+    overflow: 'hidden', borderWidth: 2.5,
+  },
+  colorThumbImg: { width: '100%', height: '100%' },
+  sizeSelector: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 6, width: 60, height: 42, borderRadius: 10, borderWidth: 1.5,
+  },
+  selectorRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  optionSelectorItem: {
+    borderWidth: 1.5,
+    borderRadius: 8,
+    width: 48,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  /* Actions */
+  actionBtns: { flexDirection: 'row', gap: 12, marginBottom: 24 },
+  addToCartBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 8, backgroundColor: '#FB923C', paddingVertical: 14, borderRadius: 14,
+    shadowColor: '#FB923C', shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.35, shadowRadius: 8, elevation: 4,
+  },
+  addToCartText: { color: '#000', fontSize: 14, fontWeight: '800' },
+  buyNowBtn: {
+    flex: 1, alignItems: 'center', justifyContent: 'center',
+    paddingVertical: 14, borderRadius: 14, borderWidth: 2,
+  },
+  buyNowText: { color: '#FB923C', fontSize: 14, fontWeight: '800' },
+
+  /* Tabs */
+  tabBar: {
+    flexDirection: 'row', borderBottomWidth: 1, marginBottom: 16,
+  },
+  tab: { paddingVertical: 12, paddingHorizontal: 4, marginRight: 24 },
+  tabActive: { borderBottomWidth: 2.5, borderBottomColor: '#FB923C' },
+  tabText: { fontSize: 14, fontWeight: '700' },
+
+  /* Tab content */
+  tabContent: { minHeight: 80 },
+  descText: { fontSize: 14, lineHeight: 22 },
+  reviewsEmpty: { alignItems: 'center', paddingVertical: 24, gap: 8 },
+  reviewsEmptyText: { fontSize: 14 },
+
+  /* Empty */
+  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  emptyTitle: { fontSize: 20, fontWeight: '700', marginTop: 16 },
+});

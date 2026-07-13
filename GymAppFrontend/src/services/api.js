@@ -1,0 +1,309 @@
+// API Configuration for Laravel Backend
+import Constants from 'expo-constants';
+import { DEV_BACKEND_IP as HARDCODED_IP } from '../../.env.js';
+
+// Production URL (Render.com deployment)
+const PRODUCTION_URL = 'https://gimapp.onrender.com/api';
+
+let DEV_BACKEND_IP = HARDCODED_IP;
+
+// If we are in Expo development mode, extract the LAN IP from the host URI
+const hostUri = Constants.expoConfig?.hostUri || Constants.manifest?.hostUri;
+if (hostUri) {
+  DEV_BACKEND_IP = hostUri.split(':')[0];
+}
+
+// In production (__DEV__ is false), use Render URL. In dev, use local IP.
+export const API_URL = !__DEV__ ? PRODUCTION_URL : (process.env.EXPO_PUBLIC_API_URL || `http://${DEV_BACKEND_IP}:8000/api`);
+
+
+// Endpoints disponibles
+export const ENDPOINTS = {
+  categories: `${API_URL}/categories`,
+  subscriptions: `${API_URL}/subscriptions`,
+  activeOffer: `${API_URL}/offers/active`,
+};
+
+// In-memory cache for API GET requests to reduce load times
+const apiCache = {};
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+const getCachedResponse = (key) => {
+  const cached = apiCache[key];
+  if (cached && (Date.now() - cached.timestamp < CACHE_DURATION)) {
+    return cached.data;
+  }
+  return null;
+};
+
+const setCachedResponse = (key, data) => {
+  apiCache[key] = {
+    data,
+    timestamp: Date.now()
+  };
+};
+
+const fetchWithAuth = async (endpoint, token, options = {}) => {
+  const isCacheableGet = !options.method || options.method === 'GET';
+
+  if (isCacheableGet) {
+    const cachedData = getCachedResponse(endpoint);
+    if (cachedData) return cachedData;
+  }
+
+  try {
+    const response = await fetch(endpoint, {
+      ...options,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+        ...options.headers
+      }
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const data = await response.json();
+    if (isCacheableGet) {
+      setCachedResponse(endpoint, data);
+    }
+    return data;
+  } catch (error) {
+    console.error('Error fetching auth data:', error);
+    throw error;
+  }
+};
+
+// Helper function para hacer peticiones GET
+export const fetchData = async (endpoint) => {
+  const cachedData = getCachedResponse(endpoint);
+  if (cachedData) return cachedData;
+
+  try {
+    const response = await fetch(endpoint, {
+      headers: {
+        Accept: 'application/json'
+      }
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const data = await response.json();
+    setCachedResponse(endpoint, data);
+    return data;
+  } catch (error) {
+    console.error('Error fetching data:', error);
+    throw error;
+  }
+};
+
+// Helper function para hacer peticiones POST
+export const postData = async (endpoint, data) => {
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json'
+      },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error('Error posting data:', error);
+    throw error;
+  }
+};
+
+export const authLogin = async (email, password) => {
+  const response = await fetch(`${API_URL}/login`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json'
+    },
+    body: JSON.stringify({ email, password })
+  });
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || `HTTP error! status: ${response.status}`);
+  }
+
+  return response.json();
+};
+
+export const authRegister = async (name, username, email, password, passwordConfirmation, phone = '') => {
+  const body = { name, username, email, password, password_confirmation: passwordConfirmation };
+  if (phone && phone.trim()) body.phone = phone.trim();
+
+  const response = await fetch(`${API_URL}/register`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json'
+    },
+    body: JSON.stringify(body)
+  });
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || `HTTP error! status: ${response.status}`);
+  }
+
+  return response.json();
+};
+
+// Helper function para hacer peticiones PUT
+export const updateData = async (endpoint, data) => {
+  try {
+    const response = await fetch(endpoint, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error('Error updating data:', error);
+    throw error;
+  }
+};
+
+// Helper function para hacer peticiones DELETE
+export const deleteData = async (endpoint) => {
+  try {
+    const response = await fetch(endpoint, {
+      method: 'DELETE',
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error('Error deleting data:', error);
+    throw error;
+  }
+};
+
+// Servicios específicos
+export const CategoryService = {
+  getAll: (token) => (token ? fetchWithAuth(ENDPOINTS.categories, token) : fetchData(ENDPOINTS.categories)),
+  getProductsByCategory: (categoryId, token) =>
+    token
+      ? fetchWithAuth(`${ENDPOINTS.categories}/${categoryId}/products`, token)
+      : fetchData(`${ENDPOINTS.categories}/${categoryId}/products`),
+  clearCache: () => {
+    delete apiCache[ENDPOINTS.categories];
+  }
+};
+
+export const SubscriptionService = {
+  getAll: () => fetchData(ENDPOINTS.subscriptions),
+  getById: (id) => fetchData(`${ENDPOINTS.subscriptions}/${id}`),
+  create: async (data) => {
+    const res = await postData(ENDPOINTS.subscriptions, data);
+    delete apiCache[ENDPOINTS.subscriptions];
+    return res;
+  },
+  update: async (id, data) => {
+    const res = await updateData(`${ENDPOINTS.subscriptions}/${id}`, data);
+    delete apiCache[ENDPOINTS.subscriptions];
+    return res;
+  },
+  delete: async (id) => {
+    const res = await deleteData(`${ENDPOINTS.subscriptions}/${id}`);
+    delete apiCache[ENDPOINTS.subscriptions];
+    return res;
+  },
+  clearCache: () => {
+    delete apiCache[ENDPOINTS.subscriptions];
+  }
+};
+
+export const OfferService = {
+  getActive: (token) => (token ? fetchWithAuth(ENDPOINTS.activeOffer, token) : fetchData(ENDPOINTS.activeOffer))
+};
+
+// Banner Service
+export const BannerService = {
+  // Public: get active banners for carousel
+  getActiveBanners: (token) => (token ? fetchWithAuth(`${API_URL}/banners/active`, token) : fetchData(`${API_URL}/banners/active`)),
+
+  // Admin: get all banners
+  getAll: (token) => fetchWithAuth(`${API_URL}/admin/banners`, token),
+
+  // Admin: create banner (with optional image)
+  create: async (formData, token) => {
+    const response = await fetch(`${API_URL}/admin/banners`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+      },
+      body: formData,
+    });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    delete apiCache[`${API_URL}/banners/active`];
+    delete apiCache[`${API_URL}/admin/banners`];
+    return response.json();
+  },
+
+  // Admin: update banner
+  update: async (id, data, token) => {
+    const response = await fetch(`${API_URL}/admin/banners/${id}`, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    delete apiCache[`${API_URL}/banners/active`];
+    delete apiCache[`${API_URL}/admin/banners`];
+    return response.json();
+  },
+
+  // Admin: upload banner image
+  uploadImage: async (id, formData, token) => {
+    const response = await fetch(`${API_URL}/admin/banners/${id}/image`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+      },
+      body: formData,
+    });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    delete apiCache[`${API_URL}/banners/active`];
+    delete apiCache[`${API_URL}/admin/banners`];
+    return response.json();
+  },
+
+  // Admin: delete banner
+  delete: async (id, token) => {
+    const response = await fetch(`${API_URL}/admin/banners/${id}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+      },
+    });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    delete apiCache[`${API_URL}/banners/active`];
+    delete apiCache[`${API_URL}/admin/banners`];
+    return response.json();
+  },
+};

@@ -1,0 +1,115 @@
+<?php
+
+namespace Database\Seeders;
+
+use Illuminate\Database\Seeder;
+use App\Models\Permission;
+use App\Models\Role;
+use App\Models\User;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
+
+class PermissionSeeder extends Seeder
+{
+    /**
+     * Run the database seeds.
+     */
+    public function run(): void
+    {
+        // Limpiar caché de permisos
+        // app()->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+
+        // Truncate tables to ensure clean state
+        \Illuminate\Support\Facades\Schema::disableForeignKeyConstraints();
+        DB::table('role_has_permissions')->delete();
+        DB::table('model_has_roles')->delete();
+        DB::table('model_has_permissions')->delete();
+        DB::table('roles')->delete();
+        DB::table('permissions')->delete();
+        \Illuminate\Support\Facades\Schema::enableForeignKeyConstraints();
+
+        // Lista de Permisos Solicitados
+        $permissions = [
+            // Dashboard
+            ['name' => 'dashboard.view', 'display_name' => 'Ver Dashboard', 'category' => 'Dashboard', 'scope' => 'admin', 'description' => 'Ver estadísticas principales'],
+
+            // Usuarios
+            ['name' => 'users.view', 'display_name' => 'Ver Usuarios', 'category' => 'Usuarios', 'scope' => 'admin', 'description' => 'Ver lista de usuarios'],
+            ['name' => 'users.edit', 'display_name' => 'Editar Usuarios', 'category' => 'Usuarios', 'scope' => 'admin', 'description' => 'Editar información de usuarios'],
+
+            // Clientes
+            ['name' => 'clients.view', 'display_name' => 'Ver Clientes', 'category' => 'Clientes', 'scope' => 'admin', 'description' => 'Ver lista de clientes asignados'],
+            ['name' => 'clients.edit', 'display_name' => 'Editar Clientes', 'category' => 'Clientes', 'scope' => 'admin', 'description' => 'Gestionar clientes'],
+
+            // Rutinas
+            ['name' => 'routines.view', 'display_name' => 'Ver Rutinas', 'category' => 'Rutinas', 'scope' => 'admin', 'description' => 'Ver rutinas creadas'],
+            ['name' => 'routines.create', 'display_name' => 'Crear Rutinas', 'category' => 'Rutinas', 'scope' => 'admin', 'description' => 'Crear nuevas rutinas'],
+            ['name' => 'routines.edit', 'display_name' => 'Editar Rutinas', 'category' => 'Rutinas', 'scope' => 'admin', 'description' => 'Modificar rutinas existentes'],
+
+            // Suscripciones
+            ['name' => 'subscriptions.view', 'display_name' => 'Ver Suscripciones', 'category' => 'Suscripciones', 'scope' => 'admin', 'description' => 'Ver estado de suscripciones'],
+            ['name' => 'subscriptions.manage', 'display_name' => 'Gestionar Suscripciones', 'category' => 'Suscripciones', 'scope' => 'admin', 'description' => 'Aprobar o rechazar suscripciones'],
+
+            // Banners
+            ['name' => 'banners.view', 'display_name' => 'Ver Banners', 'category' => 'Banners', 'scope' => 'admin', 'description' => 'Ver banners activos'],
+            ['name' => 'banners.edit', 'display_name' => 'Gestionar Banners', 'category' => 'Banners', 'scope' => 'admin', 'description' => 'Subir o eliminar banners'],
+
+            // Configuración
+            ['name' => 'settings.view', 'display_name' => 'Ver Configuración', 'category' => 'Configuración', 'scope' => 'admin', 'description' => 'Ver configuraciones del sistema'],
+
+            // Roles y Permisos (Admin Super solo, pero definimos por si acaso)
+            ['name' => 'roles.view', 'display_name' => 'Ver Roles', 'category' => 'Roles', 'scope' => 'super_admin', 'description' => 'Ver lista de roles'],
+            ['name' => 'roles.manage', 'display_name' => 'Gestionar Roles', 'category' => 'Roles', 'scope' => 'super_admin', 'description' => 'Crear, editar y eliminar roles'],
+        ];
+
+        foreach ($permissions as $perm) {
+            Permission::updateOrCreate(
+            ['name' => $perm['name']],
+            [
+                'display_name' => $perm['display_name'],
+                'category' => $perm['category'],
+                'scope' => $perm['scope'],
+                'description' => $perm['description'],
+                'guard_name' => 'sanctum',
+                'is_active' => true,
+            ]
+            );
+        }
+
+        // Crear Roles Base
+        $superAdminRole = Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => 'sanctum']);
+        $userRole = Role::firstOrCreate(['name' => 'user', 'guard_name' => 'sanctum']);
+
+        // Asignar TODOS los permisos a Super Admin
+        $allPermissions = Permission::all();
+        $superAdminRole->syncPermissions($allPermissions);
+
+        // Asignar permisos mínimos a User (solo ver productos y categorías)
+        $userPermissionNames = [
+            'products.view',
+            'categories.view',
+        ];
+        $userPerms = Permission::whereIn('name', $userPermissionNames)->get();
+        $userRole->syncPermissions($userPerms);
+
+        // Crear Usuario Super Admin por defecto si no existe
+        $adminEmail = 'admin@fitness.com';
+        $adminUser = User::firstOrCreate(
+            ['email' => $adminEmail],
+            [
+                'name' => 'Super Admin',
+                'password' => Hash::make('password123'),
+                'role' => 'admin',
+            ]
+        );
+
+        // Asignar el rol super_admin a todos los usuarios con rol 'admin'
+        $admins = User::where('role', 'admin')->get();
+        foreach ($admins as $admin) {
+            if (!$admin->hasRole('super_admin')) {
+                $admin->assignRole($superAdminRole);
+            }
+        }
+
+    }
+}

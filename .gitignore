@@ -1,0 +1,29 @@
+# Dependencies
+**/node_modules/
+/GymAppBackend/vendor/
+
+# Environment configurations
+/GymAppBackend/.env
+/GymAppFrontend/.env.js
+
+# Build outputs
+/GymAppAdmin/dist/
+/GymAppFrontend/.expo/
+
+# Laravel specific files
+/GymAppBackend/bootstrap/cache/*
+/GymAppBackend/storage/framework/cache/data/*
+/GymAppBackend/storage/framework/sessions/*
+/GymAppBackend/storage/framework/testing/*
+/GymAppBackend/storage/framework/views/*
+/GymAppBackend/storage/logs/*
+/GymAppBackend/storage/*.key
+
+# PHPUnit / Testing caches
+/GymAppBackend/.phpunit.result.cache
+
+# IDEs & System files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
