@@ -30,10 +30,10 @@ function getLocalIp() {
   return null;
 }
 
-const ip = getLocalIp();
+let ip = getLocalIp();
 if (!ip) {
-  console.error('No se pudo detectar la IP local.');
-  process.exit(1);
+  console.warn('No se pudo detectar la IP local de red. Usando 127.0.0.1 como fallback.');
+  ip = '127.0.0.1';
 }
 
 const envPath = path.join(__dirname, '.env.js');
