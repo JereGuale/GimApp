@@ -1,4 +1,4 @@
-/* CSS Stylesheet for Products Page Redesign */
+/* CSS Stylesheet for Products Page Redesign (SaaS Premium Refined) */
 
 /* Container and responsive toggling */
 .products-desktop-view {
@@ -23,9 +23,10 @@
   background: var(--card);
   border-radius: 16px;
   border: 1px solid var(--border);
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -2px rgba(0, 0, 0, 0.02);
   overflow: hidden;
   margin-bottom: 24px;
+  transition: border-color 0.2s ease;
 }
 
 .products-table {
@@ -51,36 +52,43 @@
   border-bottom: 1px solid var(--border);
   color: var(--text);
   vertical-align: middle;
+  transition: color 0.2s ease;
 }
 
 .products-table tbody tr {
-  transition: background-color 0.2s ease;
+  transition: background-color 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .products-table tbody tr:hover {
-  background-color: rgba(0, 0, 0, 0.015);
+  background-color: rgba(37, 99, 235, 0.015);
 }
 
 :root.dark .products-table tbody tr:hover {
-  background-color: rgba(255, 255, 255, 0.015);
+  background-color: rgba(59, 130, 246, 0.025);
 }
 
 /* Image Thumbnail styles */
 .product-img-thumbnail {
-  width: 54px;
-  height: 54px;
+  width: 56px;
+  height: 56px;
   border-radius: 10px;
   object-fit: cover;
   border: 1px solid var(--border);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
   background: var(--bg);
+  transition: transform 200ms ease;
+}
+
+.product-img-thumbnail:hover {
+  transform: scale(1.05);
 }
 
 .product-img-placeholder {
-  width: 54px;
-  height: 54px;
+  width: 56px;
+  height: 56px;
   border-radius: 10px;
   background: var(--bg);
-  border: 1px solid var(--border);
+  border: 1px dashed var(--border);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -88,37 +96,77 @@
   opacity: 0.6;
 }
 
-/* Badges System */
+/* Badges System (SaaS dot indicators and semi-transparent fills) */
 .badge-status {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   padding: 4px 10px;
   border-radius: 9999px;
   font-size: 12px;
   font-weight: 600;
   line-height: 1;
-  text-transform: capitalize;
+}
+
+.badge-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
 }
 
 .badge-status--active {
-  background-color: var(--success-light);
-  color: var(--success-text);
+  background-color: rgba(34, 197, 94, 0.1);
+  color: #16a34a;
+}
+:root.dark .badge-status--active {
+  background-color: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+}
+.badge-status-dot--active {
+  background-color: #16a34a;
+}
+:root.dark .badge-status-dot--active {
+  background-color: #4ade80;
 }
 
 .badge-status--inactive {
-  background-color: var(--border);
-  color: var(--text-secondary);
+  background-color: rgba(100, 116, 139, 0.1);
+  color: #475569;
+}
+:root.dark .badge-status--inactive {
+  background-color: rgba(148, 163, 184, 0.15);
+  color: #cbd5e1;
+}
+.badge-status-dot--inactive {
+  background-color: #475569;
+}
+:root.dark .badge-status-dot--inactive {
+  background-color: #cbd5e1;
 }
 
 .badge-status--out {
-  background-color: var(--danger-light);
-  color: var(--danger-text);
+  background-color: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+}
+:root.dark .badge-status--out {
+  background-color: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+}
+.badge-status-dot--out {
+  background-color: #dc2626;
+}
+:root.dark .badge-status-dot--out {
+  background-color: #fca5a5;
 }
 
 .badge-status--featured {
-  background-color: var(--primary-light);
-  color: var(--primary);
+  background-color: rgba(37, 99, 235, 0.1);
+  color: #2563eb;
+}
+:root.dark .badge-status--featured {
+  background-color: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
 }
 
 /* Dropdown Menu Styles (Shopify / Stripe Style) */
@@ -153,18 +201,18 @@
   right: 0;
   top: 105%;
   z-index: 100;
-  min-width: 170px;
+  min-width: 180px;
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 12px;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 16px -6px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.1), 0 8px 16px -6px rgba(0, 0, 0, 0.05);
   padding: 6px;
   animation: dropdownSlideIn 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   transform-origin: top right;
 }
 
 :root.dark .actions-dropdown-menu {
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 16px -6px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.5), 0 8px 16px -6px rgba(0, 0, 0, 0.3);
 }
 
 @keyframes dropdownSlideIn {
@@ -220,7 +268,7 @@
 .mobile-products-grid {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
   margin-bottom: 24px;
 }
 
@@ -228,16 +276,26 @@
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 16px;
-  padding: 16px;
-  box-shadow: var(--shadow-sm);
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02), 0 1px 2px rgba(0, 0, 0, 0.02);
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
+  transition: transform 200ms cubic-bezier(0.4, 0, 0.2, 1), box-shadow 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.product-mobile-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 16px -2px rgba(0, 0, 0, 0.04), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
+}
+
+:root.dark .product-mobile-card:hover {
+  box-shadow: 0 8px 16px -2px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
 }
 
 .product-mobile-card-header {
   display: flex;
-  gap: 12px;
+  gap: 14px;
   align-items: center;
 }
 
@@ -246,7 +304,8 @@
   height: 60px;
   border-radius: 12px;
   object-fit: cover;
-  border: 1px solid var(--border);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
 }
 
 .product-mobile-card-img-placeholder {
@@ -254,7 +313,7 @@
   height: 60px;
   border-radius: 12px;
   background: var(--bg);
-  border: 1px solid var(--border);
+  border: 1px dashed var(--border);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -267,10 +326,10 @@
 }
 
 .product-mobile-card-name {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
   color: var(--text);
-  margin-bottom: 2px;
+  margin-bottom: 3px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -280,20 +339,23 @@
   font-size: 12px;
   color: var(--text-secondary);
   font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .product-mobile-card-details {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   background-color: var(--bg);
-  padding: 12px;
-  border-radius: 12px;
-  border: 1px solid rgba(0, 0, 0, 0.02);
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(0, 0, 0, 0.01);
 }
 
 :root.dark .product-mobile-card-details {
-  border: 1px solid rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.015);
 }
 
 .product-mobile-card-row {
@@ -306,6 +368,9 @@
 .product-mobile-card-label {
   color: var(--text-secondary);
   font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .product-mobile-card-val {
@@ -317,23 +382,24 @@
   display: flex;
   gap: 12px;
   border-top: 1px solid var(--border);
-  padding-top: 14px;
+  padding-top: 16px;
 }
 
-/* Action Buttons Mobile (50% width, modern styles) */
+/* Action Buttons Mobile (50% width, modern styles with 44px min touch target) */
 .btn-mobile-action {
   flex: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 10px 14px;
+  min-height: 44px;
+  padding: 10px 16px;
   border-radius: 10px;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   border: none;
-  transition: all 0.2s ease;
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
 }
 
@@ -344,7 +410,8 @@
 
 .btn-mobile-action--edit:hover {
   background-color: var(--primary-hover);
-  box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);
+  box-shadow: 0 4px 8px rgba(37, 99, 235, 0.25);
+  transform: translateY(-1px);
 }
 
 .btn-mobile-action--delete {
@@ -354,7 +421,8 @@
 
 .btn-mobile-action--delete:hover {
   background-color: #dc2626;
-  box-shadow: 0 4px 6px rgba(239, 68, 68, 0.2);
+  box-shadow: 0 4px 8px rgba(239, 68, 68, 0.25);
+  transform: translateY(-1px);
 }
 
 /* Premium Product Viewer Modal styling */

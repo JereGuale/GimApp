@@ -14,7 +14,12 @@ import {
   FileText,
   Image as ImageIcon,
   MoreVertical,
-  Eye
+  Eye,
+  Copy,
+  Tag,
+  DollarSign,
+  Layers,
+  Calendar
 } from 'lucide-react';
 import '../components/Layout.css';
 import './Products.css';
@@ -147,12 +152,27 @@ export default function Products() {
 
   const getStatusBadge = (p) => {
     if (p.stock !== null && p.stock !== undefined && Number(p.stock) <= 0) {
-      return <span className="badge-status badge-status--out">Agotado</span>;
+      return (
+        <span className="badge-status badge-status--out">
+          <span className="badge-status-dot badge-status-dot--out" />
+          Agotado
+        </span>
+      );
     }
     if (p.status === 'inactive') {
-      return <span className="badge-status badge-status--inactive">Inactivo</span>;
+      return (
+        <span className="badge-status badge-status--inactive">
+          <span className="badge-status-dot badge-status-dot--inactive" />
+          Inactivo
+        </span>
+      );
     }
-    return <span className="badge-status badge-status--active">Activo</span>;
+    return (
+      <span className="badge-status badge-status--active">
+        <span className="badge-status-dot badge-status-dot--active" />
+        Activo
+      </span>
+    );
   };
 
   const getProductImageUrls = (p) => {
@@ -177,6 +197,58 @@ export default function Products() {
     }
     return imgList.map(img => getProductImageUrlString(img)).filter(Boolean);
   };
+
+  const handleDuplicate = (p) => {
+    try {
+      setError('');
+      setSuccess('');
+      
+      setEditId(null);
+      setName(p.name ? `${p.name} (Copia)` : 'Producto Copia');
+      setPrice(p.price || '');
+      setDescription(p.description || '');
+      setCategoryId(p.category_id || '');
+      setIsFeatured(!!p.is_featured);
+      setCondition(p.condition || 'nuevo');
+      setStock(p.stock !== null && p.stock !== undefined ? String(p.stock) : '');
+      setImageFiles([]);
+      
+      let currentImages = [];
+      if (p.images) {
+        if (Array.isArray(p.images)) {
+          currentImages = p.images;
+        } else if (typeof p.images === 'string') {
+          try {
+            const parsed = JSON.parse(p.images);
+            currentImages = Array.isArray(parsed) ? parsed : [p.images];
+          } catch (e) {
+            currentImages = [p.images];
+          }
+        } else {
+          currentImages = [p.images];
+        }
+      }
+      
+      if (currentImages.length === 0 && p.image) {
+        currentImages = [p.image];
+      }
+
+      const sanitizedImages = currentImages
+        .map(img => {
+          if (!img) return '';
+          if (typeof img === 'object') return img.image_url || img.image_path || '';
+          return String(img);
+        })
+        .filter(img => img !== '');
+      
+      setExistingImages(sanitizedImages);
+      setModalOpen(true);
+    } catch (err) {
+      console.error('Error in handleDuplicate:', err);
+      setError('No se pudo duplicar el producto: ' + err.message);
+    }
+  };
+
 
   const loadData = async () => {
     setLoading(true);
@@ -466,11 +538,18 @@ export default function Products() {
                           </div>
                         )}
                       </td>
-                      <td style={{ fontWeight: 600 }}>{p.name}</td>
-                      <td style={{ color: 'var(--text-secondary)' }}>
+                      <td>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <span style={{ fontWeight: 600, color: 'var(--text)' }}>{p.name}</span>
+                          <span style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'capitalize' }}>
+                            Condición: {p.condition || 'nuevo'}
+                          </span>
+                        </div>
+                      </td>
+                      <td style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>
                         {categories.find(c => c.id === p.category_id)?.name || 'Sin Categoría'}
                       </td>
-                      <td style={{ fontWeight: 700 }}>
+                      <td style={{ fontWeight: 700, color: 'var(--text)' }}>
                         ${Number(p.price).toFixed(2)}
                       </td>
                       <td>
@@ -484,13 +563,13 @@ export default function Products() {
                       <td>
                         {p.is_featured ? (
                           <span className="badge-status badge-status--featured" style={{ gap: 4 }}>
-                            <Star size={12} fill="currentColor" /> Sí
+                            <Star size={11} fill="currentColor" /> Sí
                           </span>
                         ) : (
                           <span className="badge-status badge-status--inactive">No</span>
                         )}
                       </td>
-                      <td style={{ color: 'var(--text-secondary)' }}>
+                      <td style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>
                         {formatDate(p.created_at)}
                       </td>
                       <td style={{ textAlign: 'right' }}>
@@ -515,7 +594,7 @@ export default function Products() {
                                 }}
                               >
                                 <Eye size={14} />
-                                <span>Ver producto</span>
+                                <span>Ver detalles</span>
                               </button>
                               
                               <button 
@@ -527,7 +606,19 @@ export default function Products() {
                                 }}
                               >
                                 <Pencil size={14} />
-                                <span>Editar</span>
+                                <span>Editar producto</span>
+                              </button>
+
+                              <button 
+                                type="button"
+                                className="actions-dropdown-item"
+                                onClick={() => {
+                                  handleDuplicate(p);
+                                  setActiveDropdown(null);
+                                }}
+                              >
+                                <Copy size={14} />
+                                <span>Duplicar</span>
                               </button>
                               
                               <button 
@@ -582,7 +673,8 @@ export default function Products() {
                     <div className="product-mobile-card-title-block">
                       <div className="product-mobile-card-name">{p.name}</div>
                       <div className="product-mobile-card-cat">
-                        {categories.find(c => c.id === p.category_id)?.name || 'Sin Categoría'}
+                        <Tag size={12} style={{ opacity: 0.6 }} />
+                        <span>{categories.find(c => c.id === p.category_id)?.name || 'Sin Categoría'}</span>
                       </div>
                     </div>
                     {/* Compact actions button on mobile cards */}
@@ -606,7 +698,18 @@ export default function Products() {
                             }}
                           >
                             <Eye size={14} />
-                            <span>Ver producto</span>
+                            <span>Ver detalles</span>
+                          </button>
+                          <button 
+                            type="button"
+                            className="actions-dropdown-item"
+                            onClick={() => {
+                              handleDuplicate(p);
+                              setActiveDropdown(null);
+                            }}
+                          >
+                            <Copy size={14} />
+                            <span>Duplicar</span>
                           </button>
                           <button 
                             type="button"
@@ -626,14 +729,20 @@ export default function Products() {
                   
                   <div className="product-mobile-card-details">
                     <div className="product-mobile-card-row">
-                      <span className="product-mobile-card-label">Precio</span>
+                      <span className="product-mobile-card-label">
+                        <DollarSign size={14} style={{ opacity: 0.7 }} />
+                        <span>Precio</span>
+                      </span>
                       <span className="product-mobile-card-val" style={{ fontSize: '14px', fontWeight: 700 }}>
                         ${Number(p.price).toFixed(2)}
                       </span>
                     </div>
                     
                     <div className="product-mobile-card-row">
-                      <span className="product-mobile-card-label">Stock</span>
+                      <span className="product-mobile-card-label">
+                        <Layers size={14} style={{ opacity: 0.7 }} />
+                        <span>Stock</span>
+                      </span>
                       <span className="product-mobile-card-val">
                         <span className={`badge-status ${getStockBadgeClass(p.stock)}`}>
                           {getStockDisplay(p.stock)}
@@ -642,14 +751,20 @@ export default function Products() {
                     </div>
                     
                     <div className="product-mobile-card-row">
-                      <span className="product-mobile-card-label">Estado</span>
+                      <span className="product-mobile-card-label">
+                        <FileText size={14} style={{ opacity: 0.7 }} />
+                        <span>Estado</span>
+                      </span>
                       <span className="product-mobile-card-val">
                         {getStatusBadge(p)}
                       </span>
                     </div>
                     
                     <div className="product-mobile-card-row">
-                      <span className="product-mobile-card-label">Destacado</span>
+                      <span className="product-mobile-card-label">
+                        <Star size={14} style={{ opacity: 0.7 }} />
+                        <span>Destacado</span>
+                      </span>
                       <span className="product-mobile-card-val">
                         {p.is_featured ? (
                           <span className="badge-status badge-status--featured" style={{ gap: 4 }}>
