@@ -83,7 +83,7 @@ class SubscriptionController extends Controller
 
             $subscriptionData['status'] = 'active';
             $subscriptionData['starts_at'] = now();
-            $subscriptionData['ends_at'] = now()->addMonths($months);
+            $subscriptionData['ends_at'] = now()->addDays($months * 30);
             $subscriptionData['approved_at'] = now();
         }
         else {

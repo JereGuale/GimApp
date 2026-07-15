@@ -150,7 +150,7 @@ class TrainerSubscriptionController extends Controller
             'approved_by' => $request->user()->id,
             'approved_at' => now(),
             'starts_at' => now(),
-            'ends_at' => now()->addMonths($months)
+            'ends_at' => now()->addDays($months * 30)
         ]);
 
         return response()->json([
@@ -176,7 +176,7 @@ class TrainerSubscriptionController extends Controller
         $subscription->update([
             'status' => 'active',
             'starts_at' => now(),
-            'ends_at' => $baseDate->copy()->addMonths($durationMonths),
+            'ends_at' => $baseDate->copy()->addDays($durationMonths * 30),
             'approved_by' => $request->user()->id,
             'approved_at' => now()
         ]);

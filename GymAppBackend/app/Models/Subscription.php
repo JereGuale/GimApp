@@ -90,7 +90,7 @@ class Subscription extends Model
             'approved_by' => $approverId,
             'approved_at' => now(),
             'starts_at' => now(),
-            'ends_at' => now()->addMonths($this->getDurationMonths())
+            'ends_at' => now()->addDays($this->getDurationMonths() * 30)
         ]);
     }
 
