@@ -169,7 +169,10 @@ export default function UserTabs() {
           name="Perfil"
           component={ProfileScreen}
           options={{
-            tabBarButton: () => null, // Hide from tab bar
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="person-outline" size={size} color={color} />
+            ),
+            title: 'Perfil',
           }}
         />
       </Tab.Navigator>

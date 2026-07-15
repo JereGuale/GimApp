@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, RefreshControl, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, RefreshControl, Platform, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { SubscriptionAPI, SubscriptionPlanAPI } from '../../services/subscriptionService';
@@ -10,6 +11,12 @@ import AuthModal from '../../components/AuthModal';
 import { useNavigation } from '@react-navigation/native';
 import { useResponsive } from '../../hooks/useResponsive';
 
+const getPlanCategory = (planName) => {
+  const name = planName.toLowerCase();
+  if (name.includes('estudiantil') || name.includes('student')) return 'FLEXIBILIDAD';
+  if (name.includes('elite') || name.includes('premium')) return 'EXPERIENCIA PREMIUM';
+  return 'ESTÁNDAR';
+};
 
 export default function SubscriptionScreen() {
   const { theme } = useTheme();
@@ -28,7 +35,7 @@ export default function SubscriptionScreen() {
   // Suscripción existente
   const [existingSub, setExistingSub] = useState(null);
   const [loadingSub, setLoadingSub] = useState(true);
-  
+
   // Planes dinámicos
   const [plans, setPlans] = useState([]);
   const [loadingPlans, setLoadingPlans] = useState(true);
@@ -244,91 +251,234 @@ export default function SubscriptionScreen() {
     );
   };
 
+  // Sort plans by price and take first 3 plans
+  const sortedPlans = [...plans]
+    .sort((a, b) => parseFloat(a.price || 0) - parseFloat(b.price || 0))
+    .slice(0, 3);
+
+  const mappedPlans = sortedPlans.map((plan, index) => {
+    if (index === 0) {
+      return {
+        ...plan,
+        displayName: 'Plan Estudiantil',
+        displayPrice: '20',
+        category: 'FLEXIBILIDAD',
+        accentColor: '#00C2FF', // Celeste
+        badge: null,
+        description: 'Económico y flexible, ideal para estudiantes.',
+        features: [
+          'Acceso total al gimnasio',
+          'Horarios flexibles',
+          'Área de cardio y peso libre',
+          'Sin contrato de permanencia'
+        ]
+      };
+    } else if (index === 1) {
+      return {
+        ...plan,
+        displayName: 'Plan Básico',
+        displayPrice: '25',
+        category: 'ESTÁNDAR',
+        accentColor: '#F97316', // Naranja
+        badge: 'MÁS POPULAR',
+        description: 'El plan más equilibrado para tu entrenamiento diario.',
+        features: [
+          'Acceso total ilimitado 24/7',
+          'Uso completo de vestidores',
+          'Clases grupales semanales',
+          '1 sesión de evaluación corporal'
+        ]
+      };
+    } else {
+      return {
+        ...plan,
+        displayName: 'Plan Elite',
+        displayPrice: '50',
+        category: 'EXPERIENCIA PREMIUM',
+        accentColor: '#5B3DF5', // Violeta
+        badge: 'PREMIUM',
+        description: 'La experiencia definitiva con acompañamiento profesional.',
+        features: [
+          'Entrenamiento 100% personalizado',
+          'Plan nutricional a medida',
+          'Acceso ilimitado 24/7 a sedes',
+          'Acceso a zona VIP y sauna',
+          'Masajes de recuperación mensual'
+        ]
+      };
+    }
+  });
+
+  const screenBg = theme.isDark ? '#090D16' : '#FFFFFF';
+  const textMain = theme.isDark ? '#F3F4F6' : '#111827';
+  const textMuted = theme.isDark ? '#9CA3AF' : '#6B7280';
+  const cardBg = theme.isDark ? '#111827' : '#FFFFFF';
+  const cardBorder = theme.isDark ? '#1F2937' : '#E2E8F0';
+  const bentoBg = theme.isDark ? '#111827' : '#F9FAFB';
+
+  const { width: SCREEN_WIDTH } = Dimensions.get('window');
+  const CARD_WIDTH_MOBILE = SCREEN_WIDTH * 0.88;
+  const CARD_WIDTH_DESKTOP = 380;
+
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <View style={[styles.container, { backgroundColor: screenBg }]}>
+      {/* TopAppBar */}
+      <View style={[styles.header, { borderBottomColor: theme.isDark ? '#1F2937' : '#F3F4F6', backgroundColor: screenBg }]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <Ionicons name="arrow-back" size={24} color={textMain} />
+        </TouchableOpacity>
+        <Text style={[styles.headerTitle, { color: textMain }]}>Suscripciones</Text>
+        <TouchableOpacity style={styles.helpButton} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <Ionicons name="help-circle-outline" size={24} color={textMuted} />
+        </TouchableOpacity>
+      </View>
+
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={[styles.title, { color: theme.colors.text }]}>Suscripciones</Text>
-        <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
-          Elige el plan ideal para tu progreso
-        </Text>
+        {/* Hero Section */}
+        <View style={styles.heroSection}>
+          <Text style={[styles.heroTitle, { color: textMain }]}>
+            Elige tu nivel de entrenamiento
+          </Text>
+          <Text style={[styles.heroSubtitle, { color: textMuted }]}>
+            Planes diseñados para superar tus límites con la mejor tecnología fitness.
+          </Text>
+        </View>
 
-        {loadingSub ? (
-          <View style={{ alignItems: 'center', paddingVertical: 40 }}>
-            <ActivityIndicator size="large" color={theme.colors.primary} />
+        {loadingSub || loadingPlans ? (
+          <View style={{ alignItems: 'center', paddingVertical: 80 }}>
+            <ActivityIndicator size="large" color="#5B3DF5" />
           </View>
         ) : (
           <>
             {renderExistingSubscriptionBanner()}
 
-            <View style={!isSmallScreen ? styles.plansWebRow : styles.plansMobileCol}>
-              {plans.map((plan) => (
-                <TouchableOpacity
-                  key={plan.id}
-                  style={[
-                    styles.planCard,
-                    { backgroundColor: theme.isDark ? theme.colors.surface : '#FFFFFF', borderColor: plan.color || '#22D3EE' },
-                    !isSmallScreen && { flex: 1, marginHorizontal: 12 },
-                    existingSub && { opacity: 0.5 }
-                  ]}
-                  onPress={() => handlePlanPress(plan)}
-                  activeOpacity={existingSub ? 1 : 0.85}
-                  disabled={!!existingSub}
-                >
-                  {(plan.is_best_value || plan.badge) && (
-                    <View style={[styles.badge, { backgroundColor: plan.color || '#22D3EE' }]}>
-                      <Text style={styles.badgeText}>{plan.badge || 'RECOMENDADO'}</Text>
-                    </View>
-                  )}
-
-                  <View style={styles.planHeader}>
-                    <View style={styles.planInfo}>
-                      <View style={styles.titleRow}>
-                        <Text style={[styles.planName, { color: theme.colors.text }]}>
-                          {plan.name}
-                        </Text>
-                        <View style={[styles.smallIconBox, { backgroundColor: (plan.color || '#22D3EE') + '1A' }]}>
-                          <Ionicons name={plan.icon || 'barbell-outline'} size={20} color={plan.color || '#22D3EE'} />
-                        </View>
+            <ScrollView
+              horizontal={isSmallScreen}
+              showsHorizontalScrollIndicator={false}
+              snapToInterval={isSmallScreen ? (CARD_WIDTH_MOBILE + 20) : null}
+              snapToAlignment="center"
+              decelerationRate="fast"
+              contentContainerStyle={!isSmallScreen ? styles.plansWebRow : styles.plansMobileColHorizontal}
+              style={isSmallScreen ? { marginHorizontal: -16, marginBottom: 32 } : null}
+            >
+              {mappedPlans.map((plan) => {
+                const isElite = plan.badge === 'PREMIUM';
+                const cardColor = plan.accentColor;
+                
+                const cardContent = (
+                  <View style={[
+                    styles.planCardInner,
+                    { backgroundColor: cardBg },
+                    existingSub && { opacity: 0.6 }
+                  ]}>
+                    {/* Badge header */}
+                    {plan.badge && (
+                      <View style={[styles.badge, { backgroundColor: cardColor }]}>
+                        {isElite && <Ionicons name="star" size={12} color="#FFFFFF" style={{ marginRight: 4 }} />}
+                        <Text style={styles.badgeText}>{plan.badge}</Text>
                       </View>
-                      <Text style={[styles.planPrice, { color: plan.color || '#22D3EE' }]}>
-                        <Text style={styles.priceBig}>${parseFloat(plan.price || 0).toFixed(2)}</Text>
-                        <Text style={styles.priceSmall}>/{plan.duration === 'monthly' ? 'mes' : (plan.duration || 'mes')}</Text>
+                    )}
+
+                    <View>
+                      <Text style={[styles.planCategory, { color: cardColor }]}>
+                        {plan.category}
+                      </Text>
+                      <Text style={[styles.planName, { color: textMain }]}>
+                        {plan.displayName}
+                      </Text>
+                      <Text style={[styles.planDesc, { color: textMuted }]}>
+                        {plan.description}
                       </Text>
                     </View>
-                  </View>
 
-                  <View style={styles.features}>
-                    {Array.isArray(plan.features) ? plan.features.map((feature, index) => {
-                      const isString = typeof feature === 'string';
-                      const iconName = isString ? 'checkmark-circle-outline' : (feature.icon || 'checkmark-circle-outline');
-                      const textVal = isString ? feature : feature.text;
-                      return (
-                        <View key={index} style={styles.featureRow}>
-                          <Ionicons name={iconName} size={16} color={plan.color || '#22D3EE'} />
-                          <Text style={[styles.featureText, { color: theme.colors.textSecondary || '#6B7280' }]}>
-                            {textVal}
-                          </Text>
-                        </View>
-                      );
-                    }) : null}
-                  </View>
+                    <View style={styles.priceContainer}>
+                      <Text style={[styles.priceBig, { color: textMain }]}>
+                        ${plan.displayPrice}
+                      </Text>
+                      <Text style={[styles.priceSmall, { color: textMuted }]}>/mes</Text>
+                    </View>
 
-                  <View style={[styles.planButton, { backgroundColor: existingSub ? '#9CA3AF' : (plan.color || '#22D3EE') }]}>
-                    <Text style={styles.planButtonText}>
-                      {existingSub ? 'NO DISPONIBLE' : `ELEGIR ${plan.name.toUpperCase()}`}
-                    </Text>
+                    <View style={styles.features}>
+                      {plan.features.map((feature, index) => {
+                        const isFirstEliteFeature = isElite && index === 0;
+                        return (
+                          <View key={index} style={styles.featureRow}>
+                            <Ionicons 
+                              name={isFirstEliteFeature ? 'star' : 'checkmark-sharp'} 
+                              size={18} 
+                              color={cardColor} 
+                            />
+                            <Text style={[
+                              styles.featureText, 
+                              { color: textMain },
+                              isFirstEliteFeature && { fontWeight: '700' }
+                            ]}>
+                              {feature}
+                            </Text>
+                          </View>
+                        );
+                      })}
+                    </View>
+
+                    <TouchableOpacity
+                      style={
+                        existingSub 
+                          ? [styles.planButton, { backgroundColor: '#9CA3AF' }]
+                          : [styles.planButton, { backgroundColor: cardColor }]
+                      }
+                      onPress={() => handlePlanPress(plan)}
+                      activeOpacity={existingSub ? 1 : 0.8}
+                      disabled={!!existingSub}
+                    >
+                      <Text style={styles.planButtonText}>
+                        {existingSub ? 'NO DISPONIBLE' : isElite ? 'Suscribirse Ahora' : 'Seleccionar'}
+                      </Text>
+                    </TouchableOpacity>
                   </View>
-                </TouchableOpacity>
-              ))}
+                );
+
+                if (isElite) {
+                  return (
+                    <View key={plan.id} style={[styles.cardOuter, isSmallScreen ? { width: CARD_WIDTH_MOBILE } : { width: CARD_WIDTH_DESKTOP, marginHorizontal: 12 }]}>
+                      <LinearGradient
+                        colors={['#5B3DF5', '#00C2FF']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={styles.eliteCardGradient}
+                      >
+                        {cardContent}
+                      </LinearGradient>
+                    </View>
+                  );
+                }
+
+                return (
+                  <View key={plan.id} style={[styles.cardOuter, isSmallScreen ? { width: CARD_WIDTH_MOBILE } : { width: CARD_WIDTH_DESKTOP, marginHorizontal: 12 }]}>
+                    <View style={[styles.standardCardBorder, { borderColor: cardBorder, backgroundColor: cardBg }]}>
+                      {cardContent}
+                    </View>
+                  </View>
+                );
+              })}
+            </ScrollView>
+
+            {/* Bento Grid Info Section */}
+            <View style={styles.bentoSection}>
+              <View style={[styles.bentoCard, { backgroundColor: bentoBg, borderColor: cardBorder }]}>
+                <Ionicons name="shield-checkmark" size={28} color="#5B3DF5" />
+                <Text style={[styles.bentoText, { color: textMain }]}>Pagos seguros</Text>
+              </View>
+              <View style={[styles.bentoCard, { backgroundColor: bentoBg, borderColor: cardBorder }]}>
+                <Ionicons name="calendar" size={28} color="#00C2FF" />
+                <Text style={[styles.bentoText, { color: textMain }]}>Cancela cuando quieras</Text>
+              </View>
             </View>
           </>
         )}
       </ScrollView>
-
-      {/* Modals */}
 
       <ReceiptUploader
         visible={receiptModalVisible}
@@ -352,134 +502,210 @@ export default function SubscriptionScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    height: 64,
+    borderBottomWidth: 1,
+  },
+  backButton: {
+    padding: 8,
+    borderRadius: 99,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    fontFamily: Platform.OS === 'web' ? 'Plus Jakarta Sans, sans-serif' : undefined,
+  },
+  helpButton: {
+    padding: 8,
+    borderRadius: 99,
   },
   content: {
-    padding: 16,
-    paddingBottom: 100
+    padding: 24,
+    paddingBottom: 80,
   },
-  title: {
-    fontSize: 26,
-    fontWeight: 'bold',
-    marginBottom: 8
+  heroSection: {
+    alignItems: 'center',
+    textAlign: 'center',
+    marginVertical: 32,
+    paddingHorizontal: 16,
   },
-  subtitle: {
-    fontSize: 14,
-    marginBottom: 24
+  heroTitle: {
+    fontSize: 32,
+    fontWeight: '800',
+    textAlign: 'center',
+    letterSpacing: -0.5,
+    fontFamily: Platform.OS === 'web' ? 'Plus Jakarta Sans, sans-serif' : undefined,
+  },
+  heroSubtitle: {
+    fontSize: 15,
+    textAlign: 'center',
+    marginTop: 12,
+    lineHeight: 22,
+    maxWidth: 480,
+    fontFamily: Platform.OS === 'web' ? 'Plus Jakarta Sans, sans-serif' : undefined,
   },
   plansWebRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginHorizontal: -12,
+    alignItems: 'center',
+    gap: 24,
+    marginVertical: 16,
   },
-  plansMobileCol: {
-    flexDirection: 'column',
+  plansMobileColHorizontal: {
+    flexDirection: 'row',
+    gap: 20,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
   },
-  planCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    borderWidth: 1.5,
-    padding: 30,
-    position: 'relative',
-    display: 'flex',
-    flexDirection: 'column',
-    minHeight: 400,
-    justifyContent: 'space-between',
-    marginBottom: 24,
+  cardOuter: {
+    borderRadius: 28,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.04,
+    shadowRadius: 20,
+    elevation: 3,
+  },
+  eliteCardGradient: {
+    padding: 2,
+    borderRadius: 28,
+  },
+  standardCardBorder: {
+    borderWidth: 1,
+    borderRadius: 28,
+  },
+  planCardInner: {
+    borderRadius: 26,
+    paddingHorizontal: 32,
+    paddingVertical: 40,
+    height: 560,
+    justifyContent: 'space-between',
+    position: 'relative',
   },
   badge: {
     position: 'absolute',
     top: -14,
-    right: 32,
+    alignSelf: 'center',
     paddingHorizontal: 16,
     paddingVertical: 6,
-    borderRadius: 20,
+    borderRadius: 99,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 3,
     zIndex: 10,
   },
   badgeText: {
-    color: '#FFF',
-    fontSize: 11,
-    fontWeight: '900',
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '800',
     letterSpacing: 1,
   },
-  planHeader: {
-    flexDirection: 'column',
-    marginBottom: 24,
-  },
-  planInfo: {
-    flex: 1,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
+  planCategory: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1.5,
+    marginBottom: 8,
   },
   planName: {
-    fontSize: 20,
+    fontSize: 26,
     fontWeight: '800',
+    letterSpacing: -0.5,
+    fontFamily: Platform.OS === 'web' ? 'Plus Jakarta Sans, sans-serif' : undefined,
   },
-  planPrice: {
+  planDesc: {
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 10,
+    fontWeight: '500',
+    fontFamily: Platform.OS === 'web' ? 'Plus Jakarta Sans, sans-serif' : undefined,
+  },
+  priceContainer: {
     flexDirection: 'row',
     alignItems: 'baseline',
+    marginVertical: 16,
   },
   priceBig: {
     fontSize: 48,
-    fontWeight: '900',
+    fontWeight: '800',
     letterSpacing: -1,
+    fontFamily: Platform.OS === 'web' ? 'Plus Jakarta Sans, sans-serif' : undefined,
   },
   priceSmall: {
     fontSize: 14,
-    color: '#9CA3AF',
     fontWeight: '600',
     marginLeft: 4,
   },
-  smallIconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   features: {
-    gap: 16,
-    flex: 1,
-    paddingVertical: 10,
+    gap: 12,
+    marginVertical: 16,
   },
   featureRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
+    alignItems: 'center',
   },
   featureText: {
-    fontSize: 13,
-    flex: 1,
-    lineHeight: 20,
+    fontSize: 14,
+    marginLeft: 12,
     fontWeight: '500',
+    fontFamily: Platform.OS === 'web' ? 'Plus Jakarta Sans, sans-serif' : undefined,
   },
   planButton: {
-    marginTop: 24,
-    paddingVertical: 18,
-    borderRadius: 12,
+    height: 52,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 1,
   },
   planButtonText: {
-    color: '#FFF',
+    color: '#FFFFFF',
     fontSize: 14,
-    fontWeight: '900',
-    letterSpacing: 1,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+    fontFamily: Platform.OS === 'web' ? 'Plus Jakarta Sans, sans-serif' : undefined,
+  },
+  bentoSection: {
+    flexDirection: 'row',
+    gap: 16,
+    marginTop: 32,
+    marginBottom: 32,
+    maxWidth: 600,
+    alignSelf: 'center',
+    width: '100%',
+  },
+  bentoCard: {
+    flex: 1,
+    height: 120,
+    borderRadius: 20,
+    padding: 20,
+    justifyContent: 'space-between',
+    borderWidth: 1,
+  },
+  bentoText: {
+    fontSize: 13,
+    fontWeight: '700',
+    fontFamily: Platform.OS === 'web' ? 'Plus Jakarta Sans, sans-serif' : undefined,
   },
   existingSubBanner: {
-    borderRadius: 16,
-    borderWidth: 1.5,
-    padding: 20,
-    marginBottom: 24,
+    borderRadius: 20,
+    borderWidth: 1,
+    padding: 24,
+    marginBottom: 32,
+    maxWidth: 600,
+    alignSelf: 'center',
+    width: '100%',
   },
   existingSubHeader: {
     flexDirection: 'row',
@@ -487,8 +713,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   existingSubTitle: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '800',
+    fontFamily: Platform.OS === 'web' ? 'Plus Jakarta Sans, sans-serif' : undefined,
   },
   existingSubPlan: {
     fontSize: 14,
@@ -497,31 +724,31 @@ const styles = StyleSheet.create({
   },
   existingSubBadge: {
     paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 20,
+    paddingVertical: 4,
+    borderRadius: 99,
   },
   existingSubBadgeText: {
     color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '900',
+    fontSize: 10,
+    fontWeight: '800',
     letterSpacing: 0.5,
   },
   existingSubDetail: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: 8,
     marginBottom: 10,
   },
   existingSubDetailText: {
     fontSize: 13,
-    flex: 1,
-    lineHeight: 18,
     fontWeight: '500',
+    fontFamily: Platform.OS === 'web' ? 'Plus Jakarta Sans, sans-serif' : undefined,
   },
   existingSubNote: {
     fontSize: 12,
     fontStyle: 'italic',
-    marginTop: 8,
+    marginTop: 12,
     textAlign: 'center',
+    fontFamily: Platform.OS === 'web' ? 'Plus Jakarta Sans, sans-serif' : undefined,
   }
 });

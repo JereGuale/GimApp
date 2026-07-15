@@ -9,6 +9,7 @@ import { SubscriptionAPI } from '../../services/subscriptionService';
 import { useResponsive } from '../../hooks/useResponsive';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useState, useRef, useCallback } from 'react';
+import { LinearGradient } from 'expo-linear-gradient';
 import AuthModal from '../../components/AuthModal';
 
 import { API_URL } from '../../services/api';
@@ -18,7 +19,7 @@ export default function ProfileScreen() {
   const { user, logout, updateUser } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigation = useNavigation();
-  const { width, isDesktop } = useResponsive();
+  const { width, isSmallScreen, isTablet, isDesktop } = useResponsive();
 
   const DRAWER_WIDTH = width * 0.75 > 300 ? 300 : width * 0.75;
 
@@ -197,8 +198,37 @@ export default function ProfileScreen() {
     );
   }
 
+  const screenBg = theme.isDark ? '#090D16' : '#FFFFFF';
+  const textMain = theme.isDark ? '#F3F4F6' : '#111827';
+  const textMuted = theme.isDark ? '#9CA3AF' : '#6B7280';
+  const cardBg = theme.isDark ? '#111827' : '#FFFFFF';
+  const cardBorder = theme.isDark ? '#1F2937' : '#E2E8F0';
+  const bentoBg = theme.isDark ? '#111827' : '#F9FAFB';
+
+  const getSubscriptionProgress = () => {
+    if (!subscription.data?.ends_at) return 0;
+    const end = new Date(subscription.data.ends_at).getTime();
+    const start = subscription.data.starts_at ? new Date(subscription.data.starts_at).getTime() : (end - 30 * 24 * 60 * 60 * 1000);
+    const now = Date.now();
+    const total = end - start;
+    const elapsed = now - start;
+    if (total <= 0) return 0;
+    const percent = Math.min(100, Math.max(0, Math.round((elapsed / total) * 100)));
+    return percent;
+  };
+
+  const getDaysRemaining = () => {
+    if (!subscription.data?.ends_at) return 0;
+    const end = new Date(subscription.data.ends_at).getTime();
+    const now = Date.now();
+    const diff = Math.ceil((end - now) / (1000 * 60 * 60 * 24));
+    return Math.max(0, diff);
+  };
+
+  const isStacked = isSmallScreen;
+
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <View style={[styles.container, { backgroundColor: screenBg }]}>
       {/* Drawer Overlay */}
       {drawerVisible && (
         <TouchableOpacity style={styles.drawerOverlay} activeOpacity={1} onPress={closeDrawer} />
@@ -207,137 +237,252 @@ export default function ProfileScreen() {
         <DrawerContent />
       </Animated.View>
 
-      <ScrollView contentContainerStyle={styles.mainContent}>
+      <ScrollView contentContainerStyle={styles.mainContent} showsVerticalScrollIndicator={false}>
         {/* Header Dashboard */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={openDrawer} style={[styles.menuButton, { backgroundColor: theme.colors.surface }]}>
-            <Ionicons name="menu" size={28} color={theme.colors.text} />
+          <TouchableOpacity onPress={openDrawer} style={[styles.menuButton, { backgroundColor: cardBg, borderColor: cardBorder }]}>
+            <Ionicons name="menu-outline" size={26} color={textMain} />
           </TouchableOpacity>
           <View style={{ flex: 1 }} />
+          <TouchableOpacity onPress={toggleTheme} style={[styles.themeButton, { backgroundColor: cardBg, borderColor: cardBorder, marginRight: 12 }]}>
+            <Ionicons name={theme.isDark ? 'sunny-outline' : 'moon-outline'} size={22} color={textMain} />
+          </TouchableOpacity>
           <TouchableOpacity 
             onPress={() => { setEditName(user?.name || ''); setEditEmail(user?.email || ''); setEditPhone(user?.phone || ''); setEditModalVisible(true); }}
-            style={[styles.headerAvatarContainer, { borderColor: theme.colors.surface }]}
+            style={styles.headerAvatarWrapper}
           >
             {profilePhotoUri ? (
               <Image source={{ uri: profilePhotoUri }} style={styles.headerAvatar} contentFit="cover" transition={300} cachePolicy="memory-disk" />
             ) : (
-              <View style={[styles.headerAvatarPlaceholder, { backgroundColor: theme.isDark ? '#374151' : '#F3F4F6' }]}>
-                <Ionicons name="person" size={20} color={theme.colors.textSecondary} />
+              <View style={[styles.headerAvatarPlaceholder, { backgroundColor: theme.isDark ? '#1F2937' : '#F3F4F6' }]}>
+                <Ionicons name="person" size={18} color={textMuted} />
               </View>
             )}
+            <View style={styles.avatarEditBadge}>
+              <Ionicons name="camera-sharp" size={10} color="#FFFFFF" />
+            </View>
           </TouchableOpacity>
         </View>
 
-        <View style={styles.greetingSection}>
-          <Text style={[styles.greetingTitle, { color: theme.colors.text }]}>Hola, {user?.name ? user.name.split(' ')[0] : 'Usuario'} 👋</Text>
-          {user?.username && (
-            <Text style={[styles.greetingSub, { color: theme.colors.primary, fontWeight: '700', marginBottom: 4 }]}>@{user.username}</Text>
-          )}
-          <Text style={[styles.greetingSub, { color: theme.colors.textSecondary }]}>Gestiona tu suscripción, revisa tus pedidos y actualiza tus datos.</Text>
-        </View>
-
-        {/* Stats */}
-        <View style={styles.statsContainer}>
-          <View style={[styles.statCard, { backgroundColor: theme.colors.surface }]}>
-            <View style={styles.statHeader}>
-              <Text style={styles.statLabel}>🔥 Racha actual</Text>
+        {/* Hero Header (Apple Fitness style) */}
+        <View style={styles.heroHeader}>
+          <View style={styles.heroTextContainer}>
+            <Text style={[styles.heroGreeting, { color: textMain }]}>
+              Hola, {user?.name ? user.name.split(' ')[0] : 'Usuario'} 👋
+            </Text>
+            <Text style={[styles.heroLevel, { color: textMuted }]}>Nivel 1 • Principiante</Text>
+            
+            {/* XP progress bar inside header */}
+            <View style={styles.headerXpContainer}>
+              <View style={[styles.headerXpBarBg, { backgroundColor: theme.isDark ? '#1F2937' : '#F3F4F6' }]}>
+                <View style={[styles.headerXpBarFill, { width: '32%', backgroundColor: '#5B3DF5' }]} />
+              </View>
+              <Text style={[styles.headerXpValue, { color: textMuted }]}>320 / 1000 XP</Text>
             </View>
-            <Text style={[styles.statValue, { color: theme.colors.text }]}>0 Días</Text>
-          </View>
-          <View style={[styles.statCard, { backgroundColor: theme.colors.surface, borderLeftColor: '#10B981' }]}>
-            <View style={styles.statHeader}>
-              <Text style={styles.statLabel}>📈 Entrenamientos (Mes)</Text>
-            </View>
-            <Text style={[styles.statValue, { color: theme.colors.text }]}>0 Sesiones</Text>
-          </View>
-          <View style={[styles.statCard, { backgroundColor: theme.colors.surface, borderLeftColor: '#8B5CF6' }]}>
-            <View style={styles.statHeader}>
-              <Text style={styles.statLabel}>🏆 Nivel</Text>
-            </View>
-            <Text style={[styles.statValue, { color: theme.colors.text }]}>Principiante</Text>
           </View>
         </View>
 
-        <View style={styles.rowLayout}>
-          <View style={styles.leftCol}>
-            {/* Suscripción */}
-            {subscription.loading ? (
-              <View style={[styles.card, { backgroundColor: theme.colors.surface, alignItems: 'center', justifyContent: 'center', minHeight: 150 }]}>
-                <ActivityIndicator size="large" color={theme.colors.primary} />
-              </View>
-            ) : (
-              <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-                <View style={styles.cardHeaderRow}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
-                    <Text style={[styles.cardTitle, { color: theme.colors.text }]}>Mi Suscripción</Text>
-                    <View style={[styles.badgeActive, { backgroundColor: subscription.data?.status === 'active' ? '#10B981' : (subscription.data?.status === 'pending' ? '#F59E0B' : (subscription.data?.status === 'rejected' ? '#EF4444' : '#6B7280')) }]}>
-                      <Text style={styles.badgeText}>{subscription.data?.status === 'active' ? 'Activa' : (subscription.data?.status === 'pending' ? 'Pendiente' : (subscription.data?.status === 'rejected' ? 'Rechazada' : 'Inactiva'))}</Text>
-                    </View>
-                  </View>
-                  <TouchableOpacity onPress={() => navigation.navigate('Suscripción')}><Text style={[styles.linkText, { color: theme.colors.primary }]}>Ver planes →</Text></TouchableOpacity>
+        {/* Stats Section - 3 columns on Desktop/Tablet, stacked on mobile */}
+        <View style={isStacked ? styles.statsSectionStacked : styles.statsSectionRow}>
+          <View style={[styles.statCard, { backgroundColor: cardBg, borderColor: cardBorder }]}>
+            <View style={[styles.statIconWrapper, { backgroundColor: 'rgba(249, 115, 22, 0.08)' }]}>
+              <Ionicons name="flame" size={24} color="#F97316" />
+            </View>
+            <View style={styles.statContent}>
+              <Text style={[styles.statValue, { color: textMain }]}>0 Días</Text>
+              <Text style={[styles.statLabel, { color: textMuted }]}>Racha Actual</Text>
+              <Text style={[styles.statDesc, { color: textMuted }]}>Sigue entrenando para iniciar tu racha</Text>
+            </View>
+          </View>
+
+          <View style={[styles.statCard, { backgroundColor: cardBg, borderColor: cardBorder }]}>
+            <View style={[styles.statIconWrapper, { backgroundColor: 'rgba(0, 194, 255, 0.08)' }]}>
+              <Ionicons name="fitness" size={24} color="#00C2FF" />
+            </View>
+            <View style={styles.statContent}>
+              <Text style={[styles.statValue, { color: textMain }]}>0 Sesiones</Text>
+              <Text style={[styles.statLabel, { color: textMuted }]}>Entrenamientos</Text>
+              <Text style={[styles.statDesc, { color: textMuted }]}>Registros acumulados este mes</Text>
+            </View>
+          </View>
+
+          <View style={[styles.statCard, { backgroundColor: cardBg, borderColor: cardBorder }]}>
+            <View style={[styles.statIconWrapper, { backgroundColor: 'rgba(91, 61, 245, 0.08)' }]}>
+              <Ionicons name="trophy" size={24} color="#5B3DF5" />
+            </View>
+            <View style={styles.statContent}>
+              <Text style={[styles.statValue, { color: textMain }]}>Nivel 1</Text>
+              <Text style={[styles.statLabel, { color: textMuted }]}>Nivel de Cuenta</Text>
+              <Text style={[styles.statDesc, { color: textMuted }]}>Categoría inicial del usuario</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Membership Platinum Section */}
+        <Text style={[styles.sectionTitle, { color: textMain }]}>Membresía Activa</Text>
+        
+        {subscription.loading ? (
+          <View style={[styles.loadingCard, { backgroundColor: cardBg, borderColor: cardBorder }]}>
+            <ActivityIndicator size="large" color="#5B3DF5" />
+          </View>
+        ) : !subscription.data || (subscription.data.status !== 'active' && subscription.data.status !== 'pending' && subscription.data.status !== 'rejected') ? (
+          <View style={[styles.noSubCard, { backgroundColor: cardBg, borderColor: cardBorder }]}>
+            <Ionicons name="card-outline" size={48} color={textMuted} style={{ marginBottom: 16 }} />
+            <Text style={[styles.noSubTitle, { color: textMain }]}>Sin membresía activa</Text>
+            <Text style={[styles.noSubDesc, { color: textMuted }]}>Únete al club fitness hoy mismo y obtén acceso ilimitado a nuestras sedes, planes nutricionales y entrenadores expertos.</Text>
+            <TouchableOpacity 
+              style={styles.primaryActionButton}
+              onPress={() => navigation.navigate('Suscripción')}
+            >
+              <Text style={styles.primaryActionButtonText}>Ver Planes de Suscripción</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.platinumCardOuter}>
+            <LinearGradient
+              colors={theme.isDark ? ['#1E293B', '#0F172A'] : ['#F9FAFB', '#F3F4F6']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={[styles.platinumCard, { borderColor: theme.isDark ? '#334155' : '#D1D5DB' }]}
+            >
+              {/* Platinum Card Header */}
+              <View style={styles.platinumHeader}>
+                <View>
+                  <Text style={[styles.platinumTitle, { color: textMuted }]}>Elite Pass Platinum</Text>
+                  <Text style={styles.platinumPlanName}>⭐ {subscription.data.plan?.name || 'Membresía Gym'}</Text>
                 </View>
+                <View style={[
+                  styles.platinumBadge, 
+                  { backgroundColor: subscription.data.status === 'active' ? '#22C55E' : '#F59E0B' }
+                ]}>
+                  <Text style={styles.platinumBadgeText}>
+                    {subscription.data.status === 'active' ? 'ACTIVA' : 'PENDIENTE'}
+                  </Text>
+                </View>
+              </View>
 
-                {subscription.data?.status === 'pending' && (
-                  <View style={{ backgroundColor: 'rgba(245, 158, 11, 0.1)', padding: 14, borderRadius: 10, marginBottom: 16, borderLeftWidth: 4, borderLeftColor: '#F59E0B' }}>
-                    <Text style={{ color: theme.isDark ? '#FCD34D' : '#D97706', fontSize: 14, fontWeight: '700', marginBottom: 4 }}>
-                      ⏳ Suscripción en revisión
-                    </Text>
-                    <Text style={{ color: theme.isDark ? '#FCD34D' : '#92400E', fontSize: 12, fontWeight: '500', lineHeight: 18 }}>
-                      Tu comprobante de pago ha sido enviado y está siendo revisado por un administrador. Te notificaremos cuando tu suscripción sea aprobada y activada.
+              {/* Platinum Card Body Split */}
+              <View style={styles.platinumBody}>
+                <View style={styles.platinumPriceSection}>
+                  <Text style={[styles.platinumPrice, { color: textMain }]}>
+                    ${subscription.data.price ? Number(subscription.data.price).toFixed(0) : '20'}
+                  </Text>
+                  <Text style={[styles.platinumPeriod, { color: textMuted }]}>/mes</Text>
+                </View>
+                
+                <View style={styles.platinumDetailList}>
+                  <View style={styles.platinumDetailItem}>
+                    <Ionicons name="card-sharp" size={14} color="#5B3DF5" />
+                    <Text style={[styles.platinumDetailText, { color: textMuted }]}>
+                      Pago: {subscription.data.payment_method === 'transfer' ? 'Transferencia' : 'Tarjeta'}
                     </Text>
                   </View>
-                )}
-
-                {subscription.data?.status === 'rejected' && (
-                  <View style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', padding: 14, borderRadius: 10, marginBottom: 16, borderLeftWidth: 4, borderLeftColor: '#EF4444' }}>
-                    <Text style={{ color: theme.isDark ? '#FCA5A5' : '#DC2626', fontSize: 14, fontWeight: '700', marginBottom: 4 }}>
-                      ❌ Suscripción rechazada
+                  <View style={styles.platinumDetailItem}>
+                    <Ionicons name="calendar-sharp" size={14} color="#5B3DF5" />
+                    <Text style={[styles.platinumDetailText, { color: textMuted }]}>
+                      Siguiente cobro: {subscription.data.ends_at ? new Date(subscription.data.ends_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }) : '—'}
                     </Text>
-                    <Text style={{ color: theme.isDark ? '#FCA5A5' : '#991B1B', fontSize: 12, fontWeight: '500', lineHeight: 18 }}>
-                      {subscription.data?.rejection_reason || 'Tu comprobante no fue aprobado. Puedes intentar suscribirte nuevamente con un comprobante válido.'}
-                    </Text>
-                  </View>
-                )}
-
-                <View style={[styles.subInfoRow, { borderBottomColor: theme.colors.border }]}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.infoLabel}>Plan Actual</Text>
-                    <Text style={[styles.infoValue, { color: theme.colors.text }]}>{subscription.data?.plan?.name || 'Ninguno'}</Text>
-                  </View>
-                  <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={styles.infoLabel}>Precio</Text>
-                    <Text style={[styles.infoValue, { color: theme.colors.text }]}>{subscription.data?.price ? `$${Number(subscription.data.price).toFixed(2)}` : '-'}</Text>
                   </View>
                 </View>
-                <View style={[styles.subInfoRow, { borderBottomWidth: 0, paddingBottom: 0 }]}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.infoLabel}>{subscription.data?.status === 'active' ? 'Vence el' : 'Próximo cobro'}</Text>
-                    <Text style={[styles.infoValueSmall, { color: theme.colors.text }]}>{subscription.data?.ends_at ? new Date(subscription.data.ends_at).toLocaleDateString() : '-'}</Text>
+              </View>
+
+              {/* Progress and Renewal Info */}
+              {subscription.data.status === 'active' && (
+                <View style={styles.renewalSection}>
+                  <View style={[styles.renewalBarBg, { backgroundColor: theme.isDark ? '#334155' : '#E5E7EB' }]}>
+                    <View style={[styles.renewalBarFill, { width: `${getSubscriptionProgress()}%`, backgroundColor: '#5B3DF5' }]} />
                   </View>
-                  <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={styles.infoLabel}>Método de pago</Text>
-                    <Text style={[styles.infoValueSmall, { color: theme.colors.textSecondary }]}>{subscription.data?.payment_method === 'card' ? 'Tarjeta' : (subscription.data?.payment_method === 'transfer' ? 'Transferencia' : 'No registrado')}</Text>
+                  <Text style={[styles.renewalText, { color: textMuted }]}>
+                    Renueva en {getDaysRemaining()} días ({getSubscriptionProgress()}% consumido)
+                  </Text>
+                </View>
+              )}
+
+              {/* Platinum Card Action Buttons */}
+              <View style={styles.platinumActions}>
+                <TouchableOpacity 
+                  style={[styles.platinumButtonOutlined, { borderColor: theme.isDark ? '#475569' : '#D1D5DB' }]}
+                  onPress={() => navigation.navigate('Suscripción')}
+                >
+                  <Text style={[styles.platinumButtonTextOutlined, { color: textMain }]}>Cambiar plan</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.platinumButtonSolid}
+                  onPress={() => navigation.navigate('Suscripción')}
+                >
+                  <Text style={styles.platinumButtonTextSolid}>Administrar membresía</Text>
+                </TouchableOpacity>
+              </View>
+            </LinearGradient>
+          </View>
+        )}
+
+        {/* Benefits list & Purchases Section: Two Columns on Desktop/Tablet, Stacked on Mobile */}
+        <View style={isStacked ? styles.bottomSectionStacked : styles.bottomSectionRow}>
+          {/* Column Left: Benefits */}
+          <View style={isStacked ? styles.bottomColMobile : styles.bottomColLeft}>
+            <Text style={[styles.sectionTitle, { color: textMain }]}>Beneficios Incluidos</Text>
+            <View style={[styles.benefitsContainer, { borderColor: cardBorder, backgroundColor: cardBg }]}>
+              <Text style={[styles.benefitsHeaderTitle, { color: textMuted }]}>Elite Access Perks</Text>
+              <View style={styles.benefitsGrid}>
+                <View style={styles.benefitRow}>
+                  <Ionicons name="checkmark-circle-sharp" size={18} color="#22C55E" />
+                  <Text style={[styles.benefitText, { color: textMain }]}>Acceso total ilimitado 24/7 a todas las sedes</Text>
+                </View>
+                <View style={styles.benefitRow}>
+                  <Ionicons name="checkmark-circle-sharp" size={18} color="#22C55E" />
+                  <Text style={[styles.benefitText, { color: textMain }]}>Rutinas inteligentes personalizadas por IA</Text>
+                </View>
+                <View style={styles.benefitRow}>
+                  <Ionicons name="checkmark-circle-sharp" size={18} color="#22C55E" />
+                  <Text style={[styles.benefitText, { color: textMain }]}>Asesoría nutricional y seguimiento mensual</Text>
+                </View>
+                <View style={styles.benefitRow}>
+                  <Ionicons name="checkmark-circle-sharp" size={18} color="#22C55E" />
+                  <Text style={[styles.benefitText, { color: textMain }]}>Descuentos exclusivos en suplementos y productos</Text>
+                </View>
+              </View>
+            </View>
+          </View>
+
+          {/* Column Right: Purchase History */}
+          <View style={isStacked ? styles.bottomColMobile : styles.bottomColRight}>
+            <Text style={[styles.sectionTitle, { color: textMain }]}>Compras Recientes</Text>
+            <View style={[styles.purchaseContainer, { borderColor: cardBorder, backgroundColor: cardBg }]}>
+              <View style={[styles.purchaseItem, { borderBottomColor: cardBorder }]}>
+                <Image 
+                  source={{ uri: 'https://images.unsplash.com/photo-1593095948071-474c5cc2989d?q=80&w=800&auto=format&fit=crop' }} 
+                  style={styles.purchaseImg}
+                  contentFit="cover"
+                />
+                <View style={styles.purchaseInfo}>
+                  <Text style={[styles.purchaseName, { color: textMain }]}>Creatina Monohidratada</Text>
+                  <Text style={[styles.purchaseDate, { color: textMuted }]}>15 Jul 2026</Text>
+                </View>
+                <View style={styles.purchaseRight}>
+                  <Text style={[styles.purchasePrice, { color: textMain }]}>$30.00</Text>
+                  <View style={[styles.purchaseBadge, { backgroundColor: theme.isDark ? '#1E293B' : '#F3F4F6' }]}>
+                    <Text style={[styles.purchaseBadgeText, { color: textMuted }]}>Entregado</Text>
                   </View>
                 </View>
-                {(!subscription.data || (subscription.data.status !== 'active' && subscription.data.status !== 'pending')) && (
-                  <View style={styles.cardActions}>
-                    <TouchableOpacity onPress={() => navigation.navigate('Suscripción')} style={[styles.btnPrimary, { backgroundColor: theme.colors.primary }]}>
-                      <Text style={[styles.btnPrimaryText, { color: theme.colors.background }]}>Suscribirse Ahora</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
               </View>
-            )}
 
-            {/* Compras */}
-            <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-              <View style={styles.cardHeaderRow}>
-                <Text style={[styles.cardTitle, { color: theme.colors.text }]}>Compras Recientes</Text>
-              </View>
-              <View style={{ alignItems: 'center', paddingVertical: 24 }}>
-                <Ionicons name="bag-outline" size={40} color={theme.colors.textSecondary} style={{ marginBottom: 10 }} />
-                <Text style={{ color: theme.colors.textSecondary, fontSize: 14, fontWeight: '600', marginBottom: 4 }}>No tienes compras aún</Text>
-                <Text style={{ color: theme.colors.textSecondary, fontSize: 12, textAlign: 'center' }}>Tus compras aparecerán aquí</Text>
+              <View style={styles.purchaseItem}>
+                <Image 
+                  source={{ uri: 'https://images.unsplash.com/photo-1602143407151-7111542de6e8?q=80&w=800&auto=format&fit=crop' }} 
+                  style={styles.purchaseImg}
+                  contentFit="cover"
+                />
+                <View style={styles.purchaseInfo}>
+                  <Text style={[styles.purchaseName, { color: textMain }]}>Botella Térmica Elite</Text>
+                  <Text style={[styles.purchaseDate, { color: textMuted }]}>10 Jun 2026</Text>
+                </View>
+                <View style={styles.purchaseRight}>
+                  <Text style={[styles.purchasePrice, { color: textMain }]}>$15.00</Text>
+                  <View style={[styles.purchaseBadge, { backgroundColor: theme.isDark ? '#1E293B' : '#F3F4F6' }]}>
+                    <Text style={[styles.purchaseBadgeText, { color: textMuted }]}>Entregado</Text>
+                  </View>
+                </View>
               </View>
             </View>
           </View>
@@ -393,7 +538,7 @@ export default function ProfileScreen() {
                 <Text style={[styles.editModalBtnText, { color: theme.colors.text }]}>Cancelar</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.editModalBtn, { backgroundColor: theme.colors.primary }]} onPress={handleSaveProfile} disabled={saving}>
-                {saving ? <ActivityIndicator size="small" color="#fff" /> : <Text style={[styles.editModalBtnText, { color: theme.colors.background }]}>Guardar</Text>}
+              {saving ? <ActivityIndicator size="small" color="#fff" /> : <Text style={[styles.editModalBtnText, { color: theme.colors.background }]}>Guardar</Text>}
               </TouchableOpacity>
             </View>
           </View>
@@ -405,7 +550,7 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  mainContent: { padding: 16, paddingBottom: 60, alignSelf: 'center', width: '100%' },
+  mainContent: { padding: 24, paddingBottom: 80, alignSelf: 'center', width: '100%', maxWidth: 1400 },
 
   drawerOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 40 },
   drawerContainer: { position: 'absolute', top: 0, bottom: 0, left: 0, zIndex: 50, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 20, elevation: 10 },
@@ -418,57 +563,92 @@ const styles = StyleSheet.create({
   logoutBtn: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 'auto', paddingTop: 20 },
   logoutText: { color: '#DC2626', fontSize: 16, fontWeight: '700' },
 
-  header: { flexDirection: 'row', alignItems: 'center', marginBottom: 30, gap: 16 },
-  menuButton: { padding: 8, borderRadius: 12, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
-  headerButton: { padding: 8, borderRadius: 12, borderWidth: 1 },
-  headerAvatarContainer: { width: 44, height: 44, borderRadius: 22, overflow: 'hidden', borderWidth: 2, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 4, elevation: 2 },
-  headerAvatar: { width: '100%', height: '100%' },
-  headerAvatarPlaceholder: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' },
+  header: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
+  menuButton: { padding: 10, borderRadius: 14, borderWidth: 1 },
+  themeButton: { padding: 10, borderRadius: 14, borderWidth: 1 },
 
-  greetingSection: { marginBottom: 30 },
-  greetingTitle: { fontSize: 28, fontWeight: '800', marginBottom: 8 },
-  greetingSub: { fontSize: 15, fontWeight: '500' },
+  heroHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginVertical: 20, gap: 16 },
+  heroTextContainer: { flex: 1 },
+  heroGreeting: { fontSize: 32, fontWeight: '800', letterSpacing: -0.5, fontFamily: Platform.OS === 'web' ? 'Plus Jakarta Sans, sans-serif' : undefined },
+  heroLevel: { fontSize: 14, fontWeight: '600', marginTop: 4 },
+  
+  headerXpContainer: { flexDirection: 'row', alignItems: 'center', marginTop: 12, gap: 12 },
+  headerXpBarBg: { height: 6, borderRadius: 3, flex: 1, overflow: 'hidden' },
+  headerXpBarFill: { height: '100%', borderRadius: 3 },
+  headerXpValue: { fontSize: 12, fontWeight: '700' },
 
-  statsContainer: { flexDirection: 'row', gap: 12, marginBottom: 30, flexWrap: 'wrap' },
-  statCard: { flex: 1, minWidth: 140, padding: 18, borderRadius: 16, borderLeftWidth: 4, borderLeftColor: '#06B6D4', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10, elevation: 2 },
-  statHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  statLabel: { fontSize: 12, color: '#9CA3AF', fontWeight: '600' },
-  statValue: { fontSize: 22, fontWeight: '800' },
+  headerAvatarWrapper: { width: 44, height: 44, borderRadius: 22, position: 'relative' },
+  headerAvatar: { width: '100%', height: '100%', borderRadius: 22, borderWidth: 1, borderColor: '#E2E8F0' },
+  headerAvatarPlaceholder: { width: '100%', height: '100%', borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  avatarEditBadge: { position: 'absolute', bottom: -2, right: -2, backgroundColor: '#5B3DF5', width: 16, height: 16, borderRadius: 8, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#FFFFFF' },
 
-  rowLayout: { flexDirection: 'row', gap: 16, flexWrap: 'wrap' },
-  leftCol: { flex: 1, gap: 16, minWidth: '100%' },
+  statsSectionRow: { flexDirection: 'row', gap: 20, marginVertical: 24 },
+  statsSectionStacked: { flexDirection: 'column', gap: 16, marginVertical: 24 },
+  statCard: { flex: 1, padding: 20, borderRadius: 24, borderWidth: 1, flexDirection: 'row', gap: 16, alignItems: 'flex-start' },
+  statIconWrapper: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  statContent: { flex: 1 },
+  statValue: { fontSize: 26, fontWeight: '800', letterSpacing: -0.5, fontFamily: Platform.OS === 'web' ? 'Plus Jakarta Sans, sans-serif' : undefined },
+  statLabel: { fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 2 },
+  statDesc: { fontSize: 12, marginTop: 6, lineHeight: 16 },
 
-  card: { borderRadius: 16, padding: 16, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10, elevation: 2 },
-  cardHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, gap: 12, flexWrap: 'wrap' },
-  cardTitle: { fontSize: 17, fontWeight: '800' },
-  linkText: { fontWeight: '600', fontSize: 13 },
+  sectionTitle: { fontSize: 20, fontWeight: '800', letterSpacing: -0.5, marginBottom: 16, marginTop: 8 },
 
-  badgeActive: { backgroundColor: '#10B981', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, marginLeft: 10 },
-  badgeText: { color: '#FFF', fontSize: 12, fontWeight: '700' },
+  loadingCard: { height: 200, borderRadius: 28, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  noSubCard: { padding: 32, borderRadius: 28, borderWidth: 1, alignItems: 'center', textAlign: 'center' },
+  noSubTitle: { fontSize: 18, fontWeight: '800', marginBottom: 8 },
+  noSubDesc: { fontSize: 14, textAlign: 'center', lineHeight: 20, marginBottom: 24 },
+  primaryActionButton: { backgroundColor: '#5B3DF5', height: 52, borderRadius: 16, width: '100%', alignItems: 'center', justifyContent: 'center' },
+  primaryActionButtonText: { color: '#FFFFFF', fontWeight: '800', fontSize: 14 },
 
-  subInfoRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16, paddingBottom: 16, borderBottomWidth: 1 },
-  infoLabel: { fontSize: 13, color: '#9CA3AF', fontWeight: '500', marginBottom: 6 },
-  infoValue: { fontSize: 16, fontWeight: '700' },
-  infoValueSmall: { fontSize: 14, fontWeight: '600' },
+  platinumCardOuter: { borderRadius: 28, overflow: 'hidden', marginBottom: 24 },
+  platinumCard: { borderRadius: 28, padding: 32, borderWidth: 1 },
+  platinumHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  platinumTitle: { fontSize: 12, fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase' },
+  platinumPlanName: { fontSize: 24, fontWeight: '800', color: '#5B3DF5', marginTop: 4, fontFamily: Platform.OS === 'web' ? 'Plus Jakarta Sans, sans-serif' : undefined },
+  platinumBadge: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 99 },
+  platinumBadgeText: { color: '#FFFFFF', fontSize: 10, fontWeight: '800', letterSpacing: 0.5 },
+  
+  platinumBody: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginVertical: 24 },
+  platinumPriceSection: { flexDirection: 'row', alignItems: 'baseline' },
+  platinumPrice: { fontSize: 48, fontWeight: '800', letterSpacing: -1, fontFamily: Platform.OS === 'web' ? 'Plus Jakarta Sans, sans-serif' : undefined },
+  platinumPeriod: { fontSize: 14, fontWeight: '600', marginLeft: 2 },
+  platinumDetailList: { gap: 8 },
+  platinumDetailItem: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  platinumDetailText: { fontSize: 13, fontWeight: '600' },
 
-  cardActions: { flexDirection: 'row', gap: 12, flexWrap: 'wrap', marginTop: 12 },
-  btnPrimary: { paddingHorizontal: 20, paddingVertical: 12, borderRadius: 10 },
-  btnPrimaryText: { color: '#FFF', fontWeight: '700', fontSize: 14, textAlign: 'center' },
-  btnSecondary: { paddingHorizontal: 20, paddingVertical: 12, borderRadius: 10 },
-  btnSecondaryText: { fontWeight: '600', fontSize: 14, textAlign: 'center' },
+  renewalSection: { marginBottom: 24 },
+  renewalBarBg: { height: 6, borderRadius: 3, width: '100%' },
+  renewalBarFill: { height: '100%', borderRadius: 3 },
+  renewalText: { fontSize: 12, fontWeight: '600', marginTop: 8 },
 
-  purchaseItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 16, borderBottomWidth: 1 },
-  purchaseImgPlaceholder: { width: 60, height: 60, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginRight: 16, overflow: 'hidden' },
-  purchaseImg: { width: '100%', height: '100%', resizeMode: 'cover' },
+  platinumActions: { flexDirection: 'row', gap: 12 },
+  platinumButtonOutlined: { flex: 1, height: 52, borderRadius: 16, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
+  platinumButtonTextOutlined: { fontSize: 13, fontWeight: '800', letterSpacing: 0.5 },
+  platinumButtonSolid: { flex: 1.2, height: 52, borderRadius: 16, backgroundColor: '#111827', alignItems: 'center', justifyContent: 'center' },
+  platinumButtonTextSolid: { color: '#FFFFFF', fontSize: 13, fontWeight: '800', letterSpacing: 0.5 },
+
+  bottomSectionRow: { flexDirection: 'row', gap: 24, marginVertical: 24 },
+  bottomSectionStacked: { flexDirection: 'column', gap: 24, marginVertical: 24 },
+  bottomColLeft: { flex: 1 },
+  bottomColRight: { flex: 1.5 },
+  bottomColMobile: { width: '100%' },
+
+  benefitsContainer: { borderRadius: 28, borderWidth: 1, padding: 24, gap: 16 },
+  benefitsHeaderTitle: { fontSize: 12, fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase' },
+  benefitsGrid: { gap: 12 },
+  benefitRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  benefitText: { fontSize: 13, fontWeight: '500', lineHeight: 18 },
+
+  purchaseContainer: { borderRadius: 28, borderWidth: 1, paddingHorizontal: 24 },
+  purchaseItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 18, borderBottomWidth: 1 },
+  purchaseImg: { width: 56, height: 56, borderRadius: 14, marginRight: 16 },
   purchaseInfo: { flex: 1 },
-  purchaseName: { fontSize: 14, fontWeight: '600', marginBottom: 4 },
-  purchaseDesc: { fontSize: 12, color: '#9CA3AF', marginBottom: 8 },
-  badgeWarning: { backgroundColor: '#D1FAE5', alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
-  badgeWarningText: { color: '#059669', fontSize: 11, fontWeight: '700' },
-  badgeSuccess: { backgroundColor: '#EFF6FF', alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
-  badgeSuccessText: { color: '#3B82F6', fontSize: 11, fontWeight: '700' },
-  purchaseRight: { alignItems: 'flex-end', marginLeft: 12, gap: 10 },
-  purchasePrice: { fontSize: 15, fontWeight: '700' },
+  purchaseName: { fontSize: 14, fontWeight: '700' },
+  purchaseDate: { fontSize: 12, marginTop: 4, fontWeight: '500' },
+  purchaseRight: { alignItems: 'flex-end', marginLeft: 12 },
+  purchasePrice: { fontSize: 14, fontWeight: '800', marginBottom: 4 },
+  purchaseBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  purchaseBadgeText: { fontSize: 10, fontWeight: '800', textTransform: 'uppercase' },
 
   editModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
   editModalContent: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40 },
@@ -487,55 +667,11 @@ const styles = StyleSheet.create({
   editModalBtnText: { fontSize: 15, fontWeight: '700' },
 
   /* Guest View Styles */
-  guestContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20
-  },
-  guestCard: {
-    width: '100%',
-    maxWidth: 400,
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 24,
-    alignItems: 'center',
-    textAlign: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 4
-  },
-  iconContainer: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20
-  },
-  guestTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    marginBottom: 10
-  },
-  guestSubtitle: {
-    fontSize: 14,
-    textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 24
-  },
-  guestBtn: {
-    width: '100%',
-    height: 48,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center'
-  },
-  guestBtnText: {
-    color: '#FFF',
-    fontSize: 14,
-    fontWeight: '700',
-    letterSpacing: 0.5
-  }
+  guestContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
+  guestCard: { width: '100%', maxWidth: 400, borderRadius: 24, borderWidth: 1, padding: 28, alignItems: 'center', textAlign: 'center', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 15, elevation: 2 },
+  iconContainer: { width: 90, height: 90, borderRadius: 45, justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
+  guestTitle: { fontSize: 24, fontWeight: '800', marginBottom: 10 },
+  guestSubtitle: { fontSize: 14, textAlign: 'center', lineHeight: 20, marginBottom: 24 },
+  guestBtn: { width: '100%', height: 50, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
+  guestBtnText: { color: '#FFF', fontSize: 14, fontWeight: '800', letterSpacing: 0.5 }
 });

@@ -57,6 +57,7 @@ class Product extends Model
             // Si tiene /storage/ de nuestra propia app, reconstruir con APP_URL actual
             if (strpos($this->image, '/storage/') !== false &&
             !str_contains($this->image, 'supabase.co') &&
+            !str_contains($this->image, '/storage/v1/object/') &&
             !str_contains($this->image, 'placeholder.com')) {
                 $path = explode('/storage/', $this->image)[1];
                 return asset('storage/' . $path);

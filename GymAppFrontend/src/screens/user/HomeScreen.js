@@ -18,8 +18,9 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { CategoryService, BannerService, API_URL } from '../../services/api';
 import { useResponsive } from '../../hooks/useResponsive';
+import { LinearGradient } from 'expo-linear-gradient';
 
-const MAX_CONTENT_WIDTH = 1100; // max width for content sections on web
+const MAX_CONTENT_WIDTH = 1600; // max width for content sections on web
 const AUTO_SCROLL_INTERVAL = 4000;
 const BASE_URL = API_URL.replace('/api', '');
 
@@ -38,7 +39,7 @@ export default function HomeScreen() {
   
   const productGap = isDesktop ? 16 : 12;
   const productCardWidth = isDesktop
-    ? Math.min((innerWidth - productGap * 5) / 4, 270)
+    ? Math.min((innerWidth - productGap * 5) / 4, 285)
     : (winWidth - 44) / 2; // Exact 2-column layout width
   const productImageHeight = productCardWidth * 1.1;
 
@@ -234,7 +235,10 @@ export default function HomeScreen() {
         transition={300}
         cachePolicy="memory-disk"
       />
-      <View style={styles.bannerGradient} />
+      <LinearGradient
+        colors={['rgba(0,0,0,0.2)', 'rgba(0,0,0,0.65)']}
+        style={StyleSheet.absoluteFillObject}
+      />
       <View style={styles.bannerContent}>
         {item.title ? <Text style={styles.bannerTitle} numberOfLines={2}>{item.title}</Text> : null}
         {item.price ? <Text style={styles.bannerPrice}>${Number(item.price).toFixed(2)}</Text> : null}
@@ -456,7 +460,7 @@ export default function HomeScreen() {
                     <Text style={{ color: '#9CA3AF', fontSize: 15 }}>No se encontraron productos coincidentes.</Text>
                   </View>
                 ) : (
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16 }}>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 16 }}>
                     {sortedProducts.map((product, index) => renderProductCard({ item: product, index }))}
                   </View>
                 )}
@@ -654,17 +658,13 @@ export default function HomeScreen() {
       </View>
 
       {/* Featured Products */}
-      <View style={[styles.sectionHeader, { paddingHorizontal: contentPadding }]}>
-        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
+      <View style={[styles.featuredProductsHeader, { paddingHorizontal: contentPadding }]}>
+        <Text style={[styles.featuredProductsSubtitle, { color: '#FF6A1A' }]}>
+          LO MEJOR PARA TI
+        </Text>
+        <Text style={[styles.featuredProductsTitle, { color: theme.colors.text }]}>
           Productos Destacados
         </Text>
-        <TouchableOpacity
-          onPress={() => setShowFullCatalog(true)}
-          style={styles.viewAllButton}
-        >
-          <Text style={[styles.viewAllText, { color: theme.colors.text }]}>Ver Todos</Text>
-          <Ionicons name="chevron-forward" size={16} color={theme.colors.text} />
-        </TouchableOpacity>
       </View>
 
       {loading ? (
@@ -676,7 +676,7 @@ export default function HomeScreen() {
           <View style={{
             flexDirection: 'row',
             flexWrap: 'wrap',
-            justifyContent: isDesktop ? 'flex-start' : 'space-between',
+            justifyContent: isDesktop ? 'center' : 'space-between',
             gap: isDesktop ? 16 : 12
           }}>
             {filteredProducts.slice(0, isDesktop ? 8 : 4).map((product, index) =>
@@ -852,48 +852,55 @@ const styles = StyleSheet.create({
   },
   bannerContent: {
     position: 'absolute',
-    left: 24,
-    bottom: 24,
-    right: 24,
-    alignItems: 'flex-start',
+    left: 40,
+    right: 40,
+    top: 40,
+    bottom: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   bannerTitle: {
     color: '#FFF',
-    fontSize: 24,
+    fontSize: 32,
     fontWeight: '900',
     textTransform: 'uppercase',
-    marginBottom: 4,
-    textShadowColor: 'rgba(0,0,0,0.3)',
+    marginBottom: 6,
+    textShadowColor: 'rgba(0,0,0,0.4)',
     textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
+    textShadowRadius: 4,
+    textAlign: 'center',
   },
   bannerPrice: {
     color: '#FF6A1A',
-    fontSize: 20,
+    fontSize: 26,
     fontWeight: '900',
-    marginBottom: 8,
+    marginBottom: 10,
+    textAlign: 'center',
   },
   bannerDescription: {
     color: '#E5E7EB',
-    fontSize: 13,
-    lineHeight: 18,
-    marginBottom: 16,
-    textShadowColor: 'rgba(0,0,0,0.3)',
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 20,
+    textShadowColor: 'rgba(0,0,0,0.4)',
     textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
+    textShadowRadius: 3,
+    textAlign: 'center',
+    maxWidth: 600,
   },
   bannerButton: {
     backgroundColor: '#FF6A1A',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 28,
+    borderRadius: 24,
   },
   bannerButtonText: {
     color: '#FFF',
     fontWeight: '800',
-    fontSize: 13,
+    fontSize: 14,
     letterSpacing: 0.5,
   },
+
   bannerLoading: {
     backgroundColor: '#1F2937',
     alignItems: 'center',
@@ -932,6 +939,25 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '800',
     letterSpacing: 0.3,
+  },
+  featuredProductsHeader: {
+    marginTop: 28,
+    marginBottom: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  featuredProductsSubtitle: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  featuredProductsTitle: {
+    fontSize: 26,
+    fontWeight: '900',
+    letterSpacing: -0.5,
+    fontFamily: Platform.OS === 'web' ? 'Plus Jakarta Sans, sans-serif' : undefined,
   },
   viewAllButton: {
     flexDirection: 'row',
