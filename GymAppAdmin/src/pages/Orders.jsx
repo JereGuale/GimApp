@@ -10,7 +10,8 @@ import {
   Check, 
   X, 
   ExternalLink,
-  Package
+  Package,
+  Trash2
 } from 'lucide-react';
 import '../components/Layout.css';
 
@@ -30,6 +31,11 @@ export default function Orders() {
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
+
+  // Custom Prompt/Confirmation States
+  const [confirmModal, setConfirmModal] = useState(null);
+  const [rejectModal, setRejectModal] = useState(null); // stores order ID to reject
+  const [rejectionReason, setRejectionReason] = useState('');
 
   const fetchOrders = () => {
     setLoading(true);
@@ -57,8 +63,16 @@ export default function Orders() {
     }
   };
 
-  const handleApprove = async (id) => {
-    if (!window.confirm('¿Seguro que deseas aprobar este pedido? Esto descontará el stock correspondiente.')) return;
+  const handleApprove = (id) => {
+    setConfirmModal({
+      title: '¿Aprobar Pedido?',
+      message: '¿Estás seguro de que deseas aprobar este pedido? Esto descontará los artículos del inventario de stock.',
+      type: 'success',
+      onConfirm: () => executeApprove(id)
+    });
+  };
+
+  const executeApprove = async (id) => {
     setActionLoading(id + '_approve');
     setError(''); setSuccess('');
     try {
@@ -69,15 +83,21 @@ export default function Orders() {
     finally { setActionLoading(null); }
   };
 
-  const handleReject = async (id) => {
-    const reason = window.prompt('Introduce el motivo del rechazo:');
-    if (reason === null) return; // Cancelado
+  const handleRejectClick = (id) => {
+    setRejectionReason('');
+    setRejectModal(id);
+  };
+
+  const executeReject = async (e) => {
+    e.preventDefault();
+    const id = rejectModal;
+    setRejectModal(null);
     setActionLoading(id + '_reject');
     setError(''); setSuccess('');
     try {
       await apiFetch(`/admin/orders/${id}/reject`, { 
         method: 'POST',
-        body: JSON.stringify({ reason: reason || 'Comprobante no válido o stock insuficiente' })
+        body: JSON.stringify({ reason: rejectionReason || 'Comprobante no válido o stock insuficiente' })
       });
       setSuccess('Pedido rechazado');
       fetchOrders();
@@ -225,7 +245,7 @@ export default function Orders() {
                             className="btn btn--danger"
                             style={{ padding: '8px', borderRadius: '10px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                             disabled={actionLoading === o.id + '_reject'}
-                            onClick={() => handleReject(o.id)}
+                            onClick={() => handleRejectClick(o.id)}
                             title="Rechazar Pedido"
                           >
                             {actionLoading === o.id + '_reject' ? <Loader2 className="spin" size={14} /> : <X size={14} />}
@@ -241,7 +261,7 @@ export default function Orders() {
           </div>
 
           {/* Pagination Controls */}
-          {totalPages > 1 && (
+          {orders.length > 0 && (
             <div className="pagination">
               <button 
                 className="btn btn--secondary" 
@@ -250,11 +270,11 @@ export default function Orders() {
               >
                 Anterior
               </button>
-              <span className="pagination-info">Página {currentPage} de {totalPages}</span>
+              <span className="pagination-info">Página {currentPage} de {totalPages || 1}</span>
               <button 
                 className="btn btn--secondary" 
                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
+                disabled={currentPage === totalPages || totalPages === 0}
               >
                 Siguiente
               </button>
@@ -290,6 +310,83 @@ export default function Orders() {
               <ExternalLink size={14} />
               <span>Abrir en nueva pestaña</span>
             </a>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Prompt Modal for Rejecting Orders */}
+      {rejectModal && (
+        <div className="modal-overlay" onClick={() => setRejectModal(null)}>
+          <div className="modal" style={{ maxWidth: 420, padding: 28 }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Rechazar Pedido</h3>
+              <button className="btn btn--ghost" style={{ padding: 6, borderRadius: '50%' }} onClick={() => setRejectModal(null)}><X size={16} /></button>
+            </div>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 16px 0', lineHeight: 1.4 }}>
+              Ingresa el motivo del rechazo para notificar al usuario. Este se guardará en los registros del pedido:
+            </p>
+            
+            <form onSubmit={executeReject}>
+              <div className="form-group" style={{ marginBottom: 20 }}>
+                <textarea 
+                  value={rejectionReason}
+                  onChange={e => setRejectionReason(e.target.value)}
+                  placeholder="Ej. Comprobante de pago borroso o stock de producto no disponible."
+                  rows={3}
+                  required
+                  autoFocus
+                />
+              </div>
+              <div className="modal-actions">
+                <button type="button" className="btn btn--ghost" style={{ flex: 1 }} onClick={() => setRejectModal(null)}>Cancelar</button>
+                <button type="submit" className="btn btn--danger" style={{ flex: 1 }}>Rechazar Pedido</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Professional Confirmation Modal */}
+      {confirmModal && (
+        <div className="modal-overlay" onClick={() => setConfirmModal(null)}>
+          <div className="modal" style={{ maxWidth: 400, textAlign: 'center', padding: '32px 24px' }} onClick={e => e.stopPropagation()}>
+            <div style={{
+              width: 56,
+              height: 56,
+              borderRadius: '50%',
+              backgroundColor: confirmModal.type === 'danger' ? 'var(--danger-light)' : 'var(--success-light)',
+              color: confirmModal.type === 'danger' ? 'var(--danger-text)' : 'var(--success)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 16px auto'
+            }}>
+              {confirmModal.type === 'danger' ? <Trash2 size={24} /> : <Check size={24} />}
+            </div>
+            
+            <h3 style={{ margin: '0 0 8px 0', fontSize: 18, fontWeight: 700, color: 'var(--text)' }}>
+              {confirmModal.title}
+            </h3>
+            
+            <p style={{ margin: '0 0 24px 0', fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+              {confirmModal.message}
+            </p>
+            
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button className="btn btn--ghost" style={{ flex: 1 }} onClick={() => setConfirmModal(null)}>
+                Cancelar
+              </button>
+              <button 
+                className={`btn btn--${confirmModal.type === 'danger' ? 'danger' : 'success'}`} 
+                style={{ flex: 1 }} 
+                onClick={() => {
+                  confirmModal.onConfirm();
+                  setConfirmModal(null);
+                }}
+              >
+                Confirmar
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -261,7 +261,7 @@ export default function SubscriptionPlans() {
           </div>
 
           {/* Pagination Controls */}
-          {totalPages > 1 && (
+          {plans.length > 0 && (
             <div className="pagination">
               <button 
                 className="btn btn--secondary" 
@@ -270,11 +270,11 @@ export default function SubscriptionPlans() {
               >
                 Anterior
               </button>
-              <span className="pagination-info">Página {currentPage} de {totalPages}</span>
+              <span className="pagination-info">Página {currentPage} de {totalPages || 1}</span>
               <button 
                 className="btn btn--secondary" 
                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
+                disabled={currentPage === totalPages || totalPages === 0}
               >
                 Siguiente
               </button>

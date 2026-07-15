@@ -32,6 +32,9 @@ export default function Subscriptions() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
 
+  // Custom Confirmation Modal State
+  const [confirmModal, setConfirmModal] = useState(null);
+
   const fetchSubs = () => {
     setLoading(true);
     apiFetch('/trainer/subscriptions')
@@ -62,8 +65,16 @@ export default function Subscriptions() {
     currentPage * itemsPerPage
   );
 
-  const handleApprove = async (id) => {
-    if (!window.confirm('¿Seguro que deseas aprobar esta suscripción?')) return;
+  const handleApprove = (id) => {
+    setConfirmModal({
+      title: '¿Aprobar Suscripción?',
+      message: '¿Estás seguro de que deseas aprobar esta suscripción? Esto activará la membresía del usuario.',
+      type: 'success',
+      onConfirm: () => executeApprove(id)
+    });
+  };
+
+  const executeApprove = async (id) => {
     setActionLoading(id + '_approve');
     setError(''); setSuccess('');
     try {
@@ -74,8 +85,16 @@ export default function Subscriptions() {
     finally { setActionLoading(null); }
   };
 
-  const handleReject = async (id) => {
-    if (!window.confirm('¿Seguro que deseas rechazar y eliminar esta suscripción?')) return;
+  const handleReject = (id) => {
+    setConfirmModal({
+      title: '¿Rechazar Suscripción?',
+      message: '¿Estás seguro de que deseas rechazar y eliminar esta solicitud de membresía? Esta acción es irreversible.',
+      type: 'danger',
+      onConfirm: () => executeReject(id)
+    });
+  };
+
+  const executeReject = async (id) => {
     setActionLoading(id + '_reject');
     setError(''); setSuccess('');
     try {
@@ -201,7 +220,7 @@ export default function Subscriptions() {
           </div>
 
           {/* Pagination Controls */}
-          {totalPages > 1 && (
+          {filtered.length > 0 && (
             <div className="pagination">
               <button 
                 className="btn btn--secondary" 
@@ -210,11 +229,11 @@ export default function Subscriptions() {
               >
                 Anterior
               </button>
-              <span className="pagination-info">Página {currentPage} de {totalPages}</span>
+              <span className="pagination-info">Página {currentPage} de {totalPages || 1}</span>
               <button 
                 className="btn btn--secondary" 
                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
+                disabled={currentPage === totalPages || totalPages === 0}
               >
                 Siguiente
               </button>
@@ -319,8 +338,8 @@ export default function Subscriptions() {
                         className="btn btn--success"
                         style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, height: 40 }}
                         disabled={actionLoading === receiptModal.id + '_approve'}
-                        onClick={async () => {
-                          await handleApprove(receiptModal.id);
+                        onClick={() => {
+                          handleApprove(receiptModal.id);
                           setReceiptModal(null);
                         }}
                       >
@@ -332,8 +351,8 @@ export default function Subscriptions() {
                         className="btn btn--danger"
                         style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, height: 40 }}
                         disabled={actionLoading === receiptModal.id + '_reject'}
-                        onClick={async () => {
-                          await handleReject(receiptModal.id);
+                        onClick={() => {
+                          handleReject(receiptModal.id);
                           setReceiptModal(null);
                         }}
                       >
@@ -357,6 +376,51 @@ export default function Subscriptions() {
               </div>
             </div>
             
+          </div>
+        </div>
+      )}
+
+      {/* Professional Confirmation Modal */}
+      {confirmModal && (
+        <div className="modal-overlay" onClick={() => setConfirmModal(null)}>
+          <div className="modal" style={{ maxWidth: 400, textAlign: 'center', padding: '32px 24px' }} onClick={e => e.stopPropagation()}>
+            <div style={{
+              width: 56,
+              height: 56,
+              borderRadius: '50%',
+              backgroundColor: confirmModal.type === 'danger' ? 'var(--danger-light)' : 'var(--success-light)',
+              color: confirmModal.type === 'danger' ? 'var(--danger-text)' : 'var(--success)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 16px auto'
+            }}>
+              {confirmModal.type === 'danger' ? <Trash2 size={24} /> : <Check size={24} />}
+            </div>
+            
+            <h3 style={{ margin: '0 0 8px 0', fontSize: 18, fontWeight: 700, color: 'var(--text)' }}>
+              {confirmModal.title}
+            </h3>
+            
+            <p style={{ margin: '0 0 24px 0', fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+              {confirmModal.message}
+            </p>
+            
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button className="btn btn--ghost" style={{ flex: 1 }} onClick={() => setConfirmModal(null)}>
+                Cancelar
+              </button>
+              <button 
+                className={`btn btn--${confirmModal.type === 'danger' ? 'danger' : 'success'}`} 
+                style={{ flex: 1 }} 
+                onClick={() => {
+                  confirmModal.onConfirm();
+                  setConfirmModal(null);
+                }}
+              >
+                Confirmar
+              </button>
+            </div>
           </div>
         </div>
       )}

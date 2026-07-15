@@ -9,7 +9,8 @@ import {
   Star, 
   Pencil, 
   Trash2,
-  X
+  X,
+  Check
 } from 'lucide-react';
 import '../components/Layout.css';
 
@@ -36,6 +37,9 @@ export default function Products() {
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+
+  // Custom Confirmation Modal State
+  const [confirmModal, setConfirmModal] = useState(null);
 
   const loadData = async () => {
     setLoading(true);
@@ -92,13 +96,25 @@ export default function Products() {
     setModalOpen(true);
   };
 
-  const handleSave = async (e) => {
+  const handleSave = (e) => {
     e.preventDefault();
     if (!name.trim() || !price || !categoryId) {
       setError('Nombre, precio y categoría son requeridos');
       return;
     }
 
+    // Trigger professional save confirmation
+    setConfirmModal({
+      title: editId ? '¿Guardar Cambios?' : '¿Crear Producto?',
+      message: editId 
+        ? `¿Estás seguro de que deseas guardar los cambios realizados en "${name}"?`
+        : `¿Estás seguro de que deseas agregar el nuevo producto "${name}" al inventario?`,
+      type: 'primary',
+      onConfirm: () => executeSave()
+    });
+  };
+
+  const executeSave = async () => {
     const formData = new FormData();
     formData.append('name', name);
     formData.append('price', price);
@@ -148,16 +164,23 @@ export default function Products() {
     }
   };
 
-  const handleDelete = async (p) => {
-    if (!window.confirm(`¿Estás seguro de eliminar "${p.name}"?`)) return;
-    setError(''); setSuccess('');
-    try {
-      await apiFetch(`/admin/products/${p.id}`, { method: 'DELETE' });
-      setSuccess('Producto eliminado');
-      loadData();
-    } catch (err) {
-      setError(err.message || 'No se pudo eliminar el producto');
-    }
+  const handleDelete = (p) => {
+    // Trigger professional delete confirmation
+    setConfirmModal({
+      title: '¿Eliminar Producto?',
+      message: `¿Estás seguro de que deseas eliminar el producto "${p.name}"? Esta acción removerá el producto permanentemente y no se puede deshacer.`,
+      type: 'danger',
+      onConfirm: async () => {
+        setError(''); setSuccess('');
+        try {
+          await apiFetch(`/admin/products/${p.id}`, { method: 'DELETE' });
+          setSuccess('Producto eliminado');
+          loadData();
+        } catch (err) {
+          setError(err.message || 'No se pudo eliminar el producto');
+        }
+      }
+    });
   };
 
   const getProductImage = (p) => {
@@ -267,7 +290,7 @@ export default function Products() {
           </div>
 
           {/* Pagination Controls */}
-          {totalPages > 1 && (
+          {products.length > 0 && (
             <div className="pagination">
               <button 
                 className="btn btn--secondary" 
@@ -276,11 +299,11 @@ export default function Products() {
               >
                 Anterior
               </button>
-              <span className="pagination-info">Página {currentPage} de {totalPages}</span>
+              <span className="pagination-info">Página {currentPage} de {totalPages || 1}</span>
               <button 
                 className="btn btn--secondary" 
                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
+                disabled={currentPage === totalPages || totalPages === 0}
               >
                 Siguiente
               </button>
@@ -353,6 +376,51 @@ export default function Products() {
                 <button type="submit" className="btn btn--primary">Guardar Producto</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Professional Confirmation Modal */}
+      {confirmModal && (
+        <div className="modal-overlay" onClick={() => setConfirmModal(null)}>
+          <div className="modal" style={{ maxWidth: 400, textAlign: 'center', padding: '32px 24px' }} onClick={e => e.stopPropagation()}>
+            <div style={{
+              width: 56,
+              height: 56,
+              borderRadius: '50%',
+              backgroundColor: confirmModal.type === 'danger' ? 'var(--danger-light)' : 'var(--primary-light)',
+              color: confirmModal.type === 'danger' ? 'var(--danger-text)' : 'var(--primary)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 16px auto'
+            }}>
+              {confirmModal.type === 'danger' ? <Trash2 size={24} /> : <Check size={24} />}
+            </div>
+            
+            <h3 style={{ margin: '0 0 8px 0', fontSize: 18, fontWeight: 700, color: 'var(--text)' }}>
+              {confirmModal.title}
+            </h3>
+            
+            <p style={{ margin: '0 0 24px 0', fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+              {confirmModal.message}
+            </p>
+            
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button className="btn btn--ghost" style={{ flex: 1 }} onClick={() => setConfirmModal(null)}>
+                Cancelar
+              </button>
+              <button 
+                className={`btn btn--${confirmModal.type === 'danger' ? 'danger' : 'primary'}`} 
+                style={{ flex: 1 }} 
+                onClick={() => {
+                  confirmModal.onConfirm();
+                  setConfirmModal(null);
+                }}
+              >
+                Confirmar
+              </button>
+            </div>
           </div>
         </div>
       )}
