@@ -173,6 +173,7 @@
 .actions-dropdown-wrapper {
   position: relative;
   display: inline-block;
+  z-index: 95;
 }
 
 .actions-dropdown-trigger {
