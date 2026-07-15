@@ -104,7 +104,11 @@ class ProductController extends Controller
                 }
                 if (!$url) {
                     $path = $image->storeAs('products', $fileName, 'public');
-                    $appUrl = rtrim(request()->getSchemeAndHttpHost(), '/');
+                    $appUrl = env('APP_URL');
+                    if (!$appUrl || str_contains($appUrl, 'localhost') || str_contains($appUrl, '127.0.0.1')) {
+                        $appUrl = rtrim(request()->getSchemeAndHttpHost(), '/');
+                    }
+                    $appUrl = rtrim($appUrl, '/');
                     $url = $appUrl . '/storage/' . $path;
                 }
                 $imageUrls[] = $url;
@@ -213,7 +217,11 @@ class ProductController extends Controller
                 }
                 if (!$url) {
                     $path = $image->storeAs('products', $fileName, 'public');
-                    $appUrl = rtrim(request()->getSchemeAndHttpHost(), '/');
+                    $appUrl = env('APP_URL');
+                    if (!$appUrl || str_contains($appUrl, 'localhost') || str_contains($appUrl, '127.0.0.1')) {
+                        $appUrl = rtrim(request()->getSchemeAndHttpHost(), '/');
+                    }
+                    $appUrl = rtrim($appUrl, '/');
                     $url = $appUrl . '/storage/' . $path;
                 }
                 $newUrls[] = $url;
