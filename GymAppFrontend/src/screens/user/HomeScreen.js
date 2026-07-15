@@ -464,77 +464,46 @@ export default function HomeScreen() {
           <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
       ) : filteredProducts.length > 0 ? (
-        isDesktop ? (
-          // Web: single horizontal row with arrow to scroll
-          <View style={{ paddingHorizontal: contentPadding }}>
-            <View style={styles.productsRow}>
-              <ScrollView
-                ref={productScrollRef}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ gap: 16, paddingRight: 8 }}
-                onScroll={(e) => setProductScrollX(e.nativeEvent.contentOffset.x)}
-                scrollEventThrottle={16}
-              >
-                {filteredProducts.map((product, index) =>
-                  renderProductCard({ item: product, index })
-                )}
-              </ScrollView>
-              {/* Arrow to scroll right */}
-              <TouchableOpacity
-                style={styles.productArrowBtn}
-                onPress={() => {
-                  const scrollAmount = (productCardWidth + 16) * 4;
-                  productScrollRef.current?.scrollTo({ x: productScrollX + scrollAmount, animated: true });
-                }}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="chevron-forward" size={24} color="#FFF" />
-              </TouchableOpacity>
-            </View>
+        // Desktop and Mobile unified grid layout (2 rows)
+        <View style={{ paddingHorizontal: contentPadding, gap: 16 }}>
+          <View style={{
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            justifyContent: isDesktop ? 'flex-start' : 'space-between',
+            gap: isDesktop ? 16 : 12
+          }}>
+            {filteredProducts.slice(0, isDesktop ? 8 : 4).map((product, index) =>
+              renderProductCard({ item: product, index })
+            )}
           </View>
-        ) : (
-          // Mobile: 2x2 grid + "Ver todo el catálogo" Button
-          <View style={{ paddingHorizontal: contentPadding, gap: 16 }}>
-            <View style={{
-              flexDirection: 'row',
-              flexWrap: 'wrap',
-              justifyContent: 'space-between',
-              gap: 12
-            }}>
-              {filteredProducts.slice(0, 4).map((product, index) =>
-                renderProductCard({ item: product, index })
-              )}
-            </View>
 
-            <View style={{ alignItems: 'center', marginTop: 12, marginBottom: 8 }}>
-              <TouchableOpacity
-                onPress={() => navigation.navigate('Categorías')}
-                style={{
-                  backgroundColor: '#FF6A1A',
-                  paddingVertical: 12,
-                  paddingHorizontal: 28,
-                  borderRadius: 24,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                  shadowColor: '#FF6A1A',
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.25,
-                  shadowRadius: 6,
-                  elevation: 4
-                }}
-                activeOpacity={0.8}
-              >
-                <Text style={{ color: '#FFF', fontSize: 14, fontWeight: '700', letterSpacing: 0.5 }}>
-                  Ver todo el catálogo
-                </Text>
-                <Ionicons name="arrow-forward" size={16} color="#FFF" />
-              </TouchableOpacity>
-            </View>
+          <View style={{ alignItems: 'center', marginTop: 24, marginBottom: 8 }}>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('Categorías')}
+              style={{
+                backgroundColor: '#FF6A1A',
+                paddingVertical: 12,
+                paddingHorizontal: 32,
+                borderRadius: 24,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                shadowColor: '#FF6A1A',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.25,
+                shadowRadius: 6,
+                elevation: 4
+              }}
+              activeOpacity={0.8}
+            >
+              <Text style={{ color: '#FFF', fontSize: 14, fontWeight: '700', letterSpacing: 0.5 }}>
+                Ver todo el catálogo
+              </Text>
+              <Ionicons name="arrow-forward" size={16} color="#FFF" />
+            </TouchableOpacity>
           </View>
-        )
+        </View>
       ) : (
         <View style={styles.emptyState}>
           <Ionicons name="cube-outline" size={48} color="#4B5563" />
