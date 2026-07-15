@@ -35,7 +35,7 @@ export default function Products() {
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 8;
+  const itemsPerPage = 10;
 
   const loadData = async () => {
     setLoading(true);
@@ -57,7 +57,7 @@ export default function Products() {
     loadData();
   }, []);
 
-  // Reset pagination when loading new products
+  // Reset pagination when products list size changes
   useEffect(() => {
     setCurrentPage(1);
   }, [products.length]);
@@ -189,7 +189,7 @@ export default function Products() {
         </div>
         <button className="btn btn--primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={handleOpenAdd}>
           <Plus size={16} />
-          <span>Agregar producto</span>
+          <span>Agregar</span>
         </button>
       </div>
 
@@ -199,102 +199,71 @@ export default function Products() {
         <div className="empty-state"><div className="empty-icon"><Package size={40} /></div><p>No hay productos en inventario</p></div>
       ) : (
         <>
-          <div className="product-grid" style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-            gap: '24px',
-            marginTop: '20px'
-          }}>
-            {paginatedProducts.map(p => (
-              <div key={p.id} style={{
-                background: 'var(--card)',
-                borderRadius: '16px',
-                overflow: 'hidden',
-                border: '1px solid var(--border)',
-                display: 'flex',
-                flexDirection: 'column',
-                position: 'relative',
-                boxShadow: 'var(--shadow-sm)',
-                transition: 'all 0.2s ease'
-              }}>
-                {/* Featured Badge (Top Left of Image) */}
-                {p.is_featured && (
-                  <div style={{ position: 'absolute', top: '12px', left: '12px', zIndex: 2 }}>
-                    <span style={{ background: '#d97706', color: '#fff', fontWeight: 'bold', fontSize: '11px', padding: '4px 8px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: 2 }}>
-                      <Star size={10} fill="#fff" />
-                      <span>Destacado</span>
-                    </span>
-                  </div>
-                )}
-
-                {/* Stock Badge (Top Right of Image) */}
-                <div style={{ position: 'absolute', top: '12px', right: '12px', zIndex: 2 }}>
-                  {p.stock !== null && p.stock !== undefined ? (
-                    <span style={{ 
-                      background: p.stock > 0 ? '#10b981' : '#ef4444', 
-                      color: '#fff', 
-                      fontWeight: 'bold', 
-                      fontSize: '11px', 
-                      padding: '4px 8px', 
-                      borderRadius: '6px' 
-                    }}>
-                      {p.stock} Uds
-                    </span>
-                  ) : (
-                    <span style={{ 
-                      background: '#3b82f6', 
-                      color: '#fff', 
-                      fontWeight: 'bold', 
-                      fontSize: '11px', 
-                      padding: '4px 8px', 
-                      borderRadius: '6px' 
-                    }}>
-                      Ilimitado
-                    </span>
-                  )}
-                </div>
-
-                {/* Image Container */}
-                <div style={{ height: '220px', background: '#f8fafc', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid var(--border)' }}>
-                  {getProductImage(p) ? (
-                    <img src={getProductImage(p)} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : (
-                    <div style={{ color: 'var(--text-secondary)', opacity: 0.5 }}>
-                      <Package size={48} />
-                    </div>
-                  )}
-                </div>
-
-                {/* Body Content */}
-                <div style={{ padding: '16px 20px 20px 20px', flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <div style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    {categories.find(c => c.id === p.category_id)?.name || 'Sin Categoría'}
-                  </div>
-                  <h3 style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text)', margin: '4px 0 0 0', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                    {p.name}
-                  </h3>
-                  <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.4', height: '40px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', margin: '4px 0 0 0' }}>
-                    {p.description || 'Sin descripción disponible.'}
-                  </p>
-                  
-                  <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text)', margin: '8px 0 0 0' }}>
-                    ${Number(p.price).toFixed(2)}
-                  </div>
-
-                  {/* Card Actions (Editar / Eliminar) */}
-                  <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
-                    <button className="btn btn--secondary" style={{ flex: 1, padding: '8px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontWeight: 500 }} onClick={() => handleOpenEdit(p)}>
-                      <Pencil size={13} />
-                      <span>Editar</span>
-                    </button>
-                    <button className="btn btn--danger" style={{ flex: 1, padding: '8px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontWeight: 500 }} onClick={() => handleDelete(p)}>
-                      <Trash2 size={13} />
-                      <span>Eliminar</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
+          <div className="card">
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>PRODUCTO</th>
+                    <th style={{ textAlign: 'right' }}>PRECIO</th>
+                    <th style={{ textAlign: 'right' }}>STOCK</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginatedProducts.map(p => (
+                    <tr key={p.id}>
+                      <td>
+                        <div className="product-info-cell">
+                          <div className="product-thumbnail-wrapper">
+                            {getProductImage(p) ? (
+                              <img src={getProductImage(p)} alt={p.name} className="product-thumbnail" />
+                            ) : (
+                              <div className="product-thumbnail" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', opacity: 0.5 }}>
+                                <Package size={20} />
+                              </div>
+                            )}
+                            {p.is_featured ? (
+                              <div className="featured-star-badge" title="Producto Destacado">
+                                <Star size={9} fill="#fff" color="#fff" />
+                              </div>
+                            ) : null}
+                          </div>
+                          <div className="product-text-details">
+                            <span className="product-category">
+                              {categories.find(c => c.id === p.category_id)?.name || 'Sin Categoría'}
+                            </span>
+                            <span className="product-name">{p.name}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--text)', fontSize: '15px' }}>
+                        ${Number(p.price).toFixed(2)}
+                      </td>
+                      <td>
+                        <div className="product-actions-cell">
+                          {p.stock !== null && p.stock !== undefined ? (
+                            <span className={`badge badge--${p.stock > 0 ? 'green' : 'red'}`} style={{ display: 'inline-block', margin: 0, padding: '4px 8px' }}>
+                              {p.stock} Uds
+                            </span>
+                          ) : (
+                            <span className="badge badge--blue" style={{ display: 'inline-block', margin: 0, padding: '4px 8px' }}>
+                              Ilimitado
+                            </span>
+                          )}
+                          
+                          <button className="btn-action-circle" onClick={() => handleOpenEdit(p)} title="Editar Producto">
+                            <Pencil size={13} />
+                          </button>
+                          <button className="btn-action-circle btn-action-circle--danger" onClick={() => handleDelete(p)} title="Eliminar Producto">
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {/* Pagination Controls */}

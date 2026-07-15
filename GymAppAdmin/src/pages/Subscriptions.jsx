@@ -10,7 +10,8 @@ import {
   CheckCircle2,
   CreditCard,
   Building,
-  X
+  X,
+  User
 } from 'lucide-react';
 import '../components/Layout.css';
 
@@ -23,7 +24,7 @@ export default function Subscriptions() {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
   const [actionLoading, setActionLoading] = useState(null);
-  const [receiptModal, setReceiptModal] = useState(null);
+  const [receiptModal, setReceiptModal] = useState(null); // stores the entire sub object
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   
@@ -86,6 +87,7 @@ export default function Subscriptions() {
   };
 
   const getReceiptUrl = (sub) => {
+    if (!sub) return null;
     const path = sub.payment_receipt || sub.receipt_path || sub.payment_proof;
     if (!path) return null;
     if (path.startsWith('http')) return path;
@@ -158,7 +160,7 @@ export default function Subscriptions() {
                     <td>
                       {getReceiptUrl(s) ? (
                         <button className="btn btn--ghost" style={{ padding: '6px 12px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}
-                          onClick={() => setReceiptModal(getReceiptUrl(s))}>
+                          onClick={() => setReceiptModal(s)}>
                           <Eye size={12} />
                           <span>Ver</span>
                         </button>
@@ -221,33 +223,140 @@ export default function Subscriptions() {
         </>
       )}
 
-      {/* Receipt Modal */}
+      {/* Receipt Modal (Split View) */}
       {receiptModal && (
         <div className="modal-overlay" onClick={() => setReceiptModal(null)}>
-          <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 16, padding: 24, maxWidth: '90vw', maxHeight: '90vh' }}
+          <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 16, padding: 24, maxWidth: '850px', width: '90%', maxHeight: '90vh', overflowY: 'auto' }}
             onClick={e => e.stopPropagation()}>
+            
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h3 style={{ margin: 0, color: 'var(--text)' }}>Comprobante de Pago</h3>
+              <h3 style={{ margin: 0, color: 'var(--text)' }}>Verificación de Suscripción</h3>
               <button className="btn btn--ghost" style={{ padding: 6, borderRadius: '50%' }} onClick={() => setReceiptModal(null)}><X size={16} /></button>
             </div>
-            <img
-              src={receiptModal}
-              alt="Comprobante"
-              style={{ maxWidth: '100%', maxHeight: '70vh', borderRadius: 10, display: 'block' }}
-              onError={e => {
-                e.target.style.display = 'none';
-                e.target.nextSibling.style.display = 'flex';
-              }}
-            />
-            <div style={{ display: 'none', flexDirection: 'column', alignItems: 'center', padding: 40, color: 'var(--text-secondary)', gap: 12 }}>
-              <AlertTriangle size={48} />
-              <p style={{ margin: 0, fontSize: 14 }}>No se pudo cargar el comprobante</p>
-              <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)', opacity: 0.8 }}>El archivo puede haber sido eliminado o la URL es incorrecta</p>
+            
+            <div className="modal-split-container">
+              {/* Left Pane: Preview */}
+              <div className="modal-split-preview">
+                {getReceiptUrl(receiptModal) ? (
+                  <img
+                    src={getReceiptUrl(receiptModal)}
+                    alt="Comprobante"
+                    onError={e => {
+                      e.target.style.display = 'none';
+                      e.target.nextSibling.style.display = 'flex';
+                    }}
+                  />
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: 'var(--text-secondary)', gap: 12 }}>
+                    <AlertTriangle size={48} />
+                    <p style={{ margin: 0 }}>No hay comprobante disponible</p>
+                  </div>
+                )}
+                <div style={{ display: 'none', flexDirection: 'column', alignItems: 'center', padding: 40, color: 'var(--text-secondary)', gap: 12 }}>
+                  <AlertTriangle size={48} />
+                  <p style={{ margin: 0, fontSize: 14 }}>No se pudo cargar el comprobante</p>
+                </div>
+              </div>
+
+              {/* Right Pane: Details & Validation Actions */}
+              <div className="modal-split-details">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  {/* User info */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border)', flexShrink: 0 }}>
+                      <User size={20} style={{ color: 'var(--primary)' }} />
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 700, color: 'var(--text)' }}>{receiptModal.user?.name || '—'}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{receiptModal.user?.email}</div>
+                    </div>
+                  </div>
+
+                  {/* Bubble Note */}
+                  <div className="chat-bubble-alert">
+                    Verifica que el importe y la fecha del comprobante coincidan con el plan seleccionado antes de tomar una acción.
+                  </div>
+
+                  {/* Summary Card */}
+                  <div className="verification-info-card">
+                    <div className="info-row">
+                      <span className="info-label">Plan Solicitado</span>
+                      <span className="info-value" style={{ color: 'var(--primary)' }}>{receiptModal.plan?.name || '—'}</span>
+                    </div>
+                    <div className="info-row">
+                      <span className="info-label">Precio</span>
+                      <span className="info-value" style={{ color: 'var(--success)' }}>${Number(receiptModal.price || receiptModal.plan?.price || 0).toFixed(2)}</span>
+                    </div>
+                    <div className="info-row">
+                      <span className="info-label">Método Pago</span>
+                      <span className="info-value" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        {receiptModal.payment_method === 'transfer' ? (
+                          <>
+                            <Building size={12} />
+                            <span>Transferencia</span>
+                          </>
+                        ) : receiptModal.payment_method || '—'}
+                      </span>
+                    </div>
+                    <div className="info-row">
+                      <span className="info-label">Fecha Solicitud</span>
+                      <span className="info-value">{receiptModal.created_at ? new Date(receiptModal.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' }) : '—'}</span>
+                    </div>
+                    <div className="info-row">
+                      <span className="info-label">Estado</span>
+                      <span className={`badge badge--${STATUS_BADGE[receiptModal.status] || 'gray'}`}>
+                        {STATUS_LABELS[receiptModal.status] || receiptModal.status}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Validation Actions */}
+                <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
+                  {receiptModal.status === 'pending' ? (
+                    <div style={{ display: 'flex', gap: 12 }}>
+                      <button
+                        className="btn btn--success"
+                        style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, height: 40 }}
+                        disabled={actionLoading === receiptModal.id + '_approve'}
+                        onClick={async () => {
+                          await handleApprove(receiptModal.id);
+                          setReceiptModal(null);
+                        }}
+                      >
+                        {actionLoading === receiptModal.id + '_approve' ? <Loader2 className="spin" size={16} /> : <Check size={16} />}
+                        <span>Aprobar Pago</span>
+                      </button>
+                      
+                      <button
+                        className="btn btn--danger"
+                        style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, height: 40 }}
+                        disabled={actionLoading === receiptModal.id + '_reject'}
+                        onClick={async () => {
+                          await handleReject(receiptModal.id);
+                          setReceiptModal(null);
+                        }}
+                      >
+                        {actionLoading === receiptModal.id + '_reject' ? <Loader2 className="spin" size={16} /> : <Trash2 size={16} />}
+                        <span>Rechazar</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ textAlign: 'center', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 500 }}>
+                      Este comprobante ya fue verificado y procesado.
+                    </div>
+                  )}
+
+                  {getReceiptUrl(receiptModal) && (
+                    <a href={getReceiptUrl(receiptModal)} target="_blank" rel="noreferrer" className="btn btn--ghost" style={{ marginTop: 12, width: '100%', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 12, height: 36 }}>
+                      <ExternalLink size={12} />
+                      <span>Ver imagen completa en pestaña</span>
+                    </a>
+                  )}
+                </div>
+              </div>
             </div>
-            <a href={receiptModal} target="_blank" rel="noreferrer" className="btn btn--primary" style={{ marginTop: 16, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-              <ExternalLink size={14} />
-              <span>Abrir en nueva pestaña</span>
-            </a>
+            
           </div>
         </div>
       )}
