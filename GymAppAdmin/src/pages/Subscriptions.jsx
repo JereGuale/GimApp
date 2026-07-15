@@ -198,7 +198,9 @@ export default function Subscriptions() {
       {loading ? (
         <div className="loading-state"><Loader2 className="spin" size={24} /> <span>Cargando…</span></div>
       ) : filtered.length === 0 ? (
-        <div className="empty-state"><div className="empty-icon"><CreditCard size={40} /></div><p>No hay suscripciones<        <>
+        <div className="empty-state"><div className="empty-icon"><CreditCard size={40} /></div><p>No hay suscripciones</p></div>
+      ) : (
+        <>
           {/* Desktop Table View */}
           <div className="subs-desktop-view">
             <div className="subs-table-container">
