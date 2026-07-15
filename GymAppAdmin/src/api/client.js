@@ -26,7 +26,9 @@ export async function apiFetch(path, options = {}) {
   if (res.status === 401) {
     localStorage.removeItem('admin_token');
     localStorage.removeItem('admin_user');
-    window.location.href = '/login';
+    if (path !== '/login') {
+      window.location.href = '/login';
+    }
     throw new Error('No autorizado');
   }
 

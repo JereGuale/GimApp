@@ -1,29 +1,80 @@
+/* Import Inter font for a clean, modern SaaS typography */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
-:root.dark {
-  --bg: #0B0F14;
-  --card: #141821;
-  --text: #E5E7EB;
-  --text-secondary: #9CA3AF;
-  --border: #1F2937;
-  --input-bg: rgba(255, 255, 255, 0.04);
-  --thead-bg: rgba(255, 255, 255, 0.02);
-  --modal-overlay: rgba(0, 0, 0, 0.8);
+:root.light {
+  --bg: #F8FAFC;
+  --card: #FFFFFF;
+  --sidebar: #FFFFFF;
+  --border: #E2E8F0;
+  --text: #0F172A;
+  --text-secondary: #64748B;
+  
+  --primary: #2563EB;
+  --primary-hover: #1D4ED8;
+  --primary-light: rgba(37, 99, 235, 0.07);
+  
+  --success: #22C55E;
+  --success-light: #DCFCE7;
+  --success-text: #15803D;
+
+  --warning: #F59E0B;
+  --warning-light: #FEF3C7;
+  --warning-text: #B56207;
+
+  --danger: #EF4444;
+  --danger-light: #FEE2E2;
+  --danger-text: #B91C1C;
+  
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.03), 0 4px 6px -4px rgba(0, 0, 0, 0.03);
+  
+  --input-bg: #FFFFFF;
+  --thead-bg: #F8FAFC;
+  --modal-overlay: rgba(15, 23, 42, 0.3);
+  --radius-card: 16px;
+  --radius-btn: 12px;
 }
 
-:root.light {
-  --bg: #F9FAFB;
-  --card: #FFFFFF;
-  --text: #111827;
-  --text-secondary: #6B7280;
-  --border: #E5E7EB;
-  --input-bg: #FFFFFF;
-  --thead-bg: rgba(0, 0, 0, 0.02);
-  --modal-overlay: rgba(0, 0, 0, 0.5);
+:root.dark {
+  --bg: #0F172A;
+  --card: #1E293B;
+  --sidebar: #111827;
+  --border: #334155;
+  --text: #F8FAFC;
+  --text-secondary: #94A3B8;
+  
+  --primary: #3B82F6;
+  --primary-hover: #2563EB;
+  --primary-light: rgba(59, 130, 246, 0.12);
+  
+  --success: #22C55E;
+  --success-light: rgba(34, 197, 94, 0.15);
+  --success-text: #4ADE80;
+
+  --warning: #F59E0B;
+  --warning-light: rgba(245, 158, 11, 0.15);
+  --warning-text: #FBBF24;
+
+  --danger: #EF4444;
+  --danger-light: rgba(239, 68, 68, 0.15);
+  --danger-text: #FCA5A5;
+  
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -2px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.25), 0 4px 6px -4px rgba(0, 0, 0, 0.25);
+  
+  --input-bg: #0F172A;
+  --thead-bg: #1E293B;
+  --modal-overlay: rgba(0, 0, 0, 0.6);
+  --radius-card: 16px;
+  --radius-btn: 12px;
 }
 
 body, html, #root {
@@ -33,8 +84,7 @@ body, html, #root {
   padding: 0;
   background-color: var(--bg);
   color: var(--text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   overflow: hidden;
-  transition: background-color 0.2s, color 0.2s;
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
-
-

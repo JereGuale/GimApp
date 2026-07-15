@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../api/client';
+import { Dumbbell, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import './Login.css';
 
 export default function Login() {
@@ -31,7 +32,7 @@ export default function Login() {
       login(user, token);
     } catch (err) {
       const msg = err.message || '';
-      if (msg.includes('401') || msg.includes('credentials') || msg.includes('Invalid')) {
+      if (msg.includes('401') || msg.includes('credentials') || msg.includes('Invalid') || msg.includes('autorizado')) {
         setError('Correo o contraseña incorrectos');
       } else if (msg.includes('fetch') || msg.includes('Network')) {
         setError('Sin conexión al servidor. Verifica que el backend esté corriendo.');
@@ -48,7 +49,9 @@ export default function Login() {
       <div className="login-bg" />
       <div className="login-card">
         <div className="login-logo">
-          <span className="login-logo-icon">🏋️</span>
+          <span className="login-logo-icon">
+            <Dumbbell size={40} />
+          </span>
           <h1 className="login-brand">GimApp</h1>
           <p className="login-subtitle">Panel de Administración</p>
         </div>
@@ -56,7 +59,8 @@ export default function Login() {
         <form className="login-form" onSubmit={handleSubmit}>
           {error && (
             <div className="login-error">
-              <span>⚠️</span> {error}
+              <AlertCircle size={16} />
+              <span>{error}</span>
             </div>
           )}
 
@@ -83,7 +87,7 @@ export default function Login() {
                 autoComplete="current-password"
               />
               <button type="button" className="toggle-pass" onClick={() => setShowPass(v => !v)}>
-                {showPass ? '🙈' : '👁️'}
+                {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
           </div>
