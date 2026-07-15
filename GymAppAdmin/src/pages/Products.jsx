@@ -31,7 +31,7 @@ export default function Products() {
   const [isFeatured, setIsFeatured] = useState(false);
   const [condition, setCondition] = useState('nuevo');
   const [stock, setStock] = useState('');
-  const [imageFile, setImageFile] = useState(null);
+  const [imageFiles, setImageFiles] = useState([]); // Support multiple files array
 
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -77,7 +77,7 @@ export default function Products() {
     setIsFeatured(false);
     setCondition('nuevo');
     setStock('');
-    setImageFile(null);
+    setImageFiles([]);
     setError('');
     setSuccess('');
     setModalOpen(true);
@@ -92,7 +92,7 @@ export default function Products() {
     setIsFeatured(!!p.is_featured);
     setCondition(p.condition || 'nuevo');
     setStock(p.stock !== null && p.stock !== undefined ? String(p.stock) : '');
-    setImageFile(null);
+    setImageFiles([]);
     setError('');
     setSuccess('');
     setModalOpen(true);
@@ -128,8 +128,11 @@ export default function Products() {
       formData.append('stock', parseInt(stock) || 0);
     }
 
-    if (imageFile) {
-      formData.append('images[]', imageFile);
+    // Append multiple files correctly under images[]
+    if (imageFiles && imageFiles.length > 0) {
+      imageFiles.forEach(file => {
+        formData.append('images[]', file);
+      });
     }
 
     setError(''); setSuccess('');
@@ -185,14 +188,21 @@ export default function Products() {
     });
   };
 
+  // Robust URL image string resolver
+  const getProductImageUrlString = (url) => {
+    if (!url) return '';
+    const actualUrl = typeof url === 'object' ? (url.image_url || url.image_path || '') : url;
+    if (!actualUrl) return '';
+    if (actualUrl.startsWith('http')) return actualUrl;
+    return `${API_BASE_URL.replace('/api', '')}/storage/${actualUrl}`;
+  };
+
+  // Main product list thumbnail resolver (checks both image & images)
   const getProductImage = (p) => {
-    if (p.images && p.images.length > 0) {
-      const img = p.images[0];
-      const url = img.image_url || img.image_path || img;
-      if (url.startsWith('http')) return url;
-      return `${API_BASE_URL.replace('/api', '')}/storage/${url}`;
-    }
-    return null;
+    if (!p) return null;
+    const rawImage = p.image || (p.images && p.images.length > 0 ? p.images[0] : null);
+    if (!rawImage) return null;
+    return getProductImageUrlString(rawImage);
   };
 
   // Calculate paginated slice
@@ -314,7 +324,7 @@ export default function Products() {
         </>
       )}
 
-      {/* Product Form Modal (Redesigned like the photo) */}
+      {/* Product Form Modal */}
       {modalOpen && (
         <div className="modal-overlay" onClick={() => setModalOpen(false)}>
           <div className="modal" style={{ maxWidth: 600, padding: 0, borderRadius: '16px', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
@@ -422,7 +432,11 @@ export default function Products() {
                       type="file" 
                       id="product-image-file" 
                       accept="image/*" 
-                      onChange={e => setImageFile(e.target.files[0])} 
+                      multiple
+                      onChange={e => {
+                        const files = Array.from(e.target.files);
+                        setImageFiles(prev => [...prev, ...files]);
+                      }} 
                       style={{ display: 'none' }} 
                     />
                     <div style={{ color: 'var(--primary)', marginBottom: 8, display: 'flex', justifyContent: 'center' }}>
@@ -432,43 +446,76 @@ export default function Products() {
                       Arrastra y suelta una imagen aquí o <span style={{ color: 'var(--primary)', textDecoration: 'underline' }}>selecciona un archivo</span>
                     </div>
                     <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 6 }}>
-                      Formatos soportados: JPG, PNG, WEBP • Máx. 5MB • Recomendado: 1200x1200px
+                      Formatos soportados: JPG, PNG, WEBP • Múltiples • Máx. 5MB
                     </div>
                   </div>
 
                   {/* Image Preview Box */}
-                  {(imageFile || (editId && getProductImage(products.find(p => p.id === editId)))) && (
-                    <div style={{ marginTop: 12 }}>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Vista previa</div>
-                      <div style={{ display: 'flex', gap: 16, alignItems: 'center', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px', background: 'var(--bg)' }}>
+                  <div style={{ marginTop: 12 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Vista previa</div>
+                    
+                    {/* Render newly uploaded files */}
+                    {imageFiles.map((file, idx) => (
+                      <div key={`new-img-${idx}`} style={{ display: 'flex', gap: 16, alignItems: 'center', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px', background: 'var(--bg)', marginBottom: 8 }}>
                         <img 
-                          src={imageFile ? URL.createObjectURL(imageFile) : getProductImage(products.find(p => p.id === editId))} 
+                          src={URL.createObjectURL(file)} 
                           style={{ width: 60, height: 60, borderRadius: '8px', objectFit: 'cover', border: '1px solid var(--border)' }} 
                         />
                         <div style={{ flex: 1 }}>
                           <div style={{ fontWeight: 600, color: 'var(--text)', fontSize: 13, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: 280 }}>
-                            {imageFile ? imageFile.name : 'Imagen actual del producto'}
+                            {file.name}
                           </div>
                           <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
-                            {imageFile ? `${(imageFile.size / (1024 * 1024)).toFixed(2)} MB` : 'Conservar imagen actual'}
+                            {(file.size / (1024 * 1024)).toFixed(2)} MB (Por subir)
                           </div>
                         </div>
-                        {imageFile && (
-                          <button 
-                            type="button" 
-                            className="btn btn--ghost" 
-                            style={{ padding: 6, borderRadius: '50%', color: 'var(--danger-text)' }}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setImageFile(null);
-                            }}
-                          >
-                            <X size={16} />
-                          </button>
-                        )}
+                        <button 
+                          type="button" 
+                          className="btn btn--ghost" 
+                          style={{ padding: 6, borderRadius: '50%', color: 'var(--danger-text)' }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setImageFiles(prev => prev.filter((_, i) => i !== idx));
+                          }}
+                        >
+                          <X size={16} />
+                        </button>
                       </div>
-                    </div>
-                  )}
+                    ))}
+
+                    {/* Render existing images from server */}
+                    {imageFiles.length === 0 && editId && (() => {
+                      const p = products.find(prod => prod.id === editId);
+                      if (!p) return null;
+                      
+                      const existingUrls = p.images && p.images.length > 0 
+                        ? p.images 
+                        : (p.image ? [p.image] : []);
+                        
+                      if (existingUrls.length === 0) return null;
+                      
+                      return existingUrls.map((url, idx) => {
+                        const resolvedUrl = getProductImageUrlString(url);
+                        return (
+                          <div key={`exist-img-${idx}`} style={{ display: 'flex', gap: 16, alignItems: 'center', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px', background: 'var(--bg)', marginBottom: 8 }}>
+                            <img 
+                              src={resolvedUrl} 
+                              style={{ width: 60, height: 60, borderRadius: '8px', objectFit: 'cover', border: '1px solid var(--border)' }} 
+                            />
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontWeight: 600, color: 'var(--text)', fontSize: 13, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: 280 }}>
+                                Imagen guardada {idx + 1}
+                              </div>
+                              <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+                                Conservando imagen actual
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
+
                 </div>
 
               </div>
