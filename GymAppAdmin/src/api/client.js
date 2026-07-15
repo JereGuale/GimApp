@@ -2,7 +2,7 @@ const DEV_IP = window.location.hostname === 'localhost' || window.location.hostn
   ? '127.0.0.1'
   : window.location.hostname;
 
-const API_BASE = `http://${DEV_IP}:8000/api`;
+const API_BASE = import.meta.env.VITE_API_BASE_URL || `http://${DEV_IP}:8000/api`;
 
 function getToken() {
   return localStorage.getItem('admin_token');
