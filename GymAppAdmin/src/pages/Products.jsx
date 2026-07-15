@@ -95,11 +95,27 @@ export default function Products() {
     setStock(p.stock !== null && p.stock !== undefined ? String(p.stock) : '');
     setImageFiles([]);
     
-    const currentImages = p.images && p.images.length > 0 
-      ? p.images 
-      : (p.image ? [p.image] : []);
+    let currentImages = [];
+    if (p.images) {
+      if (Array.isArray(p.images)) {
+        currentImages = p.images;
+      } else if (typeof p.images === 'string') {
+        try {
+          const parsed = JSON.parse(p.images);
+          currentImages = Array.isArray(parsed) ? parsed : [p.images];
+        } catch (e) {
+          currentImages = [p.images];
+        }
+      } else {
+        currentImages = [p.images];
+      }
+    }
+    
+    if (currentImages.length === 0 && p.image) {
+      currentImages = [p.image];
+    }
+    
     setExistingImages(currentImages);
-
     setError('');
     setSuccess('');
     setModalOpen(true);
@@ -205,7 +221,12 @@ export default function Products() {
   // Robust URL image string resolver
   const getProductImageUrlString = (url) => {
     if (!url) return '';
-    const actualUrl = typeof url === 'object' ? (url.image_url || url.image_path || '') : url;
+    let actualUrl = '';
+    if (typeof url === 'object' && url !== null) {
+      actualUrl = url.image_url || url.image_path || '';
+    } else {
+      actualUrl = String(url);
+    }
     if (!actualUrl) return '';
     if (actualUrl.startsWith('http')) return actualUrl;
     return `${API_BASE_URL.replace('/api', '')}/storage/${actualUrl}`;
@@ -214,7 +235,23 @@ export default function Products() {
   // Main product list thumbnail resolver (checks both image & images)
   const getProductImage = (p) => {
     if (!p) return null;
-    const rawImage = p.image || (p.images && p.images.length > 0 ? p.images[0] : null);
+    let rawImage = p.image;
+    
+    if (!rawImage && p.images) {
+      let imgList = [];
+      if (Array.isArray(p.images)) {
+        imgList = p.images;
+      } else if (typeof p.images === 'string') {
+        try {
+          const parsed = JSON.parse(p.images);
+          imgList = Array.isArray(parsed) ? parsed : [];
+        } catch (e) {}
+      }
+      if (imgList.length > 0) {
+        rawImage = imgList[0];
+      }
+    }
+    
     if (!rawImage) return null;
     return getProductImageUrlString(rawImage);
   };
