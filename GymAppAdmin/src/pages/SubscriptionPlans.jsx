@@ -291,7 +291,7 @@ export default function SubscriptionPlans() {
               <button className="btn btn--ghost" style={{ padding: 6, borderRadius: '50%' }} onClick={() => setModalOpen(false)}><X size={16} /></button>
             </div>
             <form className="modal-form" onSubmit={handleSave}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div className="form-grid-2">
                 <div className="form-group">
                   <label>Nombre del Plan</label>
                   <input
@@ -327,7 +327,7 @@ export default function SubscriptionPlans() {
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div className="form-grid-2">
                 <div className="form-group">
                   <label>Duración</label>
                   <select value={duration} onChange={e => setDuration(e.target.value)}>
@@ -345,7 +345,7 @@ export default function SubscriptionPlans() {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div className="form-grid-2">
                 <div className="form-group">
                   <label>Nombre Icono (Ionicons)</label>
                   <input

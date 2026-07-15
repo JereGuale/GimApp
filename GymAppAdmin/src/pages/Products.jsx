@@ -426,7 +426,7 @@ export default function Products() {
                     <label>Nombre del producto *</label>
                     <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Ej. Proteína Isolate 1kg" required />
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                  <div className="form-grid-2">
                     <div className="form-group">
                       <label>Precio (USD) *</label>
                       <input type="number" step="0.01" value={price} onChange={e => setPrice(e.target.value)} placeholder="29.99" required />
@@ -454,7 +454,7 @@ export default function Products() {
                     <Package size={16} style={{ color: 'var(--primary)' }} />
                     <span>Inventario y estado</span>
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.2fr 1.6fr', gap: 16, alignItems: 'center' }}>
+                  <div className="form-grid-3" style={{ alignItems: 'center' }}>
                     <div className="form-group" style={{ marginBottom: 0 }}>
                       <label>Condición *</label>
                       <select value={condition} onChange={e => setCondition(e.target.value)}>

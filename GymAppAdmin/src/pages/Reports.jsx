@@ -524,7 +524,7 @@ export default function Reports() {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 24, marginTop: 20 }}>
+              <div className="form-grid-2-1" style={{ marginTop: 20 }}>
                 {/* Attendance list table */}
                 <div className="card" style={{ marginTop: 0 }}>
                   <div className="page-header" style={{ marginBottom: 16 }}>
@@ -746,7 +746,7 @@ export default function Reports() {
                       required={userType === 'nuevo'} 
                     />
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                  <div className="form-grid-2">
                     <div className="form-group">
                       <label>Correo Electrónico (Opcional)</label>
                       <input 

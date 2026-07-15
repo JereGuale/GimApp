@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -17,7 +18,8 @@ import {
   Sun,
   Moon,
   ChevronRight,
-  Dumbbell
+  Dumbbell,
+  Menu
 } from 'lucide-react';
 import './Layout.css';
 
@@ -62,14 +64,36 @@ export default function Layout({ children }) {
   const { user, logout } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const location = useLocation();
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [isTabletExpanded, setIsTabletExpanded] = useState(false);
 
   const currentItem = allNavItems.find(n => n.to === location.pathname);
   const pageTitle = currentItem?.label || 'Panel';
 
+  const handleMenuToggle = () => {
+    if (window.innerWidth < 768) {
+      setIsMobileOpen(!isMobileOpen);
+    } else {
+      setIsTabletExpanded(!isTabletExpanded);
+    }
+  };
+
+  const handleNavItemClick = () => {
+    if (window.innerWidth < 768) {
+      setIsMobileOpen(false);
+    }
+  };
+
   return (
     <div className="layout">
+      {/* Sidebar Overlay for Mobile Drawer */}
+      <div 
+        className={`sidebar-overlay ${isMobileOpen ? 'sidebar-overlay--open' : ''}`} 
+        onClick={() => setIsMobileOpen(false)}
+      ></div>
+
       {/* Sidebar */}
-      <aside className="sidebar">
+      <aside className={`sidebar ${isTabletExpanded ? 'sidebar--expanded' : ''} ${isMobileOpen ? 'sidebar--open' : ''}`}>
         <div className="sidebar-logo">
           <span className="sidebar-logo-icon">
             <Dumbbell size={24} />
@@ -92,6 +116,7 @@ export default function Layout({ children }) {
                     to={item.to}
                     end={item.to === '/'}
                     className={({ isActive }) => `nav-item ${isActive ? 'nav-item--active' : ''}`}
+                    onClick={handleNavItemClick}
                   >
                     <span className="nav-icon">
                       <IconComponent size={18} />
@@ -123,13 +148,22 @@ export default function Layout({ children }) {
       {/* Main content */}
       <div className="main">
         <header className="topbar">
-          <div className="topbar-left">
-            <div className="topbar-breadcrumb">
-              <span>GimApp</span>
-              <ChevronRight size={12} className="topbar-breadcrumb-sep" />
-              <span>Administración</span>
+          <div className="topbar-left" style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <button 
+              className="topbar-menu-btn" 
+              onClick={handleMenuToggle} 
+              title="Menú lateral"
+            >
+              <Menu size={20} />
+            </button>
+            <div>
+              <div className="topbar-breadcrumb">
+                <span>GimApp</span>
+                <ChevronRight size={12} className="topbar-breadcrumb-sep" />
+                <span>Administración</span>
+              </div>
+              <h1 className="topbar-title">{pageTitle}</h1>
             </div>
-            <h1 className="topbar-title">{pageTitle}</h1>
           </div>
           <div className="topbar-right">
             {/* Theme Toggle Button */}

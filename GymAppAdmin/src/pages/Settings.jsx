@@ -111,7 +111,7 @@ export default function Settings() {
           <form onSubmit={handleSaveBank}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 20 }}>
               {banks.map((bank, index) => (
-                <div key={index} style={{ background: 'var(--background)', padding: 16, borderRadius: 12, border: '1px solid var(--border)' }}>
+                <div key={index} style={{ background: 'var(--bg)', padding: 16, borderRadius: 12, border: '1px solid var(--border)' }}>
                   <h4 style={{ margin: '0 0 12px', fontSize: 15, display: 'flex', alignItems: 'center', gap: 8 }}>
                     🏦 Banco {bank.name}
                   </h4>

@@ -305,7 +305,7 @@ export default function Banners() {
                 <textarea rows="2" value={description} onChange={e => setDescription(e.target.value)} placeholder="Detalles de la promoción..."></textarea>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div className="form-grid-2">
                 <div className="form-group">
                   <label>Precio a mostrar ($)</label>
                   <input type="number" step="0.01" value={price} onChange={e => setPrice(e.target.value)} placeholder="Opcional" />
@@ -316,7 +316,7 @@ export default function Banners() {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div className="form-grid-2">
                 <div className="form-group">
                   <label>Texto del botón</label>
                   <input type="text" value={buttonText} onChange={e => setButtonText(e.target.value)} placeholder="Ej. Ver más" />
@@ -332,7 +332,7 @@ export default function Banners() {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, alignItems: 'center' }}>
+              <div className="form-grid-2" style={{ alignItems: 'center' }}>
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', color: 'var(--text)' }}>
                     <input type="checkbox" checked={isActive} onChange={e => setIsActive(e.target.checked)} />
