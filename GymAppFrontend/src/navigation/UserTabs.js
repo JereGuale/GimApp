@@ -129,6 +129,7 @@ export default function UserTabs() {
           name="Categorías"
           component={CategoriesScreen}
           options={{
+            tabBarButton: () => null, // Ocultar de la barra de navegación inferior
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="grid-outline" size={size} color={color} />
             ),

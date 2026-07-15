@@ -494,19 +494,46 @@ export default function HomeScreen() {
             </View>
           </View>
         ) : (
-          // Mobile: horizontal scroll
-          <FlatList
-            data={filteredProducts}
-            renderItem={renderProductCard}
-            keyExtractor={(item, index) => `product-${item.id || index}`}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{
-              paddingHorizontal: contentPadding,
-              paddingBottom: 8,
-            }}
-            ItemSeparatorComponent={() => <View style={{ width: 14 }} />}
-          />
+          // Mobile: 2x2 grid + "Ver todo el catálogo" Button
+          <View style={{ paddingHorizontal: contentPadding, gap: 16 }}>
+            <View style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              justifyContent: 'space-between',
+              gap: 12
+            }}>
+              {filteredProducts.slice(0, 4).map((product, index) =>
+                renderProductCard({ item: product, index })
+              )}
+            </View>
+
+            <View style={{ alignItems: 'center', marginTop: 12, marginBottom: 8 }}>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('Categorías')}
+                style={{
+                  backgroundColor: '#FF6A1A',
+                  paddingVertical: 12,
+                  paddingHorizontal: 28,
+                  borderRadius: 24,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  shadowColor: '#FF6A1A',
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.25,
+                  shadowRadius: 6,
+                  elevation: 4
+                }}
+                activeOpacity={0.8}
+              >
+                <Text style={{ color: '#FFF', fontSize: 14, fontWeight: '700', letterSpacing: 0.5 }}>
+                  Ver todo el catálogo
+                </Text>
+                <Ionicons name="arrow-forward" size={16} color="#FFF" />
+              </TouchableOpacity>
+            </View>
+          </View>
         )
       ) : (
         <View style={styles.emptyState}>
