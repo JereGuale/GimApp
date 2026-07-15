@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { apiFetch } from '../api/client';
+import { apiFetch, API_BASE_URL } from '../api/client';
 import { 
   AlertTriangle, 
   Users, 
@@ -11,12 +11,71 @@ import {
   CreditCard
 } from 'lucide-react';
 import '../components/Layout.css';
+import './Subscriptions.css';
 
 export default function Dashboard() {
   const [stats, setStats] = useState(null);
   const [recentSubs, setRecentSubs] = useState([]);
   const [pendingCount, setPendingCount] = useState(0);
   const [loading, setLoading] = useState(true);
+
+  const getUserAvatarUrl = (user) => {
+    if (!user) return null;
+    const photo = user.profile_photo_url || user.profile_photo;
+    if (!photo) return null;
+    if (photo.startsWith('http')) return photo;
+    return `${API_BASE_URL.replace('/api', '')}/storage/${photo}`;
+  };
+
+  const getUserInitials = (name) => {
+    if (!name) return '?';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return parts[0][0].toUpperCase();
+  };
+
+  const getAvatarBgColor = (name) => {
+    if (!name) return '#64748b';
+    const colors = [
+      '#ef4444',
+      '#f97316',
+      '#8b5cf6',
+      '#ec4899',
+      '#3b82f6',
+      '#10b981',
+    ];
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const index = Math.abs(hash) % colors.length;
+    return colors[index];
+  };
+
+  const renderUserCell = (user) => {
+    if (!user) return <span style={{ color: 'var(--text-secondary)' }}>—</span>;
+    const avatarUrl = getUserAvatarUrl(user);
+    const initials = getUserInitials(user.name);
+    const bgColor = getAvatarBgColor(user.name);
+    
+    return (
+      <div className="user-avatar-wrapper">
+        <div className="avatar-circle" style={!avatarUrl ? { backgroundColor: bgColor } : {}}>
+          {avatarUrl ? (
+            <img src={avatarUrl} alt={user.name} className="avatar-img" />
+          ) : (
+            <span>{initials}</span>
+          )}
+        </div>
+        <div className="user-text-details">
+          <span className="user-name">{user.name}</span>
+          <span className="user-email">{user.email}</span>
+        </div>
+      </div>
+    );
+  };
 
   useEffect(() => {
     Promise.all([
@@ -141,8 +200,8 @@ export default function Dashboard() {
             <p>No hay suscripciones recientes</p>
           </div>
         ) : (
-          <div className="table-wrap">
-            <table>
+          <div className="subs-table-container" style={{ margin: 0 }}>
+            <table className="subs-table">
               <thead>
                 <tr>
                   <th>Usuario</th>
@@ -154,14 +213,21 @@ export default function Dashboard() {
               <tbody>
                 {recentSubs.map(s => (
                   <tr key={s.id}>
-                    <td style={{ fontWeight: 500 }}>{s.user?.name || s.user_id}</td>
-                    <td>{s.plan?.name || s.plan_id}</td>
+                    <td>{renderUserCell(s.user)}</td>
+                    <td style={{ fontWeight: 600 }}>{s.plan?.name || s.plan_id || '—'}</td>
                     <td>
-                      <span className={`badge badge--${s.status === 'active' || s.status === 'approved' ? 'green' : s.status === 'pending' ? 'yellow' : 'gray'}`}>
-                        {s.status}
+                      <span className={`badge-status badge-status--${s.status === 'approved' ? 'active' : s.status}`}>
+                        <span className={`badge-status-dot badge-status-dot--${s.status === 'approved' ? 'active' : s.status}`} />
+                        {s.status === 'active' || s.status === 'approved' 
+                          ? 'Activa' 
+                          : s.status === 'pending' 
+                            ? 'Pendiente' 
+                            : s.status === 'cancelled' 
+                              ? 'Cancelada' 
+                              : 'Expirada'}
                       </span>
                     </td>
-                    <td style={{ color: 'var(--text-secondary)' }}>
+                    <td style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
                       {s.created_at ? new Date(s.created_at).toLocaleDateString('es-MX', { year: 'numeric', month: 'short', day: 'numeric' }) : '—'}
                     </td>
                   </tr>

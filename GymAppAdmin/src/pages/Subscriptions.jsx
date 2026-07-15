@@ -11,12 +11,16 @@ import {
   CreditCard,
   Building,
   X,
-  User
+  User,
+  Tag,
+  Layers,
+  Calendar
 } from 'lucide-react';
 import '../components/Layout.css';
+import './Subscriptions.css';
 
 const STATUS_LABELS = { active: 'Activa', pending: 'Pendiente', cancelled: 'Cancelada', expired: 'Expirada' };
-const STATUS_BADGE = { active: 'green', pending: 'yellow', cancelled: 'red', expired: 'gray' };
+const STATUS_BADGE = { active: 'active', pending: 'pending', cancelled: 'cancelled', expired: 'expired' };
 
 export default function Subscriptions() {
   const [subs, setSubs] = useState([]);
@@ -34,6 +38,65 @@ export default function Subscriptions() {
 
   // Custom Confirmation Modal State
   const [confirmModal, setConfirmModal] = useState(null);
+
+  const getUserAvatarUrl = (user) => {
+    if (!user) return null;
+    const photo = user.profile_photo_url || user.profile_photo;
+    if (!photo) return null;
+    if (photo.startsWith('http')) return photo;
+    return `${API_BASE_URL.replace('/api', '')}/storage/${photo}`;
+  };
+
+  const getUserInitials = (name) => {
+    if (!name) return '?';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return parts[0][0].toUpperCase();
+  };
+
+  const getAvatarBgColor = (name) => {
+    if (!name) return '#64748b';
+    const colors = [
+      '#ef4444',
+      '#f97316',
+      '#8b5cf6',
+      '#ec4899',
+      '#3b82f6',
+      '#10b981',
+    ];
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const index = Math.abs(hash) % colors.length;
+    return colors[index];
+  };
+
+  const renderUserCell = (user) => {
+    if (!user) return <span style={{ color: 'var(--text-secondary)' }}>—</span>;
+    const avatarUrl = getUserAvatarUrl(user);
+    const initials = getUserInitials(user.name);
+    const bgColor = getAvatarBgColor(user.name);
+    
+    return (
+      <div className="user-avatar-wrapper">
+        <div className="avatar-circle" style={!avatarUrl ? { backgroundColor: bgColor } : {}}>
+          {avatarUrl ? (
+            <img src={avatarUrl} alt={user.name} className="avatar-img" />
+          ) : (
+            <span>{initials}</span>
+          )}
+        </div>
+        <div className="user-text-details">
+          <span className="user-name">{user.name}</span>
+          <span className="user-email">{user.email}</span>
+        </div>
+      </div>
+    );
+  };
+
 
   const fetchSubs = () => {
     setLoading(true);
@@ -135,94 +198,209 @@ export default function Subscriptions() {
       {loading ? (
         <div className="loading-state"><Loader2 className="spin" size={24} /> <span>Cargando…</span></div>
       ) : filtered.length === 0 ? (
-        <div className="empty-state"><div className="empty-icon"><CreditCard size={40} /></div><p>No hay suscripciones</p></div>
-      ) : (
-        <>
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Usuario</th>
-                  <th>Plan</th>
-                  <th>Estado</th>
-                  <th>Método</th>
-                  <th>Comprobante</th>
-                  <th>Fecha</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedItems.map(s => (
-                  <tr key={s.id}>
-                    <td style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{s.id}</td>
-                    <td>
-                      <div style={{ fontWeight: 600, color: 'var(--text)' }}>{s.user?.name || '—'}</div>
-                      <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{s.user?.email}</div>
-                    </td>
-                    <td>{s.plan?.name || s.plan_id || '—'}</td>
-                    <td>
-                      <span className={`badge badge--${STATUS_BADGE[s.status] || 'gray'}`}>
-                        {STATUS_LABELS[s.status] || s.status}
-                      </span>
-                    </td>
-                    <td>
-                      <span className="badge badge--blue" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                        {s.payment_method === 'transfer' ? (
-                          <>
-                            <Building size={12} />
-                            <span>Transferencia</span>
-                          </>
-                        ) : s.payment_method || '—'}
-                      </span>
-                    </td>
-                    <td>
-                      {getReceiptUrl(s) ? (
-                        <button className="btn btn--ghost" style={{ padding: '6px 12px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}
-                          onClick={() => setReceiptModal(s)}>
-                          <Eye size={12} />
-                          <span>Ver</span>
-                        </button>
-                      ) : <span style={{ color: 'var(--text-secondary)' }}>—</span>}
-                    </td>
-                    <td style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
-                      {s.created_at ? new Date(s.created_at).toLocaleDateString('es-MX') : '—'}
-                    </td>
-                    <td>
-                      {s.status === 'pending' && (
-                        <div style={{ display: 'flex', gap: 8 }}>
-                          <button
-                            className="btn btn--success"
-                            style={{ padding: '8px', borderRadius: '10px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-                            disabled={actionLoading === s.id + '_approve'}
-                            onClick={() => handleApprove(s.id)}
-                            title="Aprobar Suscripción"
-                          >
-                            {actionLoading === s.id + '_approve' ? <Loader2 className="spin" size={14} /> : <Check size={14} />}
-                          </button>
-                          <button
-                            className="btn btn--danger"
-                            style={{ padding: '8px', borderRadius: '10px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-                            disabled={actionLoading === s.id + '_reject'}
-                            onClick={() => handleReject(s.id)}
-                            title="Rechazar y Eliminar"
-                          >
-                            {actionLoading === s.id + '_reject' ? <Loader2 className="spin" size={14} /> : <Trash2 size={14} />}
-                          </button>
-                        </div>
-                      )}
-                      {s.status !== 'pending' && <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>—</span>}
-                    </td>
+        <div className="empty-state"><div className="empty-icon"><CreditCard size={40} /></div><p>No hay suscripciones<        <>
+          {/* Desktop Table View */}
+          <div className="subs-desktop-view">
+            <div className="subs-table-container">
+              <table className="subs-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Usuario</th>
+                    <th>Plan</th>
+                    <th>Estado</th>
+                    <th>Método</th>
+                    <th>Comprobante</th>
+                    <th>Fecha</th>
+                    <th style={{ textAlign: 'right' }}>Acciones</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {paginatedItems.map(s => (
+                    <tr key={s.id}>
+                      <td style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{s.id}</td>
+                      <td>{renderUserCell(s.user)}</td>
+                      <td style={{ fontWeight: 600 }}>{s.plan?.name || s.plan_id || '—'}</td>
+                      <td>
+                        <span className={`badge-status badge-status--${s.status}`}>
+                          <span className={`badge-status-dot badge-status-dot--${s.status}`} />
+                          {STATUS_LABELS[s.status] || s.status}
+                        </span>
+                      </td>
+                      <td>
+                        <span className="badge badge--blue" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, margin: 0 }}>
+                          {s.payment_method === 'transfer' ? (
+                            <>
+                              <Building size={12} />
+                              <span>Transferencia</span>
+                            </>
+                          ) : s.payment_method || '—'}
+                        </span>
+                      </td>
+                      <td>
+                        {getReceiptUrl(s) ? (
+                          <button 
+                            type="button"
+                            className="btn btn--secondary" 
+                            style={{ padding: '6px 12px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4, minHeight: 'auto' }}
+                            onClick={() => setReceiptModal(s)}
+                          >
+                            <Eye size={12} />
+                            <span>Ver comprobante</span>
+                          </button>
+                        ) : <span style={{ color: 'var(--text-secondary)' }}>—</span>}
+                      </td>
+                      <td style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
+                        {s.created_at ? new Date(s.created_at).toLocaleDateString('es-MX') : '—'}
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        {s.status === 'pending' ? (
+                          <div style={{ display: 'inline-flex', gap: 8 }}>
+                            <button
+                              type="button"
+                              className="btn btn--success"
+                              style={{ padding: '8px', borderRadius: '8px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: 34 }}
+                              disabled={actionLoading === s.id + '_approve'}
+                              onClick={() => handleApprove(s.id)}
+                              title="Aprobar Suscripción"
+                            >
+                              {actionLoading === s.id + '_approve' ? <Loader2 className="spin" size={14} /> : <Check size={14} />}
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn--danger"
+                              style={{ padding: '8px', borderRadius: '8px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: 34 }}
+                              disabled={actionLoading === s.id + '_reject'}
+                              onClick={() => handleReject(s.id)}
+                              title="Rechazar y Eliminar"
+                            >
+                              {actionLoading === s.id + '_reject' ? <Loader2 className="spin" size={14} /> : <Trash2 size={14} />}
+                            </button>
+                          </div>
+                        ) : (
+                          <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>—</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Mobile Cards View */}
+          <div className="subs-mobile-view">
+            <div className="mobile-subs-grid">
+              {paginatedItems.map(s => (
+                <div className="sub-mobile-card" key={s.id}>
+                  {/* Card Header with User Profile */}
+                  <div style={{ borderBottom: '1px solid var(--border)', paddingBottom: '12px' }}>
+                    {renderUserCell(s.user)}
+                  </div>
+
+                  {/* Card details */}
+                  <div className="sub-mobile-card-details">
+                    <div className="sub-mobile-card-row">
+                      <span className="sub-mobile-card-label">
+                        <Tag size={13} style={{ opacity: 0.7 }} />
+                        <span>Suscripción ID</span>
+                      </span>
+                      <span className="sub-mobile-card-val" style={{ color: 'var(--text-secondary)' }}>
+                        #{s.id}
+                      </span>
+                    </div>
+
+                    <div className="sub-mobile-card-row">
+                      <span className="sub-mobile-card-label">
+                        <Layers size={13} style={{ opacity: 0.7 }} />
+                        <span>Plan</span>
+                      </span>
+                      <span className="sub-mobile-card-val">
+                        {s.plan?.name || s.plan_id || '—'}
+                      </span>
+                    </div>
+
+                    <div className="sub-mobile-card-row">
+                      <span className="sub-mobile-card-label">
+                        <Building size={13} style={{ opacity: 0.7 }} />
+                        <span>Método</span>
+                      </span>
+                      <span className="sub-mobile-card-val" style={{ fontSize: '12px' }}>
+                        {s.payment_method === 'transfer' ? 'Transferencia' : s.payment_method || '—'}
+                      </span>
+                    </div>
+
+                    <div className="sub-mobile-card-row">
+                      <span className="sub-mobile-card-label">
+                        <Calendar size={13} style={{ opacity: 0.7 }} />
+                        <span>Fecha</span>
+                      </span>
+                      <span className="sub-mobile-card-val">
+                        {s.created_at ? new Date(s.created_at).toLocaleDateString('es-MX') : '—'}
+                      </span>
+                    </div>
+
+                    <div className="sub-mobile-card-row">
+                      <span className="sub-mobile-card-label">
+                        <CheckCircle2 size={13} style={{ opacity: 0.7 }} />
+                        <span>Estado</span>
+                      </span>
+                      <span className="sub-mobile-card-val">
+                        <span className={`badge-status badge-status--${s.status}`}>
+                          <span className={`badge-status-dot badge-status-dot--${s.status}`} />
+                          {STATUS_LABELS[s.status] || s.status}
+                        </span>
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Receipt & Validation actions */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {getReceiptUrl(s) && (
+                      <button 
+                        type="button"
+                        className="btn btn--secondary" 
+                        style={{ width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 38 }}
+                        onClick={() => setReceiptModal(s)}
+                      >
+                        <Eye size={14} />
+                        <span>Ver comprobante</span>
+                      </button>
+                    )}
+
+                    {s.status === 'pending' && (
+                      <div className="sub-mobile-card-actions">
+                        <button
+                          type="button"
+                          className="btn-sub-mobile btn-sub-mobile--approve"
+                          disabled={actionLoading === s.id + '_approve'}
+                          onClick={() => handleApprove(s.id)}
+                        >
+                          {actionLoading === s.id + '_approve' ? <Loader2 className="spin" size={14} /> : <Check size={14} />}
+                          <span>Aprobar</span>
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-sub-mobile btn-sub-mobile--reject"
+                          disabled={actionLoading === s.id + '_reject'}
+                          onClick={() => handleReject(s.id)}
+                        >
+                          {actionLoading === s.id + '_reject' ? <Loader2 className="spin" size={14} /> : <Trash2 size={14} />}
+                          <span>Rechazar</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Pagination Controls */}
           {filtered.length > 0 && (
             <div className="pagination">
               <button 
+                type="button"
                 className="btn btn--secondary" 
                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                 disabled={currentPage === 1}
@@ -231,6 +409,7 @@ export default function Subscriptions() {
               </button>
               <span className="pagination-info">Página {currentPage} de {totalPages || 1}</span>
               <button 
+                type="button"
                 className="btn btn--secondary" 
                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                 disabled={currentPage === totalPages || totalPages === 0}
@@ -281,14 +460,8 @@ export default function Subscriptions() {
               <div className="modal-split-details">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                   {/* User info */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border)', flexShrink: 0 }}>
-                      <User size={20} style={{ color: 'var(--primary)' }} />
-                    </div>
-                    <div>
-                      <div style={{ fontWeight: 700, color: 'var(--text)' }}>{receiptModal.user?.name || '—'}</div>
-                      <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{receiptModal.user?.email}</div>
-                    </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid var(--border)', paddingBottom: '14px' }}>
+                    {renderUserCell(receiptModal.user)}
                   </div>
 
                   {/* Bubble Note */}
@@ -300,11 +473,11 @@ export default function Subscriptions() {
                   <div className="verification-info-card">
                     <div className="info-row">
                       <span className="info-label">Plan Solicitado</span>
-                      <span className="info-value" style={{ color: 'var(--primary)' }}>{receiptModal.plan?.name || '—'}</span>
+                      <span className="info-value" style={{ color: 'var(--primary)', fontWeight: 700 }}>{receiptModal.plan?.name || '—'}</span>
                     </div>
                     <div className="info-row">
                       <span className="info-label">Precio</span>
-                      <span className="info-value" style={{ color: 'var(--success)' }}>${Number(receiptModal.price || receiptModal.plan?.price || 0).toFixed(2)}</span>
+                      <span className="info-value" style={{ color: 'var(--success)', fontWeight: 700 }}>${Number(receiptModal.price || receiptModal.plan?.price || 0).toFixed(2)}</span>
                     </div>
                     <div className="info-row">
                       <span className="info-label">Método Pago</span>
@@ -323,7 +496,8 @@ export default function Subscriptions() {
                     </div>
                     <div className="info-row">
                       <span className="info-label">Estado</span>
-                      <span className={`badge badge--${STATUS_BADGE[receiptModal.status] || 'gray'}`}>
+                      <span className={`badge-status badge-status--${receiptModal.status}`} style={{ margin: 0 }}>
+                        <span className={`badge-status-dot badge-status-dot--${receiptModal.status}`} />
                         {STATUS_LABELS[receiptModal.status] || receiptModal.status}
                       </span>
                     </div>
