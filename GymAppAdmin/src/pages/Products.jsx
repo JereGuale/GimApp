@@ -14,8 +14,6 @@ import {
   FileText,
   Image as ImageIcon,
   MoreVertical,
-  Eye,
-  Copy,
   Tag,
   DollarSign,
   Layers,
@@ -54,8 +52,6 @@ export default function Products() {
 
   // Redesign UI States
   const [activeDropdown, setActiveDropdown] = useState(null);
-  const [viewProduct, setViewProduct] = useState(null);
-  const [viewerActiveImageIdx, setViewerActiveImageIdx] = useState(0);
 
   const toggleFeatured = async (product) => {
     const token = localStorage.getItem('admin_token');
@@ -196,57 +192,6 @@ export default function Products() {
       imgList = [p.image];
     }
     return imgList.map(img => getProductImageUrlString(img)).filter(Boolean);
-  };
-
-  const handleDuplicate = (p) => {
-    try {
-      setError('');
-      setSuccess('');
-      
-      setEditId(null);
-      setName(p.name ? `${p.name} (Copia)` : 'Producto Copia');
-      setPrice(p.price || '');
-      setDescription(p.description || '');
-      setCategoryId(p.category_id || '');
-      setIsFeatured(!!p.is_featured);
-      setCondition(p.condition || 'nuevo');
-      setStock(p.stock !== null && p.stock !== undefined ? String(p.stock) : '');
-      setImageFiles([]);
-      
-      let currentImages = [];
-      if (p.images) {
-        if (Array.isArray(p.images)) {
-          currentImages = p.images;
-        } else if (typeof p.images === 'string') {
-          try {
-            const parsed = JSON.parse(p.images);
-            currentImages = Array.isArray(parsed) ? parsed : [p.images];
-          } catch (e) {
-            currentImages = [p.images];
-          }
-        } else {
-          currentImages = [p.images];
-        }
-      }
-      
-      if (currentImages.length === 0 && p.image) {
-        currentImages = [p.image];
-      }
-
-      const sanitizedImages = currentImages
-        .map(img => {
-          if (!img) return '';
-          if (typeof img === 'object') return img.image_url || img.image_path || '';
-          return String(img);
-        })
-        .filter(img => img !== '');
-      
-      setExistingImages(sanitizedImages);
-      setModalOpen(true);
-    } catch (err) {
-      console.error('Error in handleDuplicate:', err);
-      setError('No se pudo duplicar el producto: ' + err.message);
-    }
   };
 
 
@@ -588,37 +533,12 @@ export default function Products() {
                                 type="button"
                                 className="actions-dropdown-item"
                                 onClick={() => {
-                                  setViewProduct(p);
-                                  setViewerActiveImageIdx(0);
-                                  setActiveDropdown(null);
-                                }}
-                              >
-                                <Eye size={14} />
-                                <span>Ver detalles</span>
-                              </button>
-                              
-                              <button 
-                                type="button"
-                                className="actions-dropdown-item"
-                                onClick={() => {
                                   handleOpenEdit(p);
                                   setActiveDropdown(null);
                                 }}
                               >
                                 <Pencil size={14} />
                                 <span>Editar producto</span>
-                              </button>
-
-                              <button 
-                                type="button"
-                                className="actions-dropdown-item"
-                                onClick={() => {
-                                  handleDuplicate(p);
-                                  setActiveDropdown(null);
-                                }}
-                              >
-                                <Copy size={14} />
-                                <span>Duplicar</span>
                               </button>
                               
                               <button 
@@ -692,25 +612,14 @@ export default function Products() {
                             type="button"
                             className="actions-dropdown-item"
                             onClick={() => {
-                              setViewProduct(p);
-                              setViewerActiveImageIdx(0);
+                              handleOpenEdit(p);
                               setActiveDropdown(null);
                             }}
                           >
-                            <Eye size={14} />
-                            <span>Ver detalles</span>
+                            <Pencil size={14} />
+                            <span>Editar producto</span>
                           </button>
-                          <button 
-                            type="button"
-                            className="actions-dropdown-item"
-                            onClick={() => {
-                              handleDuplicate(p);
-                              setActiveDropdown(null);
-                            }}
-                          >
-                            <Copy size={14} />
-                            <span>Duplicar</span>
-                          </button>
+                          
                           <button 
                             type="button"
                             className="actions-dropdown-item"
@@ -721,6 +630,20 @@ export default function Products() {
                           >
                             <Star size={14} />
                             <span>{p.is_featured ? 'Quitar destacado' : 'Destacar'}</span>
+                          </button>
+
+                          <div style={{ height: '1px', background: 'var(--border)', margin: '4px 0' }} />
+
+                          <button 
+                            type="button"
+                            className="actions-dropdown-item actions-dropdown-item--danger"
+                            onClick={() => {
+                              handleDelete(p);
+                              setActiveDropdown(null);
+                            }}
+                          >
+                            <Trash2 size={14} />
+                            <span>Eliminar</span>
                           </button>
                         </div>
                       )}
@@ -775,25 +698,6 @@ export default function Products() {
                         )}
                       </span>
                     </div>
-                  </div>
-                  
-                  <div className="product-mobile-card-actions">
-                    <button 
-                      type="button"
-                      className="btn-mobile-action btn-mobile-action--edit"
-                      onClick={() => handleOpenEdit(p)}
-                    >
-                      <Pencil size={14} />
-                      <span>Editar</span>
-                    </button>
-                    <button 
-                      type="button"
-                      className="btn-mobile-action btn-mobile-action--delete"
-                      onClick={() => handleDelete(p)}
-                    >
-                      <Trash2 size={14} />
-                      <span>Eliminar</span>
-                    </button>
                   </div>
                 </div>
               ))}
@@ -1078,136 +982,6 @@ export default function Products() {
                 }}
               >
                 Confirmar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Product Viewer Modal */}
-      {viewProduct && (
-        <div className="modal-overlay" onClick={() => setViewProduct(null)}>
-          <div className="modal" style={{ maxWidth: 700, padding: 0, borderRadius: '16px', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
-            {/* Header */}
-            <div style={{ display: 'flex', gap: 16, alignItems: 'center', padding: '24px 28px', borderBottom: '1px solid var(--border)', background: 'var(--card)' }}>
-              <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', flexShrink: 0 }}>
-                <Eye size={20} />
-              </div>
-              <div style={{ flex: 1 }}>
-                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--text)' }}>
-                  Detalles del producto
-                </h3>
-                <p style={{ margin: '4px 0 0 0', fontSize: 13, color: 'var(--text-secondary)' }}>
-                  Información técnica y visual de tu inventario.
-                </p>
-              </div>
-              <button type="button" className="btn btn--ghost" style={{ padding: 6, borderRadius: '50%' }} onClick={() => setViewProduct(null)}><X size={18} /></button>
-            </div>
-
-            {/* Body */}
-            <div className="viewer-details-grid">
-              {/* Left Column: Images */}
-              <div className="viewer-image-container">
-                {getProductImageUrls(viewProduct).length > 0 ? (
-                  <>
-                    <img 
-                      src={getProductImageUrls(viewProduct)[viewerActiveImageIdx] || getProductImageUrls(viewProduct)[0]} 
-                      alt={viewProduct.name} 
-                      className="viewer-main-img" 
-                    />
-                    {getProductImageUrls(viewProduct).length > 1 && (
-                      <div className="viewer-thumb-gallery">
-                        {getProductImageUrls(viewProduct).map((url, idx) => (
-                          <img 
-                            key={`viewer-thumb-${idx}`}
-                            src={url}
-                            alt=""
-                            className={`viewer-thumb-img ${viewerActiveImageIdx === idx ? 'active' : ''}`}
-                            onClick={() => setViewerActiveImageIdx(idx)}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <div className="viewer-main-img" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', opacity: 0.5, border: '1px solid var(--border)' }}>
-                    <Package size={64} />
-                  </div>
-                )}
-              </div>
-
-              {/* Right Column: Metadata */}
-              <div className="viewer-info-pane">
-                <div className="viewer-title-section">
-                  <span className="viewer-category-tag">
-                    {categories.find(c => c.id === viewProduct.category_id)?.name || 'Sin Categoría'}
-                  </span>
-                  <h2 className="viewer-product-name">{viewProduct.name}</h2>
-                  <div className="viewer-price-badge">
-                    ${Number(viewProduct.price).toFixed(2)}
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  {getStatusBadge(viewProduct)}
-                  {viewProduct.is_featured ? (
-                    <span className="badge-status badge-status--featured" style={{ gap: 4 }}>
-                      <Star size={12} fill="currentColor" /> Destacado
-                    </span>
-                  ) : null}
-                  <span className="badge-status badge-status--inactive" style={{ textTransform: 'uppercase' }}>
-                    Condición: {viewProduct.condition || 'nuevo'}
-                  </span>
-                </div>
-
-                {viewProduct.description ? (
-                  <div>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Descripción</div>
-                    <div className="viewer-description-box">
-                      {viewProduct.description}
-                    </div>
-                  </div>
-                ) : (
-                  <div style={{ fontStyle: 'italic', fontSize: 13, color: 'var(--text-secondary)' }}>Sin descripción disponible</div>
-                )}
-
-                <div className="viewer-metadata-grid">
-                  <div className="viewer-meta-item">
-                    <span className="viewer-meta-label">Stock disponible</span>
-                    <span className="viewer-meta-value">
-                      {viewProduct.stock !== null && viewProduct.stock !== undefined ? `${viewProduct.stock} Unidades` : 'Ilimitado'}
-                    </span>
-                  </div>
-                  <div className="viewer-meta-item">
-                    <span className="viewer-meta-label">Fecha de registro</span>
-                    <span className="viewer-meta-value">
-                      {formatDate(viewProduct.created_at)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, padding: '20px 28px', borderTop: '1px solid var(--border)', background: 'var(--card)' }}>
-              <button 
-                type="button" 
-                className="btn btn--secondary" 
-                onClick={() => setViewProduct(null)}
-              >
-                Cerrar
-              </button>
-              <button 
-                type="button" 
-                className="btn btn--primary" 
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
-                onClick={() => {
-                  handleOpenEdit(viewProduct);
-                  setViewProduct(null);
-                }}
-              >
-                <Pencil size={16} />
-                <span>Editar Producto</span>
               </button>
             </div>
           </div>
