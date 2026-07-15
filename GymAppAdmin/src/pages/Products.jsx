@@ -30,8 +30,8 @@ export default function Products() {
   const [categoryId, setCategoryId] = useState('');
   const [isFeatured, setIsFeatured] = useState(false);
   const [condition, setCondition] = useState('nuevo');
-  const [stock, setStock] = useState('');
   const [imageFiles, setImageFiles] = useState([]); // Support multiple files array
+  const [existingImages, setExistingImages] = useState([]); // Support tracking existing images list
 
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -78,6 +78,7 @@ export default function Products() {
     setCondition('nuevo');
     setStock('');
     setImageFiles([]);
+    setExistingImages([]);
     setError('');
     setSuccess('');
     setModalOpen(true);
@@ -93,6 +94,12 @@ export default function Products() {
     setCondition(p.condition || 'nuevo');
     setStock(p.stock !== null && p.stock !== undefined ? String(p.stock) : '');
     setImageFiles([]);
+    
+    const currentImages = p.images && p.images.length > 0 
+      ? p.images 
+      : (p.image ? [p.image] : []);
+    setExistingImages(currentImages);
+
     setError('');
     setSuccess('');
     setModalOpen(true);
@@ -126,6 +133,13 @@ export default function Products() {
     formData.append('condition', condition);
     if (stock !== '') {
       formData.append('stock', parseInt(stock) || 0);
+    }
+
+    // Append remaining existing images
+    if (existingImages && existingImages.length > 0) {
+      existingImages.forEach(url => {
+        formData.append('images[]', url);
+      });
     }
 
     // Append multiple files correctly under images[]
@@ -484,36 +498,40 @@ export default function Products() {
                     ))}
 
                     {/* Render existing images from server */}
-                    {imageFiles.length === 0 && editId && (() => {
-                      const p = products.find(prod => prod.id === editId);
-                      if (!p) return null;
-                      
-                      const existingUrls = p.images && p.images.length > 0 
-                        ? p.images 
-                        : (p.image ? [p.image] : []);
-                        
-                      if (existingUrls.length === 0) return null;
-                      
-                      return existingUrls.map((url, idx) => {
-                        const resolvedUrl = getProductImageUrlString(url);
-                        return (
-                          <div key={`exist-img-${idx}`} style={{ display: 'flex', gap: 16, alignItems: 'center', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px', background: 'var(--bg)', marginBottom: 8 }}>
-                            <img 
-                              src={resolvedUrl} 
-                              style={{ width: 60, height: 60, borderRadius: '8px', objectFit: 'cover', border: '1px solid var(--border)' }} 
-                            />
-                            <div style={{ flex: 1 }}>
-                              <div style={{ fontWeight: 600, color: 'var(--text)', fontSize: 13, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: 280 }}>
-                                Imagen guardada {idx + 1}
+                    {editId && existingImages.length > 0 && (
+                      <div>
+                        {existingImages.map((url, idx) => {
+                          const resolvedUrl = getProductImageUrlString(url);
+                          return (
+                            <div key={`exist-img-${idx}`} style={{ display: 'flex', gap: 16, alignItems: 'center', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px', background: 'var(--bg)', marginBottom: 8 }}>
+                              <img 
+                                src={resolvedUrl} 
+                                style={{ width: 60, height: 60, borderRadius: '8px', objectFit: 'cover', border: '1px solid var(--border)' }} 
+                              />
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontWeight: 600, color: 'var(--text)', fontSize: 13, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: 280 }}>
+                                  Imagen guardada {idx + 1}
+                                </div>
+                                <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+                                  Conservando imagen actual
+                                </div>
                               </div>
-                              <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
-                                Conservando imagen actual
-                              </div>
+                              <button 
+                                type="button" 
+                                className="btn btn--ghost" 
+                                style={{ padding: 6, borderRadius: '50%', color: 'var(--danger-text)' }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setExistingImages(prev => prev.filter((_, i) => i !== idx));
+                                }}
+                              >
+                                <X size={16} />
+                              </button>
                             </div>
-                          </div>
-                        );
-                      });
-                    })()}
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
 
                 </div>

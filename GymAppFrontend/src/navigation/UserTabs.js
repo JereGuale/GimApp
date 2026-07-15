@@ -11,6 +11,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useCart } from '../context/CartContext';
 import { RoleGuard } from '../components/RoleGuard';
 import { useAuth } from '../context/AuthContext';
+import { useResponsive } from '../hooks/useResponsive';
 
 const Tab = createBottomTabNavigator();
 
@@ -18,6 +19,9 @@ export default function UserTabs() {
   const { theme, toggleTheme } = useTheme();
   const { totalItems } = useCart();
   const { user } = useAuth();
+  const { isSmallScreen } = useResponsive();
+  const isDesktop = !isSmallScreen;
+  
   // Lógica para mostrar la foto de perfil
   const BASE_URL = API_URL.replace('/api', '');
 
@@ -103,7 +107,23 @@ export default function UserTabs() {
               </TouchableOpacity>
             </View>
           ),
-          tabBarStyle: {
+          tabBarStyle: isDesktop ? {
+            backgroundColor: theme.colors.surface,
+            borderColor: theme.colors.border,
+            borderWidth: 1,
+            borderRadius: 30,
+            height: 60,
+            paddingBottom: 8,
+            position: 'absolute',
+            bottom: 16,
+            alignSelf: 'center',
+            width: 380,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.08,
+            shadowRadius: 10,
+            elevation: 4
+          } : {
             backgroundColor: theme.colors.surface,
             borderTopColor: theme.colors.border,
             height: 60,

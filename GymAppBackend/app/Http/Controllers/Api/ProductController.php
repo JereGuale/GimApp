@@ -104,7 +104,7 @@ class ProductController extends Controller
                 }
                 if (!$url) {
                     $path = $image->storeAs('products', $fileName, 'public');
-                    $appUrl = rtrim(config('app.url', 'https://gimapp.onrender.com'), '/');
+                    $appUrl = rtrim(request()->getSchemeAndHttpHost(), '/');
                     $url = $appUrl . '/storage/' . $path;
                 }
                 $imageUrls[] = $url;
@@ -186,6 +186,15 @@ class ProductController extends Controller
             'images_raw' => $request->input('images')
         ]);
 
+        $existingUrls = [];
+        if ($request->has('images') && is_array($request->input('images'))) {
+            foreach ($request->input('images') as $img) {
+                if (is_string($img) && str_starts_with($img, 'http')) {
+                    $existingUrls[] = $img;
+                }
+            }
+        }
+
         if ($request->hasFile('images')) {
             $files = $request->file('images');
             Log::info('Processing updated files', ['count' => count($files)]);
@@ -193,7 +202,7 @@ class ProductController extends Controller
             if (!$supabase->isConfigured()) {
                 Log::warning('Supabase is NOT configured for update. Fallback used.');
             }
-            $imageUrls = [];
+            $newUrls = [];
             foreach ($files as $idx => $image) {
                 $ext = $image->getClientOriginalExtension() ?: 'jpg';
                 $fileName = 'product_' . time() . '_' . $idx . '_' . uniqid() . '.' . $ext;
@@ -204,39 +213,25 @@ class ProductController extends Controller
                 }
                 if (!$url) {
                     $path = $image->storeAs('products', $fileName, 'public');
-                    $appUrl = rtrim(config('app.url', 'https://gimapp.onrender.com'), '/');
+                    $appUrl = rtrim(request()->getSchemeAndHttpHost(), '/');
                     $url = $appUrl . '/storage/' . $path;
                 }
-                $imageUrls[] = $url;
+                $newUrls[] = $url;
             }
+            $imageUrls = array_merge($existingUrls, $newUrls);
             $validated['image'] = $imageUrls[0] ?? $product->image;
             $validated['images'] = $imageUrls;
         }
-        elseif ($request->has('images') && is_array($request->images)) {
-            Log::info('Updating with existing images array', ['count' => count($request->images)]);
-            $imageUrls = [];
-            foreach ($request->images as $idx => $img) {
-                if (is_string($img) && str_starts_with($img, 'data:image')) {
-                    $url = $this->uploadImage($img, $idx);
-                    if ($url)
-                        $imageUrls[] = $url;
-                }
-                elseif (is_string($img) && str_starts_with($img, 'http')) {
-                    $imageUrls[] = $img;
-                }
-            }
-            if (!empty($imageUrls)) {
-                $validated['image'] = $imageUrls[0];
-                $validated['images'] = $imageUrls;
-            }
-            else if (count($request->images) > 0) {
-                Log::error('Product update failed: Images array sent but no valid URLs/Base64 found.');
-                return response()->json([
-                    'message' => 'Error: No se pudieron procesar las imágenes enviadas.',
-                    'debug' => ['received_count' => count($request->images)]
-                ], 422);
-            }
+        elseif (!empty($existingUrls)) {
+            Log::info('Updating only with remaining existing images', ['count' => count($existingUrls)]);
+            $validated['image'] = $existingUrls[0];
+            $validated['images'] = $existingUrls;
         }
+        elseif ($request->has('images') && empty($existingUrls)) {
+            // If they explicitly sent an empty images list, clear them
+            $validated['image'] = 'https://via.placeholder.com/400x400?text=No+Image';
+            $validated['images'] = null;
+        }   }
 
         $product->update($validated);
         $product->image_url = $product->image_url;
