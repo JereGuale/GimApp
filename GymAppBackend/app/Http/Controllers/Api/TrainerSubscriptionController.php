@@ -134,6 +134,13 @@ class TrainerSubscriptionController extends Controller
 
         $plan = \App\Models\SubscriptionPlan::findOrFail($request->subscription_plan_id);
 
+        $duration = $plan->duration ?? 'monthly';
+        $months = 1;
+        if ($duration === 'quarterly') { $months = 3; }
+        elseif ($duration === 'semiannual') { $months = 6; }
+        elseif ($duration === 'annual' || $duration === 'yearly') { $months = 12; }
+        elseif (is_numeric($duration)) { $months = (int)$duration; }
+
         $subscription = Subscription::create([
             'user_id' => $request->user_id,
             'subscription_plan_id' => $plan->id,
@@ -143,7 +150,7 @@ class TrainerSubscriptionController extends Controller
             'approved_by' => $request->user()->id,
             'approved_at' => now(),
             'starts_at' => now(),
-            'ends_at' => now()->addDays(30) // 30 días de duración
+            'ends_at' => now()->addMonths($months)
         ]);
 
         return response()->json([
@@ -159,8 +166,7 @@ class TrainerSubscriptionController extends Controller
     {
         $subscription = Subscription::findOrFail($id);
         
-        $plan = $subscription->plan;
-        $durationMonths = $plan ? ($plan->duration ?? 1) : 1;
+        $durationMonths = $subscription->getDurationMonths();
 
         // If the subscription is active and has not expired yet, extend from ends_at. Otherwise, starts from now.
         $baseDate = ($subscription->status === 'active' && $subscription->ends_at && $subscription->ends_at->isFuture()) 

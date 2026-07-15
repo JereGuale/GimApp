@@ -74,9 +74,16 @@ class SubscriptionController extends Controller
                 'card_name' => $request->card_name,
                 'expiry' => $request->card_expiry
             ]);
+            $duration = $plan->duration ?? 'monthly';
+            $months = 1;
+            if ($duration === 'quarterly') { $months = 3; }
+            elseif ($duration === 'semiannual') { $months = 6; }
+            elseif ($duration === 'annual' || $duration === 'yearly') { $months = 12; }
+            elseif (is_numeric($duration)) { $months = (int)$duration; }
+
             $subscriptionData['status'] = 'active';
             $subscriptionData['starts_at'] = now();
-            $subscriptionData['ends_at'] = now()->addMonths($plan->duration ?? 1);
+            $subscriptionData['ends_at'] = now()->addMonths($months);
             $subscriptionData['approved_at'] = now();
         }
         else {

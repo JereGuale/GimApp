@@ -65,6 +65,24 @@ class Subscription extends Model
     }
 
     // Helper methods
+    public function getDurationMonths()
+    {
+        $duration = $this->plan ? $this->plan->duration : 'monthly';
+        if ($duration === 'quarterly') {
+            return 3;
+        }
+        if ($duration === 'semiannual') {
+            return 6;
+        }
+        if ($duration === 'annual' || $duration === 'yearly') {
+            return 12;
+        }
+        if (is_numeric($duration)) {
+            return (int)$duration;
+        }
+        return 1; // default to 1 month for 'monthly' or fallback
+    }
+
     public function approve($approverId)
     {
         $this->update([
@@ -72,7 +90,7 @@ class Subscription extends Model
             'approved_by' => $approverId,
             'approved_at' => now(),
             'starts_at' => now(),
-            'ends_at' => now()->addMonths($this->plan->duration ?? 1)
+            'ends_at' => now()->addMonths($this->getDurationMonths())
         ]);
     }
 
