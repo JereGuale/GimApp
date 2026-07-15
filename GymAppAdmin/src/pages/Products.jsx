@@ -183,10 +183,13 @@ export default function Products() {
       {success && <div className="alert alert--success"><CheckCircle2 size={16} /> <span>{success}</span></div>}
 
       <div className="page-header">
-        <h2>Inventario de Productos</h2>
+        <div>
+          <h2 style={{ margin: 0 }}>Productos</h2>
+          <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: 'var(--text-secondary)' }}>Gestiona tu catálogo de productos</p>
+        </div>
         <button className="btn btn--primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={handleOpenAdd}>
           <Plus size={16} />
-          <span>Nuevo Producto</span>
+          <span>Agregar producto</span>
         </button>
       </div>
 
@@ -205,7 +208,7 @@ export default function Products() {
             {paginatedProducts.map(p => (
               <div key={p.id} style={{
                 background: 'var(--card)',
-                borderRadius: '12px',
+                borderRadius: '16px',
                 overflow: 'hidden',
                 border: '1px solid var(--border)',
                 display: 'flex',
@@ -214,19 +217,45 @@ export default function Products() {
                 boxShadow: 'var(--shadow-sm)',
                 transition: 'all 0.2s ease'
               }}>
-                {/* Badges */}
-                <div style={{ position: 'absolute', top: '12px', left: '12px', display: 'flex', gap: '8px', zIndex: 1 }}>
-                  {p.is_featured ? (
-                    <span style={{ background: '#eab308', color: '#111827', fontWeight: 'bold', fontSize: '11px', padding: '4px 8px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: 2 }}>
-                      <Star size={10} fill="#111827" />
+                {/* Featured Badge (Top Left of Image) */}
+                {p.is_featured && (
+                  <div style={{ position: 'absolute', top: '12px', left: '12px', zIndex: 2 }}>
+                    <span style={{ background: '#d97706', color: '#fff', fontWeight: 'bold', fontSize: '11px', padding: '4px 8px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                      <Star size={10} fill="#fff" />
                       <span>Destacado</span>
                     </span>
-                  ) : null}
-                  <span style={{ background: p.condition === 'nuevo' ? 'var(--success)' : '#4b5563', color: '#fff', fontWeight: 'bold', fontSize: '11px', padding: '4px 8px', borderRadius: '6px', textTransform: 'capitalize' }}>{p.condition}</span>
+                  </div>
+                )}
+
+                {/* Stock Badge (Top Right of Image) */}
+                <div style={{ position: 'absolute', top: '12px', right: '12px', zIndex: 2 }}>
+                  {p.stock !== null && p.stock !== undefined ? (
+                    <span style={{ 
+                      background: p.stock > 0 ? '#10b981' : '#ef4444', 
+                      color: '#fff', 
+                      fontWeight: 'bold', 
+                      fontSize: '11px', 
+                      padding: '4px 8px', 
+                      borderRadius: '6px' 
+                    }}>
+                      {p.stock} Uds
+                    </span>
+                  ) : (
+                    <span style={{ 
+                      background: '#3b82f6', 
+                      color: '#fff', 
+                      fontWeight: 'bold', 
+                      fontSize: '11px', 
+                      padding: '4px 8px', 
+                      borderRadius: '6px' 
+                    }}>
+                      Ilimitado
+                    </span>
+                  )}
                 </div>
 
                 {/* Image Container */}
-                <div style={{ height: '200px', background: 'var(--bg)', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid var(--border)' }}>
+                <div style={{ height: '220px', background: '#f8fafc', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid var(--border)' }}>
                   {getProductImage(p) ? (
                     <img src={getProductImage(p)} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : (
@@ -237,43 +266,29 @@ export default function Products() {
                 </div>
 
                 {/* Body Content */}
-                <div style={{ padding: '16px', flex: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                      {categories.find(c => c.id === p.category_id)?.name || 'Sin Categoría'}
-                    </div>
-                    <h3 style={{ fontSize: '17px', fontWeight: 'bold', color: 'var(--text)', margin: '4px 0 8px 0', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{p.name}</h3>
-                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.5', height: '60px', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', margin: 0 }}>
-                      {p.description || 'Sin descripción disponible.'}
-                    </p>
+                <div style={{ padding: '16px 20px 20px 20px', flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    {categories.find(c => c.id === p.category_id)?.name || 'Sin Categoría'}
+                  </div>
+                  <h3 style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text)', margin: '4px 0 0 0', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                    {p.name}
+                  </h3>
+                  <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.4', height: '40px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', margin: '4px 0 0 0' }}>
+                    {p.description || 'Sin descripción disponible.'}
+                  </p>
+                  
+                  <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text)', margin: '8px 0 0 0' }}>
+                    ${Number(p.price).toFixed(2)}
                   </div>
 
-                  {/* Price and Stock Row */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
-                    <div>
-                      <span style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'block' }}>Precio</span>
-                      <span style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--success)' }}>${Number(p.price).toFixed(2)}</span>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <span style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'block', marginBottom: '2px' }}>Stock</span>
-                      {p.stock !== null && p.stock !== undefined ? (
-                        <span className={`badge badge--${p.stock > 0 ? 'green' : 'red'}`} style={{ display: 'inline-block', margin: 0 }}>
-                          {p.stock} uds
-                        </span>
-                      ) : (
-                        <span style={{ color: 'var(--text-secondary)', fontSize: '13px', fontWeight: 600 }}>Ilimitado</span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Card Actions */}
-                  <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                    <button className="btn btn--ghost" style={{ flex: 1, padding: '8px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4 }} onClick={() => handleOpenEdit(p)}>
-                      <Pencil size={12} />
+                  {/* Card Actions (Editar / Eliminar) */}
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+                    <button className="btn btn--secondary" style={{ flex: 1, padding: '8px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontWeight: 500 }} onClick={() => handleOpenEdit(p)}>
+                      <Pencil size={13} />
                       <span>Editar</span>
                     </button>
-                    <button className="btn btn--danger" style={{ flex: 1, padding: '8px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4 }} onClick={() => handleDelete(p)}>
-                      <Trash2 size={12} />
+                    <button className="btn btn--danger" style={{ flex: 1, padding: '8px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontWeight: 500 }} onClick={() => handleDelete(p)}>
+                      <Trash2 size={13} />
                       <span>Eliminar</span>
                     </button>
                   </div>
