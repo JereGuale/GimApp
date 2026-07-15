@@ -12,9 +12,12 @@ import {
   X,
   Check,
   FileText,
-  Image as ImageIcon
+  Image as ImageIcon,
+  MoreVertical,
+  Eye
 } from 'lucide-react';
 import '../components/Layout.css';
+import './Products.css';
 
 export default function Products() {
   const [products, setProducts] = useState([]);
@@ -43,6 +46,137 @@ export default function Products() {
 
   // Custom Confirmation Modal State
   const [confirmModal, setConfirmModal] = useState(null);
+
+  // Redesign UI States
+  const [activeDropdown, setActiveDropdown] = useState(null);
+  const [viewProduct, setViewProduct] = useState(null);
+  const [viewerActiveImageIdx, setViewerActiveImageIdx] = useState(0);
+
+  const toggleFeatured = async (product) => {
+    const token = localStorage.getItem('admin_token');
+    const formData = new FormData();
+    formData.append('_method', 'PUT');
+    formData.append('name', product.name);
+    formData.append('price', product.price);
+    formData.append('category_id', product.category_id);
+    formData.append('is_featured', product.is_featured ? '0' : '1');
+    if (product.description) formData.append('description', product.description);
+    if (product.condition) formData.append('condition', product.condition);
+    if (product.stock !== null && product.stock !== undefined) {
+      formData.append('stock', product.stock);
+    }
+    
+    // Append current images to keep them
+    let currentImages = [];
+    if (product.images) {
+      if (Array.isArray(product.images)) {
+        currentImages = product.images;
+      } else if (typeof product.images === 'string') {
+        try {
+          const parsed = JSON.parse(product.images);
+          currentImages = Array.isArray(parsed) ? parsed : [product.images];
+        } catch (e) {
+          currentImages = [product.images];
+        }
+      } else {
+        currentImages = [product.images];
+      }
+    }
+    if (currentImages.length === 0 && product.image) {
+      currentImages = [product.image];
+    }
+    currentImages.forEach(img => {
+      if (img) {
+        const urlStr = typeof img === 'object' ? (img.image_url || img.image_path) : String(img);
+        if (urlStr) formData.append('images[]', urlStr);
+      }
+    });
+
+    setError('');
+    setSuccess('');
+    setLoading(true);
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/products/${product.id}`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/json',
+        },
+        body: formData,
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data?.message || 'Error al actualizar destacado');
+      }
+
+      setSuccess(product.is_featured ? 'Producto quitado de destacados' : 'Producto destacado exitosamente');
+      loadData();
+    } catch (err) {
+      setError(err.message || 'Error al actualizar destacado');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '-';
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      });
+    } catch (e) {
+      return dateStr;
+    }
+  };
+
+  const getStockDisplay = (stockVal) => {
+    if (stockVal === null || stockVal === undefined) return 'Ilimitado';
+    return `${stockVal} unidades`;
+  };
+  
+  const getStockBadgeClass = (stockVal) => {
+    if (stockVal === null || stockVal === undefined) return 'badge-status--featured';
+    return Number(stockVal) > 0 ? 'badge-status--active' : 'badge-status--out';
+  };
+
+  const getStatusBadge = (p) => {
+    if (p.stock !== null && p.stock !== undefined && Number(p.stock) <= 0) {
+      return <span className="badge-status badge-status--out">Agotado</span>;
+    }
+    if (p.status === 'inactive') {
+      return <span className="badge-status badge-status--inactive">Inactivo</span>;
+    }
+    return <span className="badge-status badge-status--active">Activo</span>;
+  };
+
+  const getProductImageUrls = (p) => {
+    if (!p) return [];
+    let imgList = [];
+    if (p.images) {
+      if (Array.isArray(p.images)) {
+        imgList = p.images;
+      } else if (typeof p.images === 'string') {
+        try {
+          const parsed = JSON.parse(p.images);
+          imgList = Array.isArray(parsed) ? parsed : [p.images];
+        } catch (e) {
+          imgList = [p.images];
+        }
+      } else {
+        imgList = [p.images];
+      }
+    }
+    if (imgList.length === 0 && p.image) {
+      imgList = [p.image];
+    }
+    return imgList.map(img => getProductImageUrlString(img)).filter(Boolean);
+  };
 
   const loadData = async () => {
     setLoading(true);
@@ -301,64 +435,128 @@ export default function Products() {
         <div className="empty-state"><div className="empty-icon"><Package size={40} /></div><p>No hay productos en inventario</p></div>
       ) : (
         <>
-          <div className="card">
-            <div className="table-wrap">
-              <table>
+          {activeDropdown && <div className="actions-dropdown-overlay" onClick={() => setActiveDropdown(null)} />}
+
+          {/* Desktop Table Layout */}
+          <div className="products-desktop-view">
+            <div className="products-table-container">
+              <table className="products-table">
                 <thead>
                   <tr>
-                    <th>PRODUCTO</th>
-                    <th style={{ textAlign: 'right' }}>PRECIO</th>
-                    <th style={{ textAlign: 'right' }}>STOCK</th>
+                    <th>Imagen</th>
+                    <th>Producto</th>
+                    <th>Categoría</th>
+                    <th>Precio</th>
+                    <th>Stock</th>
+                    <th>Estado</th>
+                    <th>Destacado</th>
+                    <th>Fecha</th>
+                    <th style={{ textAlign: 'right' }}>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
                   {paginatedProducts.map(p => (
                     <tr key={p.id}>
                       <td>
-                        <div className="product-info-cell">
-                          <div className="product-thumbnail-wrapper">
-                            {getProductImage(p) ? (
-                              <img src={getProductImage(p)} alt={p.name} className="product-thumbnail" />
-                            ) : (
-                              <div className="product-thumbnail" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', opacity: 0.5 }}>
-                                <Package size={20} />
-                              </div>
-                            )}
-                            {p.is_featured ? (
-                              <div className="featured-star-badge" title="Producto Destacado">
-                                <Star size={9} fill="#fff" color="#fff" />
-                              </div>
-                            ) : null}
+                        {getProductImage(p) ? (
+                          <img src={getProductImage(p)} alt={p.name} className="product-img-thumbnail" />
+                        ) : (
+                          <div className="product-img-placeholder">
+                            <Package size={22} />
                           </div>
-                          <div className="product-text-details">
-                            <span className="product-category">
-                              {categories.find(c => c.id === p.category_id)?.name || 'Sin Categoría'}
-                            </span>
-                            <span className="product-name">{p.name}</span>
-                          </div>
-                        </div>
+                        )}
                       </td>
-                      <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--text)', fontSize: '15px' }}>
+                      <td style={{ fontWeight: 600 }}>{p.name}</td>
+                      <td style={{ color: 'var(--text-secondary)' }}>
+                        {categories.find(c => c.id === p.category_id)?.name || 'Sin Categoría'}
+                      </td>
+                      <td style={{ fontWeight: 700 }}>
                         ${Number(p.price).toFixed(2)}
                       </td>
                       <td>
-                        <div className="product-actions-cell">
-                          {p.stock !== null && p.stock !== undefined ? (
-                            <span className={`badge badge--${p.stock > 0 ? 'green' : 'red'}`} style={{ display: 'inline-block', margin: 0, padding: '4px 8px' }}>
-                              {p.stock} Uds
-                            </span>
-                          ) : (
-                            <span className="badge badge--blue" style={{ display: 'inline-block', margin: 0, padding: '4px 8px' }}>
-                              Ilimitado
-                            </span>
+                        <span className={`badge-status ${getStockBadgeClass(p.stock)}`}>
+                          {getStockDisplay(p.stock)}
+                        </span>
+                      </td>
+                      <td>
+                        {getStatusBadge(p)}
+                      </td>
+                      <td>
+                        {p.is_featured ? (
+                          <span className="badge-status badge-status--featured" style={{ gap: 4 }}>
+                            <Star size={12} fill="currentColor" /> Sí
+                          </span>
+                        ) : (
+                          <span className="badge-status badge-status--inactive">No</span>
+                        )}
+                      </td>
+                      <td style={{ color: 'var(--text-secondary)' }}>
+                        {formatDate(p.created_at)}
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        <div className="actions-dropdown-wrapper">
+                          <button 
+                            type="button"
+                            className={`actions-dropdown-trigger ${activeDropdown === p.id ? 'active' : ''}`}
+                            onClick={() => setActiveDropdown(activeDropdown === p.id ? null : p.id)}
+                            title="Acciones"
+                          >
+                            <MoreVertical size={18} />
+                          </button>
+                          {activeDropdown === p.id && (
+                            <div className="actions-dropdown-menu">
+                              <button 
+                                type="button"
+                                className="actions-dropdown-item"
+                                onClick={() => {
+                                  setViewProduct(p);
+                                  setViewerActiveImageIdx(0);
+                                  setActiveDropdown(null);
+                                }}
+                              >
+                                <Eye size={14} />
+                                <span>Ver producto</span>
+                              </button>
+                              
+                              <button 
+                                type="button"
+                                className="actions-dropdown-item"
+                                onClick={() => {
+                                  handleOpenEdit(p);
+                                  setActiveDropdown(null);
+                                }}
+                              >
+                                <Pencil size={14} />
+                                <span>Editar</span>
+                              </button>
+                              
+                              <button 
+                                type="button"
+                                className="actions-dropdown-item"
+                                onClick={() => {
+                                  toggleFeatured(p);
+                                  setActiveDropdown(null);
+                                }}
+                              >
+                                <Star size={14} />
+                                <span>{p.is_featured ? 'Quitar destacado' : 'Destacar'}</span>
+                              </button>
+                              
+                              <div style={{ height: '1px', background: 'var(--border)', margin: '4px 0' }} />
+                              
+                              <button 
+                                type="button"
+                                className="actions-dropdown-item actions-dropdown-item--danger"
+                                onClick={() => {
+                                  handleDelete(p);
+                                  setActiveDropdown(null);
+                                }}
+                              >
+                                <Trash2 size={14} />
+                                <span>Eliminar</span>
+                              </button>
+                            </div>
                           )}
-                          
-                          <button className="btn-action-circle" onClick={() => handleOpenEdit(p)} title="Editar Producto">
-                            <Pencil size={13} />
-                          </button>
-                          <button className="btn-action-circle btn-action-circle--danger" onClick={() => handleDelete(p)} title="Eliminar Producto">
-                            <Trash2 size={13} />
-                          </button>
                         </div>
                       </td>
                     </tr>
@@ -368,10 +566,130 @@ export default function Products() {
             </div>
           </div>
 
+          {/* Mobile Cards Layout */}
+          <div className="products-mobile-view">
+            <div className="mobile-products-grid">
+              {paginatedProducts.map(p => (
+                <div className="product-mobile-card" key={p.id}>
+                  <div className="product-mobile-card-header">
+                    {getProductImage(p) ? (
+                      <img src={getProductImage(p)} alt={p.name} className="product-mobile-card-img" />
+                    ) : (
+                      <div className="product-mobile-card-img-placeholder">
+                        <Package size={24} />
+                      </div>
+                    )}
+                    <div className="product-mobile-card-title-block">
+                      <div className="product-mobile-card-name">{p.name}</div>
+                      <div className="product-mobile-card-cat">
+                        {categories.find(c => c.id === p.category_id)?.name || 'Sin Categoría'}
+                      </div>
+                    </div>
+                    {/* Compact actions button on mobile cards */}
+                    <div className="actions-dropdown-wrapper">
+                      <button 
+                        type="button"
+                        className={`actions-dropdown-trigger ${activeDropdown === p.id ? 'active' : ''}`}
+                        onClick={() => setActiveDropdown(activeDropdown === p.id ? null : p.id)}
+                      >
+                        <MoreVertical size={18} />
+                      </button>
+                      {activeDropdown === p.id && (
+                        <div className="actions-dropdown-menu">
+                          <button 
+                            type="button"
+                            className="actions-dropdown-item"
+                            onClick={() => {
+                              setViewProduct(p);
+                              setViewerActiveImageIdx(0);
+                              setActiveDropdown(null);
+                            }}
+                          >
+                            <Eye size={14} />
+                            <span>Ver producto</span>
+                          </button>
+                          <button 
+                            type="button"
+                            className="actions-dropdown-item"
+                            onClick={() => {
+                              toggleFeatured(p);
+                              setActiveDropdown(null);
+                            }}
+                          >
+                            <Star size={14} />
+                            <span>{p.is_featured ? 'Quitar destacado' : 'Destacar'}</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="product-mobile-card-details">
+                    <div className="product-mobile-card-row">
+                      <span className="product-mobile-card-label">Precio</span>
+                      <span className="product-mobile-card-val" style={{ fontSize: '14px', fontWeight: 700 }}>
+                        ${Number(p.price).toFixed(2)}
+                      </span>
+                    </div>
+                    
+                    <div className="product-mobile-card-row">
+                      <span className="product-mobile-card-label">Stock</span>
+                      <span className="product-mobile-card-val">
+                        <span className={`badge-status ${getStockBadgeClass(p.stock)}`}>
+                          {getStockDisplay(p.stock)}
+                        </span>
+                      </span>
+                    </div>
+                    
+                    <div className="product-mobile-card-row">
+                      <span className="product-mobile-card-label">Estado</span>
+                      <span className="product-mobile-card-val">
+                        {getStatusBadge(p)}
+                      </span>
+                    </div>
+                    
+                    <div className="product-mobile-card-row">
+                      <span className="product-mobile-card-label">Destacado</span>
+                      <span className="product-mobile-card-val">
+                        {p.is_featured ? (
+                          <span className="badge-status badge-status--featured" style={{ gap: 4 }}>
+                            <Star size={11} fill="currentColor" /> Sí
+                          </span>
+                        ) : (
+                          <span className="badge-status badge-status--inactive">No</span>
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="product-mobile-card-actions">
+                    <button 
+                      type="button"
+                      className="btn-mobile-action btn-mobile-action--edit"
+                      onClick={() => handleOpenEdit(p)}
+                    >
+                      <Pencil size={14} />
+                      <span>Editar</span>
+                    </button>
+                    <button 
+                      type="button"
+                      className="btn-mobile-action btn-mobile-action--delete"
+                      onClick={() => handleDelete(p)}
+                    >
+                      <Trash2 size={14} />
+                      <span>Eliminar</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* Pagination Controls */}
           {products.length > 0 && (
             <div className="pagination">
               <button 
+                type="button"
                 className="btn btn--secondary" 
                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                 disabled={currentPage === 1}
@@ -380,6 +698,7 @@ export default function Products() {
               </button>
               <span className="pagination-info">Página {currentPage} de {totalPages || 1}</span>
               <button 
+                type="button"
                 className="btn btn--secondary" 
                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                 disabled={currentPage === totalPages || totalPages === 0}
@@ -610,15 +929,15 @@ export default function Products() {
         <div className="modal-overlay" onClick={() => setConfirmModal(null)}>
           <div className="modal" style={{ maxWidth: 400, textAlign: 'center', padding: '32px 24px' }} onClick={e => e.stopPropagation()}>
             <div style={{
-              width: 56,
-              height: 56,
-              borderRadius: '50%',
-              backgroundColor: confirmModal.type === 'danger' ? 'var(--danger-light)' : 'var(--primary-light)',
-              color: confirmModal.type === 'danger' ? 'var(--danger-text)' : 'var(--primary)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto 16px auto'
+               width: 56,
+               height: 56,
+               borderRadius: '50%',
+               backgroundColor: confirmModal.type === 'danger' ? 'var(--danger-light)' : 'var(--primary-light)',
+               color: confirmModal.type === 'danger' ? 'var(--danger-text)' : 'var(--primary)',
+               display: 'flex',
+               alignItems: 'center',
+               justifyContent: 'center',
+               margin: '0 auto 16px auto'
             }}>
               {confirmModal.type === 'danger' ? <Trash2 size={24} /> : <Check size={24} />}
             </div>
@@ -649,6 +968,137 @@ export default function Products() {
           </div>
         </div>
       )}
+
+      {/* Product Viewer Modal */}
+      {viewProduct && (
+        <div className="modal-overlay" onClick={() => setViewProduct(null)}>
+          <div className="modal" style={{ maxWidth: 700, padding: 0, borderRadius: '16px', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div style={{ display: 'flex', gap: 16, alignItems: 'center', padding: '24px 28px', borderBottom: '1px solid var(--border)', background: 'var(--card)' }}>
+              <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', flexShrink: 0 }}>
+                <Eye size={20} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--text)' }}>
+                  Detalles del producto
+                </h3>
+                <p style={{ margin: '4px 0 0 0', fontSize: 13, color: 'var(--text-secondary)' }}>
+                  Información técnica y visual de tu inventario.
+                </p>
+              </div>
+              <button type="button" className="btn btn--ghost" style={{ padding: 6, borderRadius: '50%' }} onClick={() => setViewProduct(null)}><X size={18} /></button>
+            </div>
+
+            {/* Body */}
+            <div className="viewer-details-grid">
+              {/* Left Column: Images */}
+              <div className="viewer-image-container">
+                {getProductImageUrls(viewProduct).length > 0 ? (
+                  <>
+                    <img 
+                      src={getProductImageUrls(viewProduct)[viewerActiveImageIdx] || getProductImageUrls(viewProduct)[0]} 
+                      alt={viewProduct.name} 
+                      className="viewer-main-img" 
+                    />
+                    {getProductImageUrls(viewProduct).length > 1 && (
+                      <div className="viewer-thumb-gallery">
+                        {getProductImageUrls(viewProduct).map((url, idx) => (
+                          <img 
+                            key={`viewer-thumb-${idx}`}
+                            src={url}
+                            alt=""
+                            className={`viewer-thumb-img ${viewerActiveImageIdx === idx ? 'active' : ''}`}
+                            onClick={() => setViewerActiveImageIdx(idx)}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="viewer-main-img" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', opacity: 0.5, border: '1px solid var(--border)' }}>
+                    <Package size={64} />
+                  </div>
+                )}
+              </div>
+
+              {/* Right Column: Metadata */}
+              <div className="viewer-info-pane">
+                <div className="viewer-title-section">
+                  <span className="viewer-category-tag">
+                    {categories.find(c => c.id === viewProduct.category_id)?.name || 'Sin Categoría'}
+                  </span>
+                  <h2 className="viewer-product-name">{viewProduct.name}</h2>
+                  <div className="viewer-price-badge">
+                    ${Number(viewProduct.price).toFixed(2)}
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {getStatusBadge(viewProduct)}
+                  {viewProduct.is_featured ? (
+                    <span className="badge-status badge-status--featured" style={{ gap: 4 }}>
+                      <Star size={12} fill="currentColor" /> Destacado
+                    </span>
+                  ) : null}
+                  <span className="badge-status badge-status--inactive" style={{ textTransform: 'uppercase' }}>
+                    Condición: {viewProduct.condition || 'nuevo'}
+                  </span>
+                </div>
+
+                {viewProduct.description ? (
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Descripción</div>
+                    <div className="viewer-description-box">
+                      {viewProduct.description}
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ fontStyle: 'italic', fontSize: 13, color: 'var(--text-secondary)' }}>Sin descripción disponible</div>
+                )}
+
+                <div className="viewer-metadata-grid">
+                  <div className="viewer-meta-item">
+                    <span className="viewer-meta-label">Stock disponible</span>
+                    <span className="viewer-meta-value">
+                      {viewProduct.stock !== null && viewProduct.stock !== undefined ? `${viewProduct.stock} Unidades` : 'Ilimitado'}
+                    </span>
+                  </div>
+                  <div className="viewer-meta-item">
+                    <span className="viewer-meta-label">Fecha de registro</span>
+                    <span className="viewer-meta-value">
+                      {formatDate(viewProduct.created_at)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, padding: '20px 28px', borderTop: '1px solid var(--border)', background: 'var(--card)' }}>
+              <button 
+                type="button" 
+                className="btn btn--secondary" 
+                onClick={() => setViewProduct(null)}
+              >
+                Cerrar
+              </button>
+              <button 
+                type="button" 
+                className="btn btn--primary" 
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                onClick={() => {
+                  handleOpenEdit(viewProduct);
+                  setViewProduct(null);
+                }}
+              >
+                <Pencil size={16} />
+                <span>Editar Producto</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
