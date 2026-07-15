@@ -85,40 +85,55 @@ export default function Products() {
   };
 
   const handleOpenEdit = (p) => {
-    setEditId(p.id);
-    setName(p.name || '');
-    setPrice(p.price || '');
-    setDescription(p.description || '');
-    setCategoryId(p.category_id || '');
-    setIsFeatured(!!p.is_featured);
-    setCondition(p.condition || 'nuevo');
-    setStock(p.stock !== null && p.stock !== undefined ? String(p.stock) : '');
-    setImageFiles([]);
-    
-    let currentImages = [];
-    if (p.images) {
-      if (Array.isArray(p.images)) {
-        currentImages = p.images;
-      } else if (typeof p.images === 'string') {
-        try {
-          const parsed = JSON.parse(p.images);
-          currentImages = Array.isArray(parsed) ? parsed : [p.images];
-        } catch (e) {
+    try {
+      setError('');
+      setSuccess('');
+      
+      setEditId(p.id);
+      setName(p.name || '');
+      setPrice(p.price || '');
+      setDescription(p.description || '');
+      setCategoryId(p.category_id || '');
+      setIsFeatured(!!p.is_featured);
+      setCondition(p.condition || 'nuevo');
+      setStock(p.stock !== null && p.stock !== undefined ? String(p.stock) : '');
+      setImageFiles([]);
+      
+      let currentImages = [];
+      if (p.images) {
+        if (Array.isArray(p.images)) {
+          currentImages = p.images;
+        } else if (typeof p.images === 'string') {
+          try {
+            const parsed = JSON.parse(p.images);
+            currentImages = Array.isArray(parsed) ? parsed : [p.images];
+          } catch (e) {
+            currentImages = [p.images];
+          }
+        } else {
           currentImages = [p.images];
         }
-      } else {
-        currentImages = [p.images];
       }
+      
+      if (currentImages.length === 0 && p.image) {
+        currentImages = [p.image];
+      }
+
+      // Sanitize to ensure we only have non-empty string URLs
+      const sanitizedImages = currentImages
+        .map(img => {
+          if (!img) return '';
+          if (typeof img === 'object') return img.image_url || img.image_path || '';
+          return String(img);
+        })
+        .filter(img => img !== '');
+      
+      setExistingImages(sanitizedImages);
+      setModalOpen(true);
+    } catch (err) {
+      console.error('Error in handleOpenEdit:', err);
+      setError('No se pudo abrir el editor del producto: ' + err.message);
     }
-    
-    if (currentImages.length === 0 && p.image) {
-      currentImages = [p.image];
-    }
-    
-    setExistingImages(currentImages);
-    setError('');
-    setSuccess('');
-    setModalOpen(true);
   };
 
   const handleSave = (e) => {
