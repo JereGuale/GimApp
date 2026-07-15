@@ -188,7 +188,7 @@ export default function Dashboard() {
         })}
       </div>
 
-      <div className="card">
+      <div className="card" style={{ paddingBottom: '16px' }}>
         <div className="page-header" style={{ marginBottom: 16 }}>
           <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>Últimas Suscripciones</h2>
         </div>
@@ -200,22 +200,56 @@ export default function Dashboard() {
             <p>No hay suscripciones recientes</p>
           </div>
         ) : (
-          <div className="subs-table-container" style={{ margin: 0 }}>
-            <table className="subs-table">
-              <thead>
-                <tr>
-                  <th>Usuario</th>
-                  <th>Plan</th>
-                  <th>Estado</th>
-                  <th>Fecha</th>
-                </tr>
-              </thead>
-              <tbody>
+          <>
+            {/* Desktop Table View */}
+            <div className="dashboard-subs-desktop-view">
+              <div className="subs-table-container" style={{ margin: 0 }}>
+                <table className="subs-table">
+                  <thead>
+                    <tr>
+                      <th>Usuario</th>
+                      <th>Plan</th>
+                      <th>Estado</th>
+                      <th>Fecha</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recentSubs.map(s => (
+                      <tr key={s.id}>
+                        <td>{renderUserCell(s.user)}</td>
+                        <td style={{ fontWeight: 600 }}>{s.plan?.name || s.plan_id || '—'}</td>
+                        <td>
+                          <span className={`badge-status badge-status--${s.status === 'approved' ? 'active' : s.status}`}>
+                            <span className={`badge-status-dot badge-status-dot--${s.status === 'approved' ? 'active' : s.status}`} />
+                            {s.status === 'active' || s.status === 'approved' 
+                              ? 'Activa' 
+                              : s.status === 'pending' 
+                                ? 'Pendiente' 
+                                : s.status === 'cancelled' 
+                                  ? 'Cancelada' 
+                                  : 'Expirada'}
+                          </span>
+                        </td>
+                        <td style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
+                          {s.created_at ? new Date(s.created_at).toLocaleDateString('es-MX', { year: 'numeric', month: 'short', day: 'numeric' }) : '—'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Mobile Feed View */}
+            <div className="dashboard-subs-mobile-view">
+              <div className="dashboard-recent-subs-list">
                 {recentSubs.map(s => (
-                  <tr key={s.id}>
-                    <td>{renderUserCell(s.user)}</td>
-                    <td style={{ fontWeight: 600 }}>{s.plan?.name || s.plan_id || '—'}</td>
-                    <td>
+                  <div className="dashboard-recent-sub-item" key={s.id}>
+                    <div className="dashboard-recent-sub-left">
+                      {renderUserCell(s.user)}
+                    </div>
+                    <div className="dashboard-recent-sub-right">
+                      <span className="recent-sub-plan">{s.plan?.name || 'Plan'}</span>
                       <span className={`badge-status badge-status--${s.status === 'approved' ? 'active' : s.status}`}>
                         <span className={`badge-status-dot badge-status-dot--${s.status === 'approved' ? 'active' : s.status}`} />
                         {s.status === 'active' || s.status === 'approved' 
@@ -226,15 +260,12 @@ export default function Dashboard() {
                               ? 'Cancelada' 
                               : 'Expirada'}
                       </span>
-                    </td>
-                    <td style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
-                      {s.created_at ? new Date(s.created_at).toLocaleDateString('es-MX', { year: 'numeric', month: 'short', day: 'numeric' }) : '—'}
-                    </td>
-                  </tr>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </div>
+            </div>
+          </>
         )}
       </div>
     </div>

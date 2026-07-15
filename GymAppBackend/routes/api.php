@@ -86,6 +86,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/trainer/subscriptions/pending-count', [TrainerSubscriptionController::class , 'pendingCount']);
     Route::post('/trainer/subscriptions/{id}/approve', [TrainerSubscriptionController::class , 'approve']);
     Route::post('/trainer/subscriptions/{id}/reject', [TrainerSubscriptionController::class , 'reject']);
+    Route::post('/trainer/subscriptions/{id}/renew', [TrainerSubscriptionController::class , 'renew']);
+    Route::delete('/trainer/subscriptions/{id}', [TrainerSubscriptionController::class , 'destroy']);
     Route::post('/trainer/subscriptions/create', [TrainerSubscriptionController::class , 'create']);
 
     // Admin routes - In development mode, all authenticated users can access these

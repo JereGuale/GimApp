@@ -20,7 +20,9 @@ import {
   Clock,
   ZoomIn,
   ZoomOut,
-  RotateCw
+  RotateCw,
+  RefreshCw,
+  MoreVertical
 } from 'lucide-react';
 import '../components/Layout.css';
 import './Subscriptions.css';
@@ -37,6 +39,7 @@ export default function Subscriptions() {
   const [receiptModal, setReceiptModal] = useState(null); // stores the entire sub object
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
+  const [activeDropdown, setActiveDropdown] = useState(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   
@@ -51,6 +54,21 @@ export default function Subscriptions() {
     setZoom(1);
     setRotation(0);
     setReceiptModal(sub);
+  };
+
+  const getRemainingDaysText = (endsAtStr) => {
+    if (!endsAtStr) return '';
+    const endsAt = new Date(endsAtStr);
+    const today = new Date();
+    endsAt.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+    const diffTime = endsAt - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays < 0) return 'Expirado';
+    if (diffDays === 0) return 'Vence hoy';
+    if (diffDays === 1) return 'Queda 1 día';
+    return `${diffDays} días restantes`;
   };
 
   const getUserAvatarUrl = (user) => {
@@ -127,6 +145,20 @@ export default function Subscriptions() {
     setCurrentPage(1);
   }, [search, filter]);
 
+  // Close active dropdown when clicking outside
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (activeDropdown === null) return;
+      if (!e.target.closest('.actions-dropdown-wrapper')) {
+        setActiveDropdown(null);
+      }
+    };
+    document.addEventListener('click', handleOutsideClick);
+    return () => {
+      document.removeEventListener('click', handleOutsideClick);
+    };
+  }, [activeDropdown]);
+
   const filtered = subs.filter(s => {
     const matchFilter = filter === 'all' || s.status === filter;
     const matchSearch = !search ||
@@ -180,6 +212,52 @@ export default function Subscriptions() {
       fetchSubs();
     } catch (e) { setError(e.message); }
     finally { setActionLoading(null); }
+  };
+
+  const handleDelete = (id) => {
+    setConfirmModal({
+      title: '¿Eliminar Suscripción?',
+      message: '¿Estás seguro de que deseas eliminar esta suscripción permanentemente? Esta acción es irreversible.',
+      type: 'danger',
+      onConfirm: () => executeDelete(id)
+    });
+  };
+
+  const executeDelete = async (id) => {
+    setActionLoading(id + '_delete');
+    setError(''); setSuccess('');
+    try {
+      await apiFetch(`/trainer/subscriptions/${id}`, { method: 'DELETE' });
+      setSuccess('Suscripción eliminada exitosamente');
+      fetchSubs();
+    } catch (e) { 
+      setError(e.message || 'Error al eliminar la suscripción'); 
+    } finally { 
+      setActionLoading(null); 
+    }
+  };
+
+  const handleRenew = (id) => {
+    setConfirmModal({
+      title: '¿Renovar Suscripción?',
+      message: '¿Estás seguro de que deseas renovar esta suscripción? Esto activará y extenderá su vigencia en base a la duración de su plan.',
+      type: 'success',
+      onConfirm: () => executeRenew(id)
+    });
+  };
+
+  const executeRenew = async (id) => {
+    setActionLoading(id + '_renew');
+    setError(''); setSuccess('');
+    try {
+      await apiFetch(`/trainer/subscriptions/${id}/renew`, { method: 'POST' });
+      setSuccess('Suscripción renovada exitosamente');
+      fetchSubs();
+    } catch (e) { 
+      setError(e.message || 'Error al renovar la suscripción'); 
+    } finally { 
+      setActionLoading(null); 
+    }
   };
 
   const getReceiptUrl = (sub) => {
@@ -319,7 +397,7 @@ export default function Subscriptions() {
                     <th>Estado</th>
                     <th>Método</th>
                     <th>Comprobante</th>
-                    <th>Fecha</th>
+                    <th>Vigencia</th>
                     <th style={{ textAlign: 'right' }}>Acciones</th>
                   </tr>
                 </thead>
@@ -367,8 +445,23 @@ export default function Subscriptions() {
                           <span style={{ color: 'var(--text-secondary)' }}>—</span>
                         )}
                       </td>
-                      <td style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
-                        {s.created_at ? new Date(s.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
+                      <td style={{ fontSize: 13 }}>
+                        {s.starts_at && s.ends_at ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                            <span style={{ color: 'var(--text-secondary)', fontSize: '11px' }}>Inicio: {new Date(s.starts_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}</span>
+                            <span style={{ fontWeight: 600 }}>Vence: {new Date(s.ends_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                            {s.status === 'active' && (
+                              <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--primary)', marginTop: 2 }}>
+                                {getRemainingDaysText(s.ends_at)}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                            <span style={{ color: 'var(--text-secondary)', fontSize: '11px' }}>Creada: {s.created_at ? new Date(s.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }) : '—'}</span>
+                            <span style={{ color: 'var(--text-secondary)', fontSize: '11px' }}>Sin vigencia activa</span>
+                          </div>
+                        )}
                       </td>
                       <td style={{ textAlign: 'right' }}>
                         {s.status === 'pending' ? (
@@ -395,7 +488,28 @@ export default function Subscriptions() {
                             </button>
                           </div>
                         ) : (
-                          <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>—</span>
+                          <div style={{ display: 'inline-flex', gap: 8 }}>
+                            <button
+                              type="button"
+                              className="btn btn--success"
+                              style={{ padding: '8px', borderRadius: '8px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: 34 }}
+                              disabled={actionLoading === s.id + '_renew'}
+                              onClick={() => handleRenew(s.id)}
+                              title="Renovar Suscripción"
+                            >
+                              {actionLoading === s.id + '_renew' ? <Loader2 className="spin" size={14} /> : <RefreshCw size={14} />}
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn--danger"
+                              style={{ padding: '8px', borderRadius: '8px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: 34 }}
+                              disabled={actionLoading === s.id + '_delete'}
+                              onClick={() => handleDelete(s.id)}
+                              title="Eliminar Suscripción"
+                            >
+                              {actionLoading === s.id + '_delete' ? <Loader2 className="spin" size={14} /> : <Trash2 size={14} />}
+                            </button>
+                          </div>
                         )}
                       </td>
                     </tr>
@@ -411,8 +525,77 @@ export default function Subscriptions() {
               {paginatedItems.map(s => (
                 <div className="sub-mobile-card" key={s.id}>
                   {/* Card Header with User Profile */}
-                  <div style={{ borderBottom: '1px solid var(--border)', paddingBottom: '12px' }}>
+                  <div style={{ borderBottom: '1px solid var(--border)', paddingBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     {renderUserCell(s.user)}
+                    
+                    {/* Compact actions button on mobile cards */}
+                    <div className="actions-dropdown-wrapper">
+                      <button 
+                        type="button"
+                        className={`actions-dropdown-trigger ${activeDropdown === s.id ? 'active' : ''}`}
+                        onClick={() => setActiveDropdown(activeDropdown === s.id ? null : s.id)}
+                        title="Acciones"
+                      >
+                        <MoreVertical size={18} />
+                      </button>
+                      {activeDropdown === s.id && (
+                        <div className="actions-dropdown-menu">
+                          {s.status === 'pending' && (
+                            <>
+                              <button 
+                                type="button"
+                                className="actions-dropdown-item"
+                                onClick={() => {
+                                  handleApprove(s.id);
+                                  setActiveDropdown(null);
+                                }}
+                              >
+                                <Check size={14} style={{ color: '#16a34a' }} />
+                                <span style={{ color: '#16a34a', fontWeight: 600 }}>Aprobar pago</span>
+                              </button>
+                              
+                              <button 
+                                type="button"
+                                className="actions-dropdown-item"
+                                onClick={() => {
+                                  handleReject(s.id);
+                                  setActiveDropdown(null);
+                                }}
+                              >
+                                <X size={14} style={{ color: '#dc2626' }} />
+                                <span style={{ color: '#dc2626', fontWeight: 600 }}>Rechazar pago</span>
+                              </button>
+                            </>
+                          )}
+                          
+                          <button 
+                            type="button"
+                            className="actions-dropdown-item"
+                            onClick={() => {
+                              handleRenew(s.id);
+                              setActiveDropdown(null);
+                            }}
+                          >
+                            <RefreshCw size={14} />
+                            <span>Renovar suscripción</span>
+                          </button>
+
+                          <div style={{ height: '1px', background: 'var(--border)', margin: '4px 0' }} />
+
+                          <button 
+                            type="button"
+                            className="actions-dropdown-item actions-dropdown-item--danger"
+                            onClick={() => {
+                              handleDelete(s.id);
+                              setActiveDropdown(null);
+                            }}
+                          >
+                            <Trash2 size={14} />
+                            <span>Eliminar</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* Card details */}
@@ -447,13 +630,28 @@ export default function Subscriptions() {
                       </span>
                     </div>
 
-                    <div className="sub-mobile-card-row">
-                      <span className="sub-mobile-card-label">
+                    <div className="sub-mobile-card-row" style={{ alignItems: 'flex-start' }}>
+                      <span className="sub-mobile-card-label" style={{ marginTop: '2px' }}>
                         <Calendar size={13} style={{ opacity: 0.7 }} />
-                        <span>Fecha</span>
+                        <span>Vigencia</span>
                       </span>
-                      <span className="sub-mobile-card-val">
-                        {s.created_at ? new Date(s.created_at).toLocaleDateString('es-MX') : '—'}
+                      <span className="sub-mobile-card-val" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', textAlign: 'right', fontSize: '12px' }}>
+                        {s.starts_at && s.ends_at ? (
+                          <>
+                            <span style={{ opacity: 0.8 }}>Inicio: {new Date(s.starts_at).toLocaleDateString('es-MX')}</span>
+                            <span>Vence: {new Date(s.ends_at).toLocaleDateString('es-MX')}</span>
+                            {s.status === 'active' && (
+                              <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--primary)', marginTop: '3px' }}>
+                                {getRemainingDaysText(s.ends_at)}
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            <span style={{ opacity: 0.8 }}>Creada: {s.created_at ? new Date(s.created_at).toLocaleDateString('es-MX') : '—'}</span>
+                            <span style={{ color: 'var(--text-secondary)', fontSize: '11px' }}>Sin vigencia activa</span>
+                          </>
+                        )}
                       </span>
                     </div>
 
@@ -485,28 +683,7 @@ export default function Subscriptions() {
                       </button>
                     )}
 
-                    {s.status === 'pending' && (
-                      <div className="sub-mobile-card-actions">
-                        <button
-                          type="button"
-                          className="btn-sub-mobile btn-sub-mobile--approve"
-                          disabled={actionLoading === s.id + '_approve'}
-                          onClick={() => handleApprove(s.id)}
-                        >
-                          {actionLoading === s.id + '_approve' ? <Loader2 className="spin" size={14} /> : <Check size={14} />}
-                          <span>Aprobar</span>
-                        </button>
-                        <button
-                          type="button"
-                          className="btn-sub-mobile btn-sub-mobile--reject"
-                          disabled={actionLoading === s.id + '_reject'}
-                          onClick={() => handleReject(s.id)}
-                        >
-                          {actionLoading === s.id + '_reject' ? <Loader2 className="spin" size={14} /> : <Trash2 size={14} />}
-                          <span>Rechazar</span>
-                        </button>
-                      </div>
-                    )}
+                    {/* Inline actions removed, handled by the 3-dots dropdown menu */}
                   </div>
                 </div>
               ))}

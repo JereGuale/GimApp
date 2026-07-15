@@ -151,4 +151,46 @@ class TrainerSubscriptionController extends Controller
             'subscription' => $subscription->load(['user', 'plan'])
         ], 201);
     }
+
+    /**
+     * Renew subscription
+     */
+    public function renew(Request $request, $id)
+    {
+        $subscription = Subscription::findOrFail($id);
+        
+        $plan = $subscription->plan;
+        $durationMonths = $plan ? ($plan->duration ?? 1) : 1;
+
+        // If the subscription is active and has not expired yet, extend from ends_at. Otherwise, starts from now.
+        $baseDate = ($subscription->status === 'active' && $subscription->ends_at && $subscription->ends_at->isFuture()) 
+            ? $subscription->ends_at 
+            : now();
+
+        $subscription->update([
+            'status' => 'active',
+            'starts_at' => now(),
+            'ends_at' => $baseDate->copy()->addMonths($durationMonths),
+            'approved_by' => $request->user()->id,
+            'approved_at' => now()
+        ]);
+
+        return response()->json([
+            'message' => 'Suscripción renovada exitosamente',
+            'subscription' => $subscription->load(['user', 'plan'])
+        ]);
+    }
+
+    /**
+     * Delete subscription
+     */
+    public function destroy($id)
+    {
+        $subscription = Subscription::findOrFail($id);
+        $subscription->delete();
+
+        return response()->json([
+            'message' => 'Suscripción eliminada exitosamente'
+        ]);
+    }
 }
