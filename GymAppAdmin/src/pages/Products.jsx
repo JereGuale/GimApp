@@ -1,5 +1,16 @@
 import { useEffect, useState } from 'react';
 import { apiFetch, API_BASE_URL } from '../api/client';
+import { 
+  AlertTriangle, 
+  CheckCircle2, 
+  Plus, 
+  Loader2, 
+  Package, 
+  Star, 
+  Pencil, 
+  Trash2,
+  X
+} from 'lucide-react';
 import '../components/Layout.css';
 
 export default function Products() {
@@ -22,6 +33,10 @@ export default function Products() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
+
   const loadData = async () => {
     setLoading(true);
     try {
@@ -41,6 +56,11 @@ export default function Products() {
   useEffect(() => {
     loadData();
   }, []);
+
+  // Reset pagination when loading new products
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [products.length]);
 
   const handleOpenAdd = () => {
     setEditId(null);
@@ -109,7 +129,6 @@ export default function Products() {
       };
 
       if (editId) {
-        // Laravel PUT with multipart/form-data works best by spoofing method
         formData.append('_method', 'PUT');
         url = `${API_BASE_URL}/admin/products/${editId}`;
       }
@@ -151,105 +170,148 @@ export default function Products() {
     return null;
   };
 
+  // Calculate paginated slice
+  const totalPages = Math.ceil(products.length / itemsPerPage);
+  const paginatedProducts = products.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
   return (
     <div>
-      {error && <div className="alert alert--error">⚠️ {error}</div>}
-      {success && <div className="alert alert--success">✅ {success}</div>}
+      {error && <div className="alert alert--error"><AlertTriangle size={16} /> <span>{error}</span></div>}
+      {success && <div className="alert alert--success"><CheckCircle2 size={16} /> <span>{success}</span></div>}
 
       <div className="page-header">
         <h2>Inventario de Productos</h2>
-        <button className="btn btn--primary" onClick={handleOpenAdd}>
-          ➕ Nuevo Producto
+        <button className="btn btn--primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={handleOpenAdd}>
+          <Plus size={16} />
+          <span>Nuevo Producto</span>
         </button>
       </div>
 
       {loading ? (
-        <div className="loading-state"><span className="spin">⏳</span> Cargando productos...</div>
+        <div className="loading-state"><Loader2 className="spin" size={24} /> <span>Cargando productos...</span></div>
       ) : products.length === 0 ? (
-        <div className="empty-state"><div className="empty-icon">📦</div><p>No hay productos en inventario</p></div>
+        <div className="empty-state"><div className="empty-icon"><Package size={40} /></div><p>No hay productos en inventario</p></div>
       ) : (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-          gap: '24px',
-          marginTop: '20px'
-        }}>
-          {products.map(p => (
-            <div key={p.id} style={{
-              background: '#111827',
-              borderRadius: '12px',
-              overflow: 'hidden',
-              border: '1px solid #1f2937',
-              display: 'flex',
-              flexDirection: 'column',
-              position: 'relative'
-            }}>
-              {/* Badges */}
-              <div style={{ position: 'absolute', top: '12px', left: '12px', display: 'flex', gap: '8px', zIndex: 1 }}>
-                {p.is_featured ? (
-                  <span style={{ background: '#eab308', color: '#111827', fontWeight: 'bold', fontSize: '11px', padding: '4px 8px', borderRadius: '6px' }}>⭐ Destacado</span>
-                ) : null}
-                <span style={{ background: p.condition === 'nuevo' ? '#10b981' : '#4b5563', color: '#fff', fontWeight: 'bold', fontSize: '11px', padding: '4px 8px', borderRadius: '6px', textTransform: 'capitalize' }}>{p.condition}</span>
-              </div>
-
-              {/* Image Container */}
-              <div style={{ height: '200px', background: '#1f2937', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {getProductImage(p) ? (
-                  <img src={getProductImage(p)} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                ) : (
-                  <div style={{ fontSize: '48px' }}>📦</div>
-                )}
-              </div>
-
-              {/* Body Content */}
-              <div style={{ padding: '16px', flex: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div>
-                  <div style={{ fontSize: '11px', color: '#9ca3af', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    {categories.find(c => c.id === p.category_id)?.name || 'Sin Categoría'}
-                  </div>
-                  <h3 style={{ fontSize: '17px', fontWeight: 'bold', color: '#f9fafb', margin: '4px 0 8px 0', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{p.name}</h3>
-                  <p style={{ fontSize: '13px', color: '#9ca3af', lineHeight: '1.5', height: '60px', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', margin: 0 }}>
-                    {p.description || 'Sin descripción disponible.'}
-                  </p>
+        <>
+          <div className="product-grid" style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+            gap: '24px',
+            marginTop: '20px'
+          }}>
+            {paginatedProducts.map(p => (
+              <div key={p.id} style={{
+                background: 'var(--card)',
+                borderRadius: '12px',
+                overflow: 'hidden',
+                border: '1px solid var(--border)',
+                display: 'flex',
+                flexDirection: 'column',
+                position: 'relative',
+                boxShadow: 'var(--shadow-sm)',
+                transition: 'all 0.2s ease'
+              }}>
+                {/* Badges */}
+                <div style={{ position: 'absolute', top: '12px', left: '12px', display: 'flex', gap: '8px', zIndex: 1 }}>
+                  {p.is_featured ? (
+                    <span style={{ background: '#eab308', color: '#111827', fontWeight: 'bold', fontSize: '11px', padding: '4px 8px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                      <Star size={10} fill="#111827" />
+                      <span>Destacado</span>
+                    </span>
+                  ) : null}
+                  <span style={{ background: p.condition === 'nuevo' ? 'var(--success)' : '#4b5563', color: '#fff', fontWeight: 'bold', fontSize: '11px', padding: '4px 8px', borderRadius: '6px', textTransform: 'capitalize' }}>{p.condition}</span>
                 </div>
 
-                {/* Price and Stock Row */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', borderTop: '1px solid #1f2937', paddingTop: '12px' }}>
+                {/* Image Container */}
+                <div style={{ height: '200px', background: 'var(--bg)', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid var(--border)' }}>
+                  {getProductImage(p) ? (
+                    <img src={getProductImage(p)} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <div style={{ color: 'var(--text-secondary)', opacity: 0.5 }}>
+                      <Package size={48} />
+                    </div>
+                  )}
+                </div>
+
+                {/* Body Content */}
+                <div style={{ padding: '16px', flex: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   <div>
-                    <span style={{ fontSize: '11px', color: '#6b7280', display: 'block' }}>Precio</span>
-                    <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#10b981' }}>${Number(p.price).toFixed(2)}</span>
+                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      {categories.find(c => c.id === p.category_id)?.name || 'Sin Categoría'}
+                    </div>
+                    <h3 style={{ fontSize: '17px', fontWeight: 'bold', color: 'var(--text)', margin: '4px 0 8px 0', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{p.name}</h3>
+                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.5', height: '60px', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', margin: 0 }}>
+                      {p.description || 'Sin descripción disponible.'}
+                    </p>
                   </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <span style={{ fontSize: '11px', color: '#6b7280', display: 'block', marginBottom: '2px' }}>Stock</span>
-                    {p.stock !== null && p.stock !== undefined ? (
-                      <span className={`badge badge--${p.stock > 0 ? 'green' : 'red'}`} style={{ display: 'inline-block', margin: 0 }}>
-                        {p.stock} uds
-                      </span>
-                    ) : (
-                      <span style={{ color: '#9ca3af', fontSize: '13px', fontWeight: 600 }}>Ilimitado</span>
-                    )}
-                  </div>
-                </div>
 
-                {/* Card Actions */}
-                <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                  <button className="btn btn--ghost" style={{ flex: 1, padding: '8px', fontSize: '13px', justifyContent: 'center' }} onClick={() => handleOpenEdit(p)}>
-                    ✏️ Editar
-                  </button>
-                  <button className="btn btn--danger" style={{ flex: 1, padding: '8px', fontSize: '13px', justifyContent: 'center' }} onClick={() => handleDelete(p)}>
-                    🗑️ Eliminar
-                  </button>
+                  {/* Price and Stock Row */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
+                    <div>
+                      <span style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'block' }}>Precio</span>
+                      <span style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--success)' }}>${Number(p.price).toFixed(2)}</span>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <span style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'block', marginBottom: '2px' }}>Stock</span>
+                      {p.stock !== null && p.stock !== undefined ? (
+                        <span className={`badge badge--${p.stock > 0 ? 'green' : 'red'}`} style={{ display: 'inline-block', margin: 0 }}>
+                          {p.stock} uds
+                        </span>
+                      ) : (
+                        <span style={{ color: 'var(--text-secondary)', fontSize: '13px', fontWeight: 600 }}>Ilimitado</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Card Actions */}
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                    <button className="btn btn--ghost" style={{ flex: 1, padding: '8px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4 }} onClick={() => handleOpenEdit(p)}>
+                      <Pencil size={12} />
+                      <span>Editar</span>
+                    </button>
+                    <button className="btn btn--danger" style={{ flex: 1, padding: '8px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4 }} onClick={() => handleDelete(p)}>
+                      <Trash2 size={12} />
+                      <span>Eliminar</span>
+                    </button>
+                  </div>
                 </div>
               </div>
+            ))}
+          </div>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="pagination">
+              <button 
+                className="btn btn--secondary" 
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+              >
+                Anterior
+              </button>
+              <span className="pagination-info">Página {currentPage} de {totalPages}</span>
+              <button 
+                className="btn btn--secondary" 
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+              >
+                Siguiente
+              </button>
             </div>
-          ))}
-        </div>
+          )}
+        </>
       )}
 
       {modalOpen && (
         <div className="modal-overlay" onClick={() => setModalOpen(false)}>
           <div className="modal" style={{ maxWidth: 540 }} onClick={e => e.stopPropagation()}>
-            <h3>{editId ? 'Editar Producto' : 'Nuevo Producto'}</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 style={{ margin: 0 }}>{editId ? 'Editar Producto' : 'Nuevo Producto'}</h3>
+              <button className="btn btn--ghost" style={{ padding: 6, borderRadius: '50%' }} onClick={() => setModalOpen(false)}><X size={16} /></button>
+            </div>
             <form className="modal-form" onSubmit={handleSave}>
               <div className="form-group">
                 <label>Nombre del Producto</label>
@@ -290,16 +352,16 @@ export default function Products() {
               </div>
 
               <div className="form-group" style={{ justifyContent: 'center', display: 'flex', flexDirection: 'column' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, cursor: 'pointer' }}>
-                    <input type="checkbox" checked={isFeatured} onChange={e => setIsFeatured(e.target.checked)} />
-                    Destacar producto ⭐
-                  </label>
-                </div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, cursor: 'pointer', color: 'var(--text)' }}>
+                  <input type="checkbox" checked={isFeatured} onChange={e => setIsFeatured(e.target.checked)} />
+                  <span>Destacar producto</span>
+                </label>
+              </div>
 
               <div className="form-group">
                 <label>Imagen del Producto</label>
                 <input type="file" accept="image/*" onChange={e => setImageFile(e.target.files[0])} />
-                <span style={{ fontSize: 11, color: '#475569' }}>Formatos soportados: JPG, PNG, WEBP. Máx: 5MB</span>
+                <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Formatos soportados: JPG, PNG, WEBP. Máx: 5MB</span>
               </div>
 
               <div className="modal-actions">

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { apiFetch } from '../api/client';
+import { Loader2, AlertTriangle, CheckCircle2, ShieldAlert } from 'lucide-react';
 import '../components/Layout.css';
 
 export default function Users() {
@@ -12,6 +13,10 @@ export default function Users() {
   const [customDate, setCustomDate] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const fetchUsers = () => {
     setLoading(true);
@@ -27,6 +32,11 @@ export default function Users() {
   useEffect(() => {
     fetchUsers();
   }, []);
+
+  // Reset pagination when searching
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search]);
 
   const handleEditClick = (u) => {
     setEditUser(u);
@@ -107,10 +117,17 @@ export default function Users() {
     u.username?.toLowerCase().includes(search.toLowerCase())
   );
 
+  // Calculate paginated slice
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const paginatedItems = filtered.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
   return (
     <div>
-      {error && <div className="alert alert--error">⚠️ {error}</div>}
-      {success && <div className="alert alert--success">✅ {success}</div>}
+      {error && <div className="alert alert--error"><AlertTriangle size={16} /> <span>{error}</span></div>}
+      {success && <div className="alert alert--success"><CheckCircle2 size={16} /> <span>{success}</span></div>}
 
       <div className="page-header">
         <h2>Usuarios Registrados</h2>
@@ -123,77 +140,101 @@ export default function Users() {
       </div>
 
       {loading ? (
-        <div className="loading-state"><span className="spin">⏳</span> Cargando usuarios...</div>
+        <div className="loading-state"><Loader2 className="spin" size={24} /> <span>Cargando usuarios...</span></div>
       ) : filtered.length === 0 ? (
-        <div className="empty-state"><div className="empty-icon">👥</div><p>No se encontraron usuarios</p></div>
+        <div className="empty-state"><div className="empty-icon"><Users size={40} /></div><p>No se encontraron usuarios</p></div>
       ) : (
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Nombre</th>
-                <th>Usuario</th>
-                <th>Email</th>
-                <th>Rol</th>
-                <th>Estado</th>
-                <th>Teléfono</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map(u => (
-                <tr key={u.id}>
-                  <td style={{ color: '#475569' }}>{u.id}</td>
-                  <td style={{ fontWeight: 600 }}>{u.name}</td>
-                  <td>{u.username ? `@${u.username}` : '—'}</td>
-                  <td>{u.email}</td>
-                  <td>
-                    <span className={`badge badge--${u.role === 'admin' || u.role === 'super_admin' ? 'red' : 'gray'}`}>
-                      {u.role === 'admin' ? 'Admin' : u.role === 'super_admin' ? 'Super Admin' : 'Cliente'}
-                    </span>
-                  </td>
-                  <td>
-                    {u.is_active === 0 || u.is_active === false ? (
-                      <span className="badge badge--red">Suspendido Indefinido</span>
-                    ) : u.suspended_until && new Date(u.suspended_until) > new Date() ? (
-                      <div>
-                        <span className="badge badge--yellow" style={{ display: 'inline-block' }}>Susp. Temporal</span>
-                        <div style={{ fontSize: '11px', color: '#f59e0b', marginTop: '4px' }}>
-                          Hasta: {new Date(u.suspended_until).toLocaleString('es-MX', {
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </div>
-                      </div>
-                    ) : (
-                      <span className="badge badge--green">Activo</span>
-                    )}
-                  </td>
-                  <td>{u.phone || '—'}</td>
-                  <td>
-                    <button className="btn btn--ghost" onClick={() => handleEditClick(u)}>
-                      🛡️ Gestionar
-                    </button>
-                  </td>
+        <>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Nombre</th>
+                  <th>Usuario</th>
+                  <th>Email</th>
+                  <th>Rol</th>
+                  <th>Estado</th>
+                  <th>Teléfono</th>
+                  <th>Acciones</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {paginatedItems.map(u => (
+                  <tr key={u.id}>
+                    <td style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{u.id}</td>
+                    <td style={{ fontWeight: 600 }}>{u.name}</td>
+                    <td>{u.username ? `@${u.username}` : '—'}</td>
+                    <td>{u.email}</td>
+                    <td>
+                      <span className={`badge badge--${u.role === 'admin' || u.role === 'super_admin' ? 'red' : 'gray'}`}>
+                        {u.role === 'admin' ? 'Admin' : u.role === 'super_admin' ? 'Super Admin' : 'Cliente'}
+                      </span>
+                    </td>
+                    <td>
+                      {u.is_active === 0 || u.is_active === false ? (
+                        <span className="badge badge--red">Suspendido Indefinido</span>
+                      ) : u.suspended_until && new Date(u.suspended_until) > new Date() ? (
+                        <div>
+                          <span className="badge badge--yellow" style={{ display: 'inline-block' }}>Susp. Temporal</span>
+                          <div style={{ fontSize: '11px', color: 'var(--warning-text)', marginTop: '4px', fontWeight: 500 }}>
+                            Hasta: {new Date(u.suspended_until).toLocaleString('es-MX', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="badge badge--green">Activo</span>
+                      )}
+                    </td>
+                    <td>{u.phone || '—'}</td>
+                    <td>
+                      <button className="btn btn--ghost" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={() => handleEditClick(u)}>
+                        <ShieldAlert size={14} />
+                        <span>Gestionar</span>
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="pagination">
+              <button 
+                className="btn btn--secondary" 
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+              >
+                Anterior
+              </button>
+              <span className="pagination-info">Página {currentPage} de {totalPages}</span>
+              <button 
+                className="btn btn--secondary" 
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+              >
+                Siguiente
+              </button>
+            </div>
+          )}
+        </>
       )}
 
       {editUser && (
         <div className="modal-overlay" onClick={() => setEditUser(null)}>
           <div className="modal" style={{ maxWidth: 450 }} onClick={e => e.stopPropagation()}>
             <h3>Gestionar Cuenta de Usuario</h3>
-            <div style={{ background: '#1e293b', padding: '12px', borderRadius: '8px', marginBottom: '16px', border: '1px solid #334155' }}>
-              <div style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '4px' }}>Usuario a gestionar:</div>
-              <div style={{ fontWeight: 'bold', color: '#f8fafc', fontSize: '15px' }}>{editUser.name}</div>
-              <div style={{ fontSize: '12px', color: '#64748b' }}>{editUser.email}</div>
+            <div style={{ background: 'var(--bg)', padding: '16px', borderRadius: '12px', marginBottom: '16px', border: '1px solid var(--border)' }}>
+              <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Usuario a gestionar:</div>
+              <div style={{ fontWeight: 'bold', color: 'var(--text)', fontSize: '15px' }}>{editUser.name}</div>
+              <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{editUser.email}</div>
             </div>
             
             <form className="modal-form" onSubmit={handleSave}>

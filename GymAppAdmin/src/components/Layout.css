@@ -947,3 +947,20 @@ select option {
   font-weight: 700;
   color: var(--text);
 }
+
+/* ── Pagination ── */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 16px;
+  margin-top: 20px;
+  padding: 8px 4px;
+}
+
+.pagination-info {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+

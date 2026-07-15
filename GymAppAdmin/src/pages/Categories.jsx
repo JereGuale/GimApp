@@ -1,5 +1,15 @@
 import { useEffect, useState } from 'react';
 import { apiFetch } from '../api/client';
+import { 
+  AlertTriangle, 
+  CheckCircle2, 
+  Plus, 
+  Loader2, 
+  FolderOpen, 
+  Pencil, 
+  Trash2, 
+  X 
+} from 'lucide-react';
 import '../components/Layout.css';
 
 export default function Categories() {
@@ -10,6 +20,10 @@ export default function Categories() {
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
 
   const fetchCategories = () => {
     setLoading(true);
@@ -22,6 +36,11 @@ export default function Categories() {
   useEffect(() => {
     fetchCategories();
   }, []);
+
+  // Reset pagination when categories list size changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [categories.length]);
 
   const handleOpenAdd = () => {
     setEditId(null);
@@ -76,60 +95,96 @@ export default function Categories() {
     }
   };
 
+  // Calculate paginated slice
+  const totalPages = Math.ceil(categories.length / itemsPerPage);
+  const paginatedCategories = categories.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
   return (
     <div>
-      {error && <div className="alert alert--error">⚠️ {error}</div>}
-      {success && <div className="alert alert--success">✅ {success}</div>}
+      {error && <div className="alert alert--error"><AlertTriangle size={16} /> <span>{error}</span></div>}
+      {success && <div className="alert alert--success"><CheckCircle2 size={16} /> <span>{success}</span></div>}
 
       <div className="page-header">
         <h2>Categorías de Productos</h2>
-        <button className="btn btn--primary" onClick={handleOpenAdd}>
-          ➕ Nueva Categoría
+        <button className="btn btn--primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={handleOpenAdd}>
+          <Plus size={16} />
+          <span>Nueva Categoría</span>
         </button>
       </div>
 
       {loading ? (
-        <div className="loading-state"><span className="spin">⏳</span> Cargando categorías...</div>
+        <div className="loading-state"><Loader2 className="spin" size={24} /> <span>Cargando categorías...</span></div>
       ) : categories.length === 0 ? (
-        <div className="empty-state"><div className="empty-icon">📂</div><p>No hay categorías registradas</p></div>
+        <div className="empty-state"><div className="empty-icon"><FolderOpen size={40} /></div><p>No hay categorías registradas</p></div>
       ) : (
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Nombre</th>
-                <th>Productos Asignados</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {categories.map(c => (
-                <tr key={c.id}>
-                  <td style={{ color: '#475569' }}>{c.id}</td>
-                  <td style={{ fontWeight: 600 }}>{c.name}</td>
-                  <td>{c.products?.length ?? 0}</td>
-                  <td>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button className="btn btn--ghost" style={{ padding: '6px 12px', fontSize: 12 }} onClick={() => handleOpenEdit(c)}>
-                        ✏️ Editar
-                      </button>
-                      <button className="btn btn--danger" style={{ padding: '6px 12px', fontSize: 12 }} onClick={() => handleDelete(c)}>
-                        🗑️ Eliminar
-                      </button>
-                    </div>
-                  </td>
+        <>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Nombre</th>
+                  <th>Productos Asignados</th>
+                  <th>Acciones</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {paginatedCategories.map(c => (
+                  <tr key={c.id}>
+                    <td style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{c.id}</td>
+                    <td style={{ fontWeight: 600, color: 'var(--text)' }}>{c.name}</td>
+                    <td style={{ color: 'var(--text-secondary)' }}>{c.products?.length ?? 0} productos</td>
+                    <td>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button className="btn btn--ghost" style={{ padding: '6px 12px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }} onClick={() => handleOpenEdit(c)}>
+                          <Pencil size={12} />
+                          <span>Editar</span>
+                        </button>
+                        <button className="btn btn--danger" style={{ padding: '6px 12px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }} onClick={() => handleDelete(c)}>
+                          <Trash2 size={12} />
+                          <span>Eliminar</span>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="pagination">
+              <button 
+                className="btn btn--secondary" 
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+              >
+                Anterior
+              </button>
+              <span className="pagination-info">Página {currentPage} de {totalPages}</span>
+              <button 
+                className="btn btn--secondary" 
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+              >
+                Siguiente
+              </button>
+            </div>
+          )}
+        </>
       )}
 
       {modalOpen && (
         <div className="modal-overlay" onClick={() => setModalOpen(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
-            <h3>{editId ? 'Editar Categoría' : 'Nueva Categoría'}</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 style={{ margin: 0 }}>{editId ? 'Editar Categoría' : 'Nueva Categoría'}</h3>
+              <button className="btn btn--ghost" style={{ padding: 6, borderRadius: '50%' }} onClick={() => setModalOpen(false)}><X size={16} /></button>
+            </div>
             <form className="modal-form" onSubmit={handleSave}>
               <div className="form-group">
                 <label>Nombre de la Categoría</label>
@@ -139,6 +194,7 @@ export default function Categories() {
                   onChange={e => setName(e.target.value)}
                   placeholder="Ej. Suplementos, Accesorios..."
                   autoFocus
+                  required
                 />
               </div>
 

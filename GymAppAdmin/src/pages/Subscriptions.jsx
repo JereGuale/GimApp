@@ -2,14 +2,15 @@ import { useEffect, useState } from 'react';
 import { apiFetch, API_BASE_URL } from '../api/client';
 import { 
   Check, 
-  X, 
+  Trash2, 
   Eye, 
   ExternalLink, 
   Loader2, 
   AlertTriangle, 
   CheckCircle2,
   CreditCard,
-  Building
+  Building,
+  X
 } from 'lucide-react';
 import '../components/Layout.css';
 
@@ -25,6 +26,10 @@ export default function Subscriptions() {
   const [receiptModal, setReceiptModal] = useState(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
 
   const fetchSubs = () => {
     setLoading(true);
@@ -36,6 +41,11 @@ export default function Subscriptions() {
 
   useEffect(() => { fetchSubs(); }, []);
 
+  // Reset pagination when searching or filtering
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, filter]);
+
   const filtered = subs.filter(s => {
     const matchFilter = filter === 'all' || s.status === filter;
     const matchSearch = !search ||
@@ -44,7 +54,15 @@ export default function Subscriptions() {
     return matchFilter && matchSearch;
   });
 
+  // Calculate paginated slice
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const paginatedItems = filtered.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
   const handleApprove = async (id) => {
+    if (!window.confirm('¿Seguro que deseas aprobar esta suscripción?')) return;
     setActionLoading(id + '_approve');
     setError(''); setSuccess('');
     try {
@@ -56,7 +74,7 @@ export default function Subscriptions() {
   };
 
   const handleReject = async (id) => {
-    if (!window.confirm('¿Seguro que deseas rechazar esta suscripción?')) return;
+    if (!window.confirm('¿Seguro que deseas rechazar y eliminar esta suscripción?')) return;
     setActionLoading(id + '_reject');
     setError(''); setSuccess('');
     try {
@@ -98,86 +116,109 @@ export default function Subscriptions() {
       ) : filtered.length === 0 ? (
         <div className="empty-state"><div className="empty-icon"><CreditCard size={40} /></div><p>No hay suscripciones</p></div>
       ) : (
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Usuario</th>
-                <th>Plan</th>
-                <th>Estado</th>
-                <th>Método</th>
-                <th>Comprobante</th>
-                <th>Fecha</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map(s => (
-                <tr key={s.id}>
-                  <td style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{s.id}</td>
-                  <td>
-                    <div style={{ fontWeight: 600, color: 'var(--text)' }}>{s.user?.name || '—'}</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{s.user?.email}</div>
-                  </td>
-                  <td>{s.plan?.name || s.plan_id || '—'}</td>
-                  <td>
-                    <span className={`badge badge--${STATUS_BADGE[s.status] || 'gray'}`}>
-                      {STATUS_LABELS[s.status] || s.status}
-                    </span>
-                  </td>
-                  <td>
-                    <span className="badge badge--blue" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                      {s.payment_method === 'transfer' ? (
-                        <>
-                          <Building size={12} />
-                          <span>Transferencia</span>
-                        </>
-                      ) : s.payment_method || '—'}
-                    </span>
-                  </td>
-                  <td>
-                    {getReceiptUrl(s) ? (
-                      <button className="btn btn--ghost" style={{ padding: '6px 12px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}
-                        onClick={() => setReceiptModal(getReceiptUrl(s))}>
-                        <Eye size={12} />
-                        <span>Ver</span>
-                      </button>
-                    ) : <span style={{ color: 'var(--text-secondary)' }}>—</span>}
-                  </td>
-                  <td style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
-                    {s.created_at ? new Date(s.created_at).toLocaleDateString('es-MX') : '—'}
-                  </td>
-                  <td>
-                    {s.status === 'pending' && (
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <button
-                          className="btn btn--success"
-                          style={{ padding: '6px 12px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}
-                          disabled={actionLoading === s.id + '_approve'}
-                          onClick={() => handleApprove(s.id)}
-                        >
-                          {actionLoading === s.id + '_approve' ? <Loader2 className="spin" size={12} /> : <Check size={12} />}
-                          <span>Aprobar</span>
-                        </button>
-                        <button
-                          className="btn btn--danger"
-                          style={{ padding: '6px 12px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}
-                          disabled={actionLoading === s.id + '_reject'}
-                          onClick={() => handleReject(s.id)}
-                        >
-                          {actionLoading === s.id + '_reject' ? <Loader2 className="spin" size={12} /> : <X size={12} />}
-                          <span>Rechazar</span>
-                        </button>
-                      </div>
-                    )}
-                    {s.status !== 'pending' && <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>—</span>}
-                  </td>
+        <>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Usuario</th>
+                  <th>Plan</th>
+                  <th>Estado</th>
+                  <th>Método</th>
+                  <th>Comprobante</th>
+                  <th>Fecha</th>
+                  <th>Acciones</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {paginatedItems.map(s => (
+                  <tr key={s.id}>
+                    <td style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{s.id}</td>
+                    <td>
+                      <div style={{ fontWeight: 600, color: 'var(--text)' }}>{s.user?.name || '—'}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{s.user?.email}</div>
+                    </td>
+                    <td>{s.plan?.name || s.plan_id || '—'}</td>
+                    <td>
+                      <span className={`badge badge--${STATUS_BADGE[s.status] || 'gray'}`}>
+                        {STATUS_LABELS[s.status] || s.status}
+                      </span>
+                    </td>
+                    <td>
+                      <span className="badge badge--blue" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        {s.payment_method === 'transfer' ? (
+                          <>
+                            <Building size={12} />
+                            <span>Transferencia</span>
+                          </>
+                        ) : s.payment_method || '—'}
+                      </span>
+                    </td>
+                    <td>
+                      {getReceiptUrl(s) ? (
+                        <button className="btn btn--ghost" style={{ padding: '6px 12px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                          onClick={() => setReceiptModal(getReceiptUrl(s))}>
+                          <Eye size={12} />
+                          <span>Ver</span>
+                        </button>
+                      ) : <span style={{ color: 'var(--text-secondary)' }}>—</span>}
+                    </td>
+                    <td style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
+                      {s.created_at ? new Date(s.created_at).toLocaleDateString('es-MX') : '—'}
+                    </td>
+                    <td>
+                      {s.status === 'pending' && (
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <button
+                            className="btn btn--success"
+                            style={{ padding: '8px', borderRadius: '10px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                            disabled={actionLoading === s.id + '_approve'}
+                            onClick={() => handleApprove(s.id)}
+                            title="Aprobar Suscripción"
+                          >
+                            {actionLoading === s.id + '_approve' ? <Loader2 className="spin" size={14} /> : <Check size={14} />}
+                          </button>
+                          <button
+                            className="btn btn--danger"
+                            style={{ padding: '8px', borderRadius: '10px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                            disabled={actionLoading === s.id + '_reject'}
+                            onClick={() => handleReject(s.id)}
+                            title="Rechazar y Eliminar"
+                          >
+                            {actionLoading === s.id + '_reject' ? <Loader2 className="spin" size={14} /> : <Trash2 size={14} />}
+                          </button>
+                        </div>
+                      )}
+                      {s.status !== 'pending' && <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>—</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="pagination">
+              <button 
+                className="btn btn--secondary" 
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+              >
+                Anterior
+              </button>
+              <span className="pagination-info">Página {currentPage} de {totalPages}</span>
+              <button 
+                className="btn btn--secondary" 
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+              >
+                Siguiente
+              </button>
+            </div>
+          )}
+        </>
       )}
 
       {/* Receipt Modal */}

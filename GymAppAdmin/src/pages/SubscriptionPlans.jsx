@@ -1,5 +1,16 @@
 import { useEffect, useState } from 'react';
 import { apiFetch } from '../api/client';
+import { 
+  AlertTriangle, 
+  CheckCircle2, 
+  Plus, 
+  Loader2, 
+  CreditCard, 
+  Sparkles, 
+  Pencil, 
+  Trash2, 
+  X 
+} from 'lucide-react';
 import '../components/Layout.css';
 
 export default function SubscriptionPlans() {
@@ -22,6 +33,10 @@ export default function SubscriptionPlans() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
+
   const fetchPlans = () => {
     setLoading(true);
     apiFetch('/admin/subscription-plans')
@@ -33,6 +48,11 @@ export default function SubscriptionPlans() {
   useEffect(() => {
     fetchPlans();
   }, []);
+
+  // Reset pagination when loading new plans
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [plans.length]);
 
   const handleOpenAdd = () => {
     setEditId(null);
@@ -50,31 +70,30 @@ export default function SubscriptionPlans() {
     setModalOpen(true);
   };
 
-  const handleOpenEdit = (plan) => {
-    setEditId(plan.id);
-    setName(plan.name || '');
-    setDescription(plan.description || '');
-    setPrice(plan.price || '');
-    setDuration(plan.duration || 'monthly');
+  const handleOpenEdit = (p) => {
+    setEditId(p.id);
+    setName(p.name || '');
+    setDescription(p.description || '');
+    setPrice(p.price || '');
+    setDuration(p.duration || 'monthly');
     
-    // Parse features to text (one per line)
-    if (Array.isArray(plan.features)) {
-      setFeaturesText(plan.features.join('\n'));
-    } else if (typeof plan.features === 'string') {
+    let featStr = '';
+    if (Array.isArray(p.features)) {
+      featStr = p.features.join('\n');
+    } else if (typeof p.features === 'string') {
       try {
-        const parsed = JSON.parse(plan.features);
-        setFeaturesText(Array.isArray(parsed) ? parsed.join('\n') : '');
+        const parsed = JSON.parse(p.features);
+        featStr = Array.isArray(parsed) ? parsed.join('\n') : p.features;
       } catch {
-        setFeaturesText(plan.features || '');
+        featStr = p.features;
       }
-    } else {
-      setFeaturesText('');
     }
-
-    setIcon(plan.icon || 'barbell-outline');
-    setColor(plan.color || '#22D3EE');
-    setIsBestValue(!!plan.is_best_value);
-    setStatus(plan.status || 'active');
+    
+    setFeaturesText(featStr);
+    setIcon(p.icon || 'barbell-outline');
+    setColor(p.color || '#22D3EE');
+    setIsBestValue(!!p.is_best_value);
+    setStatus(p.status || 'active');
     setError('');
     setSuccess('');
     setModalOpen(true);
@@ -82,43 +101,43 @@ export default function SubscriptionPlans() {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    if (!name.trim()) { setError('El nombre es requerido'); return; }
-    if (!price || isNaN(price) || parseFloat(price) < 0) { setError('El precio debe ser un número válido'); return; }
-    
-    setError(''); 
-    setSuccess('');
-    
-    // Convert features text to array
-    const features = featuresText
-      .split('\n')
-      .map(item => item.trim())
-      .filter(Boolean);
+    if (!name.trim() || !price) {
+      setError('Nombre y precio son requeridos');
+      return;
+    }
 
-    const payload = {
+    const feats = featuresText
+      .split('\n')
+      .map(x => x.trim())
+      .filter(x => x.length > 0);
+
+    const body = {
       name,
       description,
-      price: parseFloat(price),
+      price: parseFloat(price) || 0,
       duration,
-      features,
+      features: feats,
       icon,
       color,
       is_best_value: isBestValue,
-      status
+      status,
     };
+
+    setError(''); setSuccess('');
 
     try {
       if (editId) {
         await apiFetch(`/admin/subscription-plans/${editId}`, {
           method: 'PUT',
-          body: JSON.stringify(payload),
+          body: JSON.stringify(body),
         });
-        setSuccess('Plan de suscripción actualizado');
+        setSuccess('Plan actualizado con éxito');
       } else {
         await apiFetch('/admin/subscription-plans', {
           method: 'POST',
-          body: JSON.stringify(payload),
+          body: JSON.stringify(body),
         });
-        setSuccess('Plan de suscripción creado');
+        setSuccess('Plan creado con éxito');
       }
       setModalOpen(false);
       fetchPlans();
@@ -127,112 +146,150 @@ export default function SubscriptionPlans() {
     }
   };
 
-  const handleDelete = async (plan) => {
-    if (!window.confirm(`¿Estás seguro de eliminar el plan "${plan.name}"?`)) return;
-    setError(''); 
-    setSuccess('');
+  const handleDelete = async (p) => {
+    if (!window.confirm(`¿Estás seguro de eliminar el plan "${p.name}"?`)) return;
+    setError(''); setSuccess('');
     try {
-      await apiFetch(`/admin/subscription-plans/${plan.id}`, { method: 'DELETE' });
-      setSuccess('Plan de suscripción eliminado');
+      await apiFetch(`/admin/subscription-plans/${p.id}`, { method: 'DELETE' });
+      setSuccess('Plan eliminado correctamente');
       fetchPlans();
     } catch (err) {
       setError(err.message || 'No se pudo eliminar el plan');
     }
   };
 
+  // Calculate paginated slice
+  const totalPages = Math.ceil(plans.length / itemsPerPage);
+  const paginatedPlans = plans.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
   return (
     <div>
-      {error && <div className="alert alert--error">⚠️ {error}</div>}
-      {success && <div className="alert alert--success">✅ {success}</div>}
+      {error && <div className="alert alert--error"><AlertTriangle size={16} /> <span>{error}</span></div>}
+      {success && <div className="alert alert--success"><CheckCircle2 size={16} /> <span>{success}</span></div>}
 
       <div className="page-header">
         <h2>Planes de Suscripción</h2>
-        <button className="btn btn--primary" onClick={handleOpenAdd}>
-          ➕ Nuevo Plan
+        <button className="btn btn--primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={handleOpenAdd}>
+          <Plus size={16} />
+          <span>Nuevo Plan</span>
         </button>
       </div>
 
       {loading ? (
-        <div className="loading-state"><span className="spin">⏳</span> Cargando planes...</div>
+        <div className="loading-state"><Loader2 className="spin" size={24} /> <span>Cargando planes...</span></div>
       ) : plans.length === 0 ? (
         <div className="empty-state">
-          <div className="empty-icon">💳</div>
+          <div className="empty-icon"><CreditCard size={40} /></div>
           <p>No hay planes de suscripción registrados</p>
         </div>
       ) : (
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Nombre</th>
-                <th>Precio</th>
-                <th>Duración</th>
-                <th>Estado</th>
-                <th>Destacado</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {plans.map(plan => (
-                <tr key={plan.id}>
-                  <td style={{ color: '#475569' }}>{plan.id}</td>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <span 
-                        style={{ 
-                          width: 12, 
-                          height: 12, 
-                          borderRadius: '50%', 
-                          backgroundColor: plan.color || '#22D3EE', 
-                          display: 'inline-block' 
-                        }} 
-                      />
-                      <span style={{ fontWeight: 600 }}>{plan.name}</span>
-                    </div>
-                    {plan.description && (
-                      <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>
-                        {plan.description}
-                      </div>
-                    )}
-                  </td>
-                  <td style={{ fontWeight: 'bold', color: 'var(--primary)' }}>
-                    ${Number(plan.price).toFixed(2)}
-                  </td>
-                  <td>{plan.duration === 'monthly' ? 'Mensual' : plan.duration}</td>
-                  <td>
-                    <span className={`badge badge--${plan.status === 'active' ? 'green' : 'gray'}`}>
-                      {plan.status === 'active' ? 'Activo' : 'Inactivo'}
-                    </span>
-                  </td>
-                  <td>
-                    {plan.is_best_value ? (
-                      <span className="badge badge--yellow">✨ Sí</span>
-                    ) : (
-                      <span style={{ color: '#475569' }}>No</span>
-                    )}
-                  </td>
-                  <td>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button className="btn btn--ghost" style={{ padding: '6px 12px', fontSize: 12 }} onClick={() => handleOpenEdit(plan)}>
-                        ✏️ Editar
-                      </button>
-                      <button className="btn btn--danger" style={{ padding: '6px 12px', fontSize: 12 }} onClick={() => handleDelete(plan)}>
-                        🗑️ Eliminar
-                      </button>
-                    </div>
-                  </td>
+        <>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Nombre</th>
+                  <th>Precio</th>
+                  <th>Duración</th>
+                  <th>Estado</th>
+                  <th>Destacado</th>
+                  <th>Acciones</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {paginatedPlans.map(plan => (
+                  <tr key={plan.id}>
+                    <td style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{plan.id}</td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span 
+                          style={{ 
+                            width: 12, 
+                            height: 12, 
+                            borderRadius: '50%', 
+                            backgroundColor: plan.color || '#22D3EE', 
+                            display: 'inline-block' 
+                          }} 
+                        />
+                        <span style={{ fontWeight: 600, color: 'var(--text)' }}>{plan.name}</span>
+                      </div>
+                      {plan.description && (
+                        <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>
+                          {plan.description}
+                        </div>
+                      )}
+                    </td>
+                    <td style={{ fontWeight: 'bold', color: 'var(--primary)' }}>
+                      ${Number(plan.price).toFixed(2)}
+                    </td>
+                    <td>{plan.duration === 'monthly' ? 'Mensual' : plan.duration === 'weekly' ? 'Semanal' : plan.duration === 'yearly' ? 'Anual' : plan.duration}</td>
+                    <td>
+                      <span className={`badge badge--${plan.status === 'active' ? 'green' : 'gray'}`}>
+                        {plan.status === 'active' ? 'Activo' : 'Inactivo'}
+                      </span>
+                    </td>
+                    <td>
+                      {plan.is_best_value ? (
+                        <span className="badge badge--yellow" style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                          <Sparkles size={10} />
+                          <span>Sí</span>
+                        </span>
+                      ) : (
+                        <span style={{ color: 'var(--text-secondary)' }}>No</span>
+                      )}
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button className="btn btn--ghost" style={{ padding: '6px 12px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }} onClick={() => handleOpenEdit(plan)}>
+                          <Pencil size={12} />
+                          <span>Editar</span>
+                        </button>
+                        <button className="btn btn--danger" style={{ padding: '6px 12px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }} onClick={() => handleDelete(plan)}>
+                          <Trash2 size={12} />
+                          <span>Eliminar</span>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="pagination">
+              <button 
+                className="btn btn--secondary" 
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+              >
+                Anterior
+              </button>
+              <span className="pagination-info">Página {currentPage} de {totalPages}</span>
+              <button 
+                className="btn btn--secondary" 
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+              >
+                Siguiente
+              </button>
+            </div>
+          )}
+        </>
       )}
 
       {modalOpen && (
         <div className="modal-overlay" onClick={() => setModalOpen(false)}>
           <div className="modal" style={{ maxWidth: 520 }} onClick={e => e.stopPropagation()}>
-            <h3>{editId ? 'Editar Plan de Suscripción' : 'Nuevo Plan de Suscripción'}</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 style={{ margin: 0 }}>{editId ? 'Editar Plan de Suscripción' : 'Nuevo Plan de Suscripción'}</h3>
+              <button className="btn btn--ghost" style={{ padding: 6, borderRadius: '50%' }} onClick={() => setModalOpen(false)}><X size={16} /></button>
+            </div>
             <form className="modal-form" onSubmit={handleSave}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <div className="form-group">
@@ -305,7 +362,7 @@ export default function SubscriptionPlans() {
                       type="color"
                       value={color}
                       onChange={e => setColor(e.target.value)}
-                      style={{ width: '100%', height: 38, padding: '2px', cursor: 'pointer', border: '1px solid #334155', borderRadius: '6px', backgroundColor: 'transparent' }}
+                      style={{ width: '100%', height: 38, padding: '2px', cursor: 'pointer', border: '1px solid var(--border)', borderRadius: '6px', backgroundColor: 'transparent' }}
                     />
                   </div>
                 </div>
@@ -329,7 +386,7 @@ export default function SubscriptionPlans() {
                   onChange={e => setIsBestValue(e.target.checked)}
                   style={{ width: 'auto', cursor: 'pointer' }}
                 />
-                <label htmlFor="isBestValue" style={{ margin: 0, cursor: 'pointer', userSelect: 'none' }}>
+                <label htmlFor="isBestValue" style={{ margin: 0, cursor: 'pointer', userSelect: 'none', color: 'var(--text)' }}>
                   Destacar plan como el de "Mejor Valor" (Best Value)
                 </label>
               </div>

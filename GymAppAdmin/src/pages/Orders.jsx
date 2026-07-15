@@ -1,5 +1,17 @@
 import { useEffect, useState } from 'react';
 import { apiFetch, API_BASE_URL } from '../api/client';
+import { 
+  AlertTriangle, 
+  CheckCircle2, 
+  Loader2, 
+  Building, 
+  CreditCard, 
+  Eye, 
+  Check, 
+  X, 
+  ExternalLink,
+  Package
+} from 'lucide-react';
 import '../components/Layout.css';
 
 const STATUS_LABELS = { pending: 'Pendiente', approved: 'Aprobado', rejected: 'Rechazado', completed: 'Completado' };
@@ -15,6 +27,10 @@ export default function Orders() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
+
   const fetchOrders = () => {
     setLoading(true);
     apiFetch(`/admin/orders?status=${filter}&search=${search}`)
@@ -29,6 +45,11 @@ export default function Orders() {
   useEffect(() => {
     fetchOrders();
   }, [filter]);
+
+  // Reset pagination when filter or search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, filter]);
 
   const handleSearchKeyPress = (e) => {
     if (e.key === 'Enter') {
@@ -71,10 +92,17 @@ export default function Orders() {
     return `${API_BASE_URL.replace('/api', '')}/storage/${path}`;
   };
 
+  // Calculate paginated slice
+  const totalPages = Math.ceil(orders.length / itemsPerPage);
+  const paginatedOrders = orders.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
   return (
     <div>
-      {error && <div className="alert alert--error">⚠️ {error}</div>}
-      {success && <div className="alert alert--success">✅ {success}</div>}
+      {error && <div className="alert alert--error"><AlertTriangle size={16} /> <span>{error}</span></div>}
+      {success && <div className="alert alert--success"><CheckCircle2 size={16} /> <span>{success}</span></div>}
 
       <div className="page-header">
         <h2>Gestión de Pedidos</h2>
@@ -98,115 +126,151 @@ export default function Orders() {
       </div>
 
       {loading ? (
-        <div className="loading-state"><span className="spin">⏳</span> Cargando…</div>
+        <div className="loading-state"><Loader2 className="spin" size={24} /> <span>Cargando…</span></div>
       ) : orders.length === 0 ? (
-        <div className="empty-state"><div className="empty-icon">📦</div><p>No hay pedidos registrados</p></div>
+        <div className="empty-state"><div className="empty-icon"><Package size={40} /></div><p>No hay pedidos registrados</p></div>
       ) : (
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Usuario</th>
-                <th>Productos</th>
-                <th>Total</th>
-                <th>Estado</th>
-                <th>Método</th>
-                <th>Comprobante</th>
-                <th>Fecha</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {orders.map(o => (
-                <tr key={o.id}>
-                  <td style={{ color: '#475569' }}>{o.id}</td>
-                  <td>
-                    <div style={{ fontWeight: 600, color: '#e2e8f0' }}>{o.user?.name || '—'}</div>
-                    <div style={{ fontSize: 12, color: '#475569' }}>{o.user?.email}</div>
-                  </td>
-                  <td>
-                    <div style={{ maxHeight: 80, overflowY: 'auto', fontSize: 13, color: '#94a3b8' }}>
-                      {Array.isArray(o.items) ? o.items.map((item, idx) => (
-                        <div key={idx} style={{ marginBottom: 4 }}>
-                          • <strong>{item.name}</strong> x{item.quantity} (${Number(item.price).toFixed(2)})
-                        </div>
-                      )) : '—'}
-                    </div>
-                  </td>
-                  <td style={{ fontWeight: 700, color: '#34d399' }}>
-                    ${Number(o.total).toFixed(2)}
-                  </td>
-                  <td>
-                    <span className={`badge badge--${STATUS_BADGE[o.status] || 'gray'}`}>
-                      {STATUS_LABELS[o.status] || o.status}
-                    </span>
-                    {o.status === 'rejected' && o.rejection_reason && (
-                      <div style={{ fontSize: 11, color: '#ef4444', marginTop: 4, maxWidth: 150 }}>
-                        Motivo: {o.rejection_reason}
-                      </div>
-                    )}
-                  </td>
-                  <td>
-                    <span className="badge badge--blue">
-                      {o.payment_method === 'transfer' ? '🏦 Transferencia' : '💳 Tarjeta'}
-                    </span>
-                  </td>
-                  <td>
-                    {getReceiptUrl(o) ? (
-                      <button className="btn btn--ghost" style={{ padding: '6px 12px', fontSize: 12 }}
-                        onClick={() => setReceiptModal(getReceiptUrl(o))}>
-                        Ver 🖼️
-                      </button>
-                    ) : <span style={{ color: '#475569' }}>—</span>}
-                  </td>
-                  <td style={{ color: '#64748b', fontSize: 13 }}>
-                    {o.created_at ? new Date(o.created_at).toLocaleDateString('es-MX', {
-                      day: 'numeric',
-                      month: 'short',
-                      year: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    }) : '—'}
-                  </td>
-                  <td>
-                    {o.status === 'pending' && (
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <button
-                          className="btn btn--success"
-                          style={{ padding: '6px 12px', fontSize: 12 }}
-                          disabled={actionLoading === o.id + '_approve'}
-                          onClick={() => handleApprove(o.id)}
-                        >
-                          {actionLoading === o.id + '_approve' ? '…' : '✅ Aprobar'}
-                        </button>
-                        <button
-                          className="btn btn--danger"
-                          style={{ padding: '6px 12px', fontSize: 12 }}
-                          disabled={actionLoading === o.id + '_reject'}
-                          onClick={() => handleReject(o.id)}
-                        >
-                          {actionLoading === o.id + '_reject' ? '…' : '❌ Rechazar'}
-                        </button>
-                      </div>
-                    )}
-                    {o.status !== 'pending' && <span style={{ color: '#334155', fontSize: 12 }}>—</span>}
-                  </td>
+        <>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Usuario</th>
+                  <th>Productos</th>
+                  <th>Total</th>
+                  <th>Estado</th>
+                  <th>Método</th>
+                  <th>Comprobante</th>
+                  <th>Fecha</th>
+                  <th>Acciones</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {paginatedOrders.map(o => (
+                  <tr key={o.id}>
+                    <td style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{o.id}</td>
+                    <td>
+                      <div style={{ fontWeight: 600, color: 'var(--text)' }}>{o.user?.name || '—'}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{o.user?.email}</div>
+                    </td>
+                    <td>
+                      <div style={{ maxHeight: 80, overflowY: 'auto', fontSize: 13, color: 'var(--text-secondary)' }}>
+                        {Array.isArray(o.items) ? o.items.map((item, idx) => (
+                          <div key={idx} style={{ marginBottom: 4 }}>
+                            • <strong>{item.name}</strong> x{item.quantity} (${Number(item.price).toFixed(2)})
+                          </div>
+                        )) : '—'}
+                      </div>
+                    </td>
+                    <td style={{ fontWeight: 700, color: 'var(--success)' }}>
+                      ${Number(o.total).toFixed(2)}
+                    </td>
+                    <td>
+                      <span className={`badge badge--${STATUS_BADGE[o.status] || 'gray'}`}>
+                        {STATUS_LABELS[o.status] || o.status}
+                      </span>
+                      {o.status === 'rejected' && o.rejection_reason && (
+                        <div style={{ fontSize: 11, color: 'var(--danger-text)', marginTop: 4, maxWidth: 150 }}>
+                          Motivo: {o.rejection_reason}
+                        </div>
+                      )}
+                    </td>
+                    <td>
+                      <span className="badge badge--blue" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        {o.payment_method === 'transfer' ? (
+                          <>
+                            <Building size={12} />
+                            <span>Transferencia</span>
+                          </>
+                        ) : (
+                          <>
+                            <CreditCard size={12} />
+                            <span>Tarjeta</span>
+                          </>
+                        )}
+                      </span>
+                    </td>
+                    <td>
+                      {getReceiptUrl(o) ? (
+                        <button className="btn btn--ghost" style={{ padding: '6px 12px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                          onClick={() => setReceiptModal(getReceiptUrl(o))}>
+                          <Eye size={12} />
+                          <span>Ver</span>
+                        </button>
+                      ) : <span style={{ color: 'var(--text-secondary)' }}>—</span>}
+                    </td>
+                    <td style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
+                      {o.created_at ? new Date(o.created_at).toLocaleDateString('es-MX', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      }) : '—'}
+                    </td>
+                    <td>
+                      {o.status === 'pending' && (
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <button
+                            className="btn btn--success"
+                            style={{ padding: '8px', borderRadius: '10px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                            disabled={actionLoading === o.id + '_approve'}
+                            onClick={() => handleApprove(o.id)}
+                            title="Aprobar Pedido"
+                          >
+                            {actionLoading === o.id + '_approve' ? <Loader2 className="spin" size={14} /> : <Check size={14} />}
+                          </button>
+                          <button
+                            className="btn btn--danger"
+                            style={{ padding: '8px', borderRadius: '10px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                            disabled={actionLoading === o.id + '_reject'}
+                            onClick={() => handleReject(o.id)}
+                            title="Rechazar Pedido"
+                          >
+                            {actionLoading === o.id + '_reject' ? <Loader2 className="spin" size={14} /> : <X size={14} />}
+                          </button>
+                        </div>
+                      )}
+                      {o.status !== 'pending' && <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>—</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="pagination">
+              <button 
+                className="btn btn--secondary" 
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+              >
+                Anterior
+              </button>
+              <span className="pagination-info">Página {currentPage} de {totalPages}</span>
+              <button 
+                className="btn btn--secondary" 
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+              >
+                Siguiente
+              </button>
+            </div>
+          )}
+        </>
       )}
 
       {/* Receipt Modal */}
       {receiptModal && (
         <div className="modal-overlay" onClick={() => setReceiptModal(null)}>
-          <div style={{ background: '#0f172a', borderRadius: 16, padding: 24, maxWidth: '90vw', maxHeight: '90vh' }}
+          <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 16, padding: 24, maxWidth: '90vw', maxHeight: '90vh' }}
             onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-              <h3 style={{ margin: 0, color: '#f1f5f9' }}>Comprobante de Pago</h3>
-              <button className="btn btn--ghost" onClick={() => setReceiptModal(null)}>✕</button>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 style={{ margin: 0, color: 'var(--text)' }}>Comprobante de Pago</h3>
+              <button className="btn btn--ghost" style={{ padding: 6, borderRadius: '50%' }} onClick={() => setReceiptModal(null)}><X size={16} /></button>
             </div>
             <img
               src={receiptModal}
@@ -217,13 +281,14 @@ export default function Orders() {
                 e.target.nextSibling.style.display = 'flex';
               }}
             />
-            <div style={{ display: 'none', flexDirection: 'column', alignItems: 'center', padding: 40, color: '#94a3b8', gap: 12 }}>
-              <span style={{ fontSize: 48 }}>🖼️</span>
+            <div style={{ display: 'none', flexDirection: 'column', alignItems: 'center', padding: 40, color: 'var(--text-secondary)', gap: 12 }}>
+              <AlertTriangle size={48} />
               <p style={{ margin: 0, fontSize: 14 }}>No se pudo cargar el comprobante</p>
-              <p style={{ margin: 0, fontSize: 12, color: '#64748b' }}>El archivo puede haber sido eliminado o la URL es incorrecta</p>
+              <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)', opacity: 0.8 }}>El archivo puede haber sido eliminado o la URL es incorrecta</p>
             </div>
-            <a href={receiptModal} target="_blank" rel="noreferrer" className="btn btn--primary" style={{ marginTop: 16, textDecoration: 'none', display: 'inline-block', textAlign: 'center' }}>
-              📥 Abrir en nueva pestaña
+            <a href={receiptModal} target="_blank" rel="noreferrer" className="btn btn--primary" style={{ marginTop: 16, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <ExternalLink size={14} />
+              <span>Abrir en nueva pestaña</span>
             </a>
           </div>
         </div>
