@@ -10,7 +10,9 @@ import {
   Pencil, 
   Trash2,
   X,
-  Check
+  Check,
+  FileText,
+  Image as ImageIcon
 } from 'lucide-react';
 import '../components/Layout.css';
 
@@ -312,70 +314,175 @@ export default function Products() {
         </>
       )}
 
+      {/* Product Form Modal (Redesigned like the photo) */}
       {modalOpen && (
         <div className="modal-overlay" onClick={() => setModalOpen(false)}>
-          <div className="modal" style={{ maxWidth: 540 }} onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h3 style={{ margin: 0 }}>{editId ? 'Editar Producto' : 'Nuevo Producto'}</h3>
-              <button className="btn btn--ghost" style={{ padding: 6, borderRadius: '50%' }} onClick={() => setModalOpen(false)}><X size={16} /></button>
+          <div className="modal" style={{ maxWidth: 600, padding: 0, borderRadius: '16px', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
+            
+            {/* Header */}
+            <div style={{ display: 'flex', gap: 16, alignItems: 'center', padding: '24px 28px', borderBottom: '1px solid var(--border)', background: 'var(--card)' }}>
+              <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', flexShrink: 0 }}>
+                <Package size={20} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--text)' }}>
+                  {editId ? 'Editar producto' : 'Nuevo producto'}
+                </h3>
+                <p style={{ margin: '4px 0 0 0', fontSize: 13, color: 'var(--text-secondary)' }}>
+                  {editId ? 'Completa la información para actualizar el producto.' : 'Completa la información para agregar un nuevo producto.'}
+                </p>
+              </div>
+              <button className="btn btn--ghost" style={{ padding: 6, borderRadius: '50%' }} onClick={() => setModalOpen(false)}><X size={18} /></button>
             </div>
+
+            {/* Scrollable Form Body */}
             <form className="modal-form" onSubmit={handleSave}>
-              <div className="form-group">
-                <label>Nombre del Producto</label>
-                <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Ej. Proteína Isolate 1kg" required />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                <div className="form-group">
-                  <label>Precio ($)</label>
-                  <input type="number" step="0.01" value={price} onChange={e => setPrice(e.target.value)} placeholder="Ej. 29.99" required />
+              <div style={{ maxHeight: '65vh', overflowY: 'auto', padding: '28px' }}>
+                
+                {/* Section 1: Basic Info */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 28 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, fontWeight: 700, color: 'var(--text)', borderBottom: '1px solid var(--border)', paddingBottom: 8 }}>
+                    <FileText size={16} style={{ color: 'var(--primary)' }} />
+                    <span>Información básica</span>
+                  </div>
+                  <div className="form-group">
+                    <label>Nombre del producto *</label>
+                    <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Ej. Proteína Isolate 1kg" required />
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                    <div className="form-group">
+                      <label>Precio (USD) *</label>
+                      <input type="number" step="0.01" value={price} onChange={e => setPrice(e.target.value)} placeholder="29.99" required />
+                    </div>
+                    <div className="form-group">
+                      <label>Categoría *</label>
+                      <select value={categoryId} onChange={e => setCategoryId(e.target.value)} required>
+                        <option value="">Selecciona...</option>
+                        {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <label>Descripción</label>
+                      <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{description.length} / 500</span>
+                    </div>
+                    <textarea rows="3" maxLength="500" value={description} onChange={e => setDescription(e.target.value)} placeholder="Escribe detalles del producto..."></textarea>
+                  </div>
                 </div>
-                <div className="form-group">
-                  <label>Categoría</label>
-                  <select value={categoryId} onChange={e => setCategoryId(e.target.value)} required>
-                    <option value="">Selecciona...</option>
-                    {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
+
+                {/* Section 2: Inventory & Stock */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 28 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, fontWeight: 700, color: 'var(--text)', borderBottom: '1px solid var(--border)', paddingBottom: 8 }}>
+                    <Package size={16} style={{ color: 'var(--primary)' }} />
+                    <span>Inventario y estado</span>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.2fr 1.6fr', gap: 16, alignItems: 'center' }}>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label>Condición *</label>
+                      <select value={condition} onChange={e => setCondition(e.target.value)}>
+                        <option value="nuevo">Nuevo</option>
+                        <option value="usado">Usado</option>
+                      </select>
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label>Stock (unidades) *</label>
+                      <input type="number" min="0" value={stock} onChange={e => setStock(e.target.value)} placeholder="Ej. 50" />
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 0, paddingLeft: 8 }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', color: 'var(--text)', marginTop: 22 }}>
+                        <input type="checkbox" checked={isFeatured} onChange={e => setIsFeatured(e.target.checked)} style={{ width: 'auto' }} />
+                        <span style={{ fontSize: 12, lineHeight: 1.2 }}>Destacar producto</span>
+                      </label>
+                    </div>
+                  </div>
                 </div>
-              </div>
 
-              <div className="form-group">
-                <label>Descripción</label>
-                <textarea rows="3" value={description} onChange={e => setDescription(e.target.value)} placeholder="Escribe detalles del producto..."></textarea>
-              </div>
+                {/* Section 3: Product Image & Upload */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, fontWeight: 700, color: 'var(--text)', borderBottom: '1px solid var(--border)', paddingBottom: 8 }}>
+                    <ImageIcon size={16} style={{ color: 'var(--primary)' }} />
+                    <span>Imagen del producto</span>
+                  </div>
+                  
+                  {/* Upload Area */}
+                  <div 
+                    style={{ 
+                      border: '2px dashed var(--primary-light)', 
+                      borderRadius: '12px', 
+                      padding: '24px', 
+                      textAlign: 'center', 
+                      background: 'rgba(37, 99, 235, 0.01)', 
+                      cursor: 'pointer', 
+                      transition: 'all 0.2s ease'
+                    }}
+                    onClick={() => document.getElementById('product-image-file').click()}
+                  >
+                    <input 
+                      type="file" 
+                      id="product-image-file" 
+                      accept="image/*" 
+                      onChange={e => setImageFile(e.target.files[0])} 
+                      style={{ display: 'none' }} 
+                    />
+                    <div style={{ color: 'var(--primary)', marginBottom: 8, display: 'flex', justifyContent: 'center' }}>
+                      <Plus size={28} />
+                    </div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
+                      Arrastra y suelta una imagen aquí o <span style={{ color: 'var(--primary)', textDecoration: 'underline' }}>selecciona un archivo</span>
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 6 }}>
+                      Formatos soportados: JPG, PNG, WEBP • Máx. 5MB • Recomendado: 1200x1200px
+                    </div>
+                  </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                <div className="form-group">
-                  <label>Condición</label>
-                  <select value={condition} onChange={e => setCondition(e.target.value)}>
-                    <option value="nuevo">Nuevo</option>
-                    <option value="usado">Usado</option>
-                  </select>
+                  {/* Image Preview Box */}
+                  {(imageFile || (editId && getProductImage(products.find(p => p.id === editId)))) && (
+                    <div style={{ marginTop: 12 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Vista previa</div>
+                      <div style={{ display: 'flex', gap: 16, alignItems: 'center', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px', background: 'var(--bg)' }}>
+                        <img 
+                          src={imageFile ? URL.createObjectURL(imageFile) : getProductImage(products.find(p => p.id === editId))} 
+                          style={{ width: 60, height: 60, borderRadius: '8px', objectFit: 'cover', border: '1px solid var(--border)' }} 
+                        />
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontWeight: 600, color: 'var(--text)', fontSize: 13, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: 280 }}>
+                            {imageFile ? imageFile.name : 'Imagen actual del producto'}
+                          </div>
+                          <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+                            {imageFile ? `${(imageFile.size / (1024 * 1024)).toFixed(2)} MB` : 'Conservar imagen actual'}
+                          </div>
+                        </div>
+                        {imageFile && (
+                          <button 
+                            type="button" 
+                            className="btn btn--ghost" 
+                            style={{ padding: 6, borderRadius: '50%', color: 'var(--danger-text)' }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setImageFile(null);
+                            }}
+                          >
+                            <X size={16} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div className="form-group">
-                  <label>Stock (unidades)</label>
-                  <input type="number" min="0" value={stock} onChange={e => setStock(e.target.value)} placeholder="Ej. 50 (vacío = ilimitado)" />
-                </div>
+
               </div>
 
-              <div className="form-group" style={{ justifyContent: 'center', display: 'flex', flexDirection: 'column' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, cursor: 'pointer', color: 'var(--text)' }}>
-                  <input type="checkbox" checked={isFeatured} onChange={e => setIsFeatured(e.target.checked)} />
-                  <span>Destacar producto</span>
-                </label>
-              </div>
-
-              <div className="form-group">
-                <label>Imagen del Producto</label>
-                <input type="file" accept="image/*" onChange={e => setImageFile(e.target.files[0])} />
-                <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Formatos soportados: JPG, PNG, WEBP. Máx: 5MB</span>
-              </div>
-
-              <div className="modal-actions">
-                <button type="button" className="btn btn--ghost" onClick={() => setModalOpen(false)}>Cancelar</button>
-                <button type="submit" className="btn btn--primary">Guardar Producto</button>
+              {/* Footer Actions */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, padding: '20px 28px', borderTop: '1px solid var(--border)', background: 'var(--card)' }}>
+                <button type="button" className="btn btn--secondary" onClick={() => setModalOpen(false)}>Cancelar</button>
+                <button type="submit" className="btn btn--primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <Check size={16} />
+                  <span>Guardar producto</span>
+                </button>
               </div>
             </form>
+
           </div>
         </div>
       )}
