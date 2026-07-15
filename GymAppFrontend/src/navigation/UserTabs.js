@@ -22,6 +22,9 @@ export default function UserTabs() {
   const { isSmallScreen } = useResponsive();
   const isDesktop = !isSmallScreen;
   
+  const tabWidth = isDesktop ? 380 : 340;
+  const translateXOffset = -tabWidth / 2;
+  
   // Lógica para mostrar la foto de perfil
   const BASE_URL = API_URL.replace('/api', '');
 
@@ -107,7 +110,7 @@ export default function UserTabs() {
               </TouchableOpacity>
             </View>
           ),
-          tabBarStyle: isDesktop ? {
+          tabBarStyle: {
             backgroundColor: theme.colors.surface,
             borderColor: theme.colors.border,
             borderWidth: 1,
@@ -116,18 +119,14 @@ export default function UserTabs() {
             paddingBottom: 8,
             position: 'absolute',
             bottom: 16,
-            alignSelf: 'center',
-            width: 380,
+            left: '50%',
+            transform: [{ translateX: translateXOffset }],
+            width: tabWidth,
             shadowColor: '#000',
             shadowOffset: { width: 0, height: 4 },
             shadowOpacity: 0.08,
             shadowRadius: 10,
             elevation: 4
-          } : {
-            backgroundColor: theme.colors.surface,
-            borderTopColor: theme.colors.border,
-            height: 60,
-            paddingBottom: 8
           },
           tabBarActiveTintColor: '#FF6A1A',
           tabBarInactiveTintColor: '#9CA3AF',

@@ -231,7 +231,7 @@ class ProductController extends Controller
             // If they explicitly sent an empty images list, clear them
             $validated['image'] = 'https://via.placeholder.com/400x400?text=No+Image';
             $validated['images'] = null;
-        }   }
+        }
 
         $product->update($validated);
         $product->image_url = $product->image_url;
