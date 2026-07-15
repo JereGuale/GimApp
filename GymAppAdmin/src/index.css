@@ -88,3 +88,323 @@ body, html, #root {
   overflow: hidden;
   transition: background-color 0.25s ease, color 0.25s ease;
 }
+
+/* ──────────────────────────────────────────────────────────────────────────
+   ADMIN PANEL RESPONSIVE REDESIGN OVERRIDES (GLOBAL LEVEL)
+   ────────────────────────────────────────────────────────────────────────── */
+
+/* --- Typography & Spacing Scaling --- */
+h1, .topbar-title, .page-header h2 {
+  transition: font-size 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (min-width: 1200px) {
+  .page-header h2 {
+    font-size: 32px;
+  }
+}
+
+@media (max-width: 1199px) {
+  .content {
+    padding: 24px !important;
+  }
+  .topbar {
+    padding: 0 24px !important;
+  }
+  .page-header h2 {
+    font-size: 26px;
+  }
+}
+
+@media (max-width: 767px) {
+  .content {
+    padding: 16px !important;
+  }
+  .topbar {
+    padding: 0 16px !important;
+  }
+  .page-header h2 {
+    font-size: 22px;
+  }
+}
+
+/* --- Keyboard Accessibility & Focus Rings --- */
+input:focus-visible, 
+select:focus-visible, 
+textarea:focus-visible, 
+button:focus-visible, 
+a:focus-visible {
+  outline: 2px solid var(--primary) !important;
+  outline-offset: 2px !important;
+}
+
+/* --- Entrance Animations --- */
+@keyframes cardFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.card, .stat-card {
+  animation: cardFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* --- Topbar Toggle Menu Button --- */
+.topbar-menu-btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: none; /* Hidden on desktop */
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  transition: all 0.2s ease;
+  margin-right: 12px;
+}
+
+.topbar-menu-btn:hover {
+  background: rgba(0, 0, 0, 0.02);
+  color: var(--text);
+  border-color: var(--text-secondary);
+}
+
+:root.dark .topbar-menu-btn:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+@media (max-width: 1199px) {
+  .topbar-menu-btn {
+    display: flex !important; /* Visible on tablet and mobile */
+  }
+}
+
+/* --- Tablet Sidebar Collapsible Behaviour (768px - 1199px) --- */
+@media (min-width: 768px) and (max-width: 1199px) {
+  .sidebar {
+    width: 72px !important;
+    min-width: 72px !important;
+    transition: width 250ms cubic-bezier(0.4, 0, 0.2, 1);
+    overflow-x: hidden;
+  }
+  
+  /* Expand on hover OR when toggled active */
+  .sidebar:hover,
+  .sidebar.sidebar--expanded {
+    width: 260px !important;
+    min-width: 260px !important;
+    box-shadow: 10px 0 15px -3px rgba(0, 0, 0, 0.05);
+  }
+  
+  /* Hide labels, brand name, user details when collapsed */
+  .sidebar:not(:hover):not(.sidebar--expanded) .sidebar-brand,
+  .sidebar:not(:hover):not(.sidebar--expanded) .sidebar-role,
+  .sidebar:not(:hover):not(.sidebar--expanded) .sidebar-group-title,
+  .sidebar:not(:hover):not(.sidebar--expanded) .nav-item span:not(.nav-icon),
+  .sidebar:not(:hover):not(.sidebar--expanded) .sidebar-user-info {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    white-space: nowrap !important;
+  }
+  
+  /* Center align collapsed layout elements */
+  .sidebar:not(:hover):not(.sidebar--expanded) .nav-item {
+    justify-content: center !important;
+    padding: 10px !important;
+    margin: 0 8px !important;
+  }
+  
+  .sidebar:not(:hover):not(.sidebar--expanded) .sidebar-logo {
+    justify-content: center !important;
+    padding: 24px 10px !important;
+  }
+  
+  .sidebar:not(:hover):not(.sidebar--expanded) .sidebar-footer {
+    justify-content: center !important;
+    padding: 16px 8px !important;
+  }
+  
+  .sidebar:not(:hover):not(.sidebar--expanded) .sidebar-avatar {
+    margin: 0 !important;
+  }
+  
+  .sidebar:not(:hover):not(.sidebar--expanded) .sidebar-user {
+    justify-content: center !important;
+  }
+}
+
+/* --- Mobile Drawer Off-Canvas Behaviour (<768px) --- */
+@media (max-width: 767px) {
+  .sidebar {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    z-index: 1000 !important;
+    width: 280px !important;
+    min-width: 280px !important;
+    transform: translateX(-100%) !important;
+    transition: transform 250ms cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+  
+  .sidebar.sidebar--open {
+    transform: translateX(0) !important;
+  }
+  
+  .sidebar-overlay {
+    position: fixed !important;
+    inset: 0 !important;
+    background: var(--modal-overlay) !important;
+    backdrop-filter: blur(4px) !important;
+    z-index: 999 !important;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 250ms ease;
+  }
+
+  .sidebar-overlay.sidebar-overlay--open {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+  
+  /* Hide breadcrumbs on mobile */
+  .topbar-breadcrumb {
+    display: none !important;
+  }
+  
+  /* Force main content container to 100% screen width when sidebar floats */
+  .main {
+    width: 100% !important;
+    min-width: 100% !important;
+  }
+
+  /* Make header flex stack on mobile when buttons exist */
+  .page-header {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+  }
+  
+  .page-header > div {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    gap: 8px !important;
+  }
+  
+  .page-header .btn, 
+  .search-input {
+    width: 100% !important;
+  }
+  
+  /* Minimum touch targets for mobile accessibility */
+  button, 
+  .btn, 
+  .btn-action-circle, 
+  .tab-btn, 
+  input, 
+  select, 
+  textarea, 
+  .nav-item {
+    min-height: 44px !important;
+  }
+}
+
+/* --- Dashboard Stats Grid --- */
+.stat-grid {
+  display: grid !important;
+  grid-template-columns: repeat(4, 1fr) !important;
+  gap: 20px !important;
+  margin-bottom: 28px !important;
+  width: 100% !important;
+}
+
+@media (max-width: 1439px) {
+  .stat-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+}
+
+@media (max-width: 1199px) {
+  .stat-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .stat-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+}
+
+/* --- Responsive Tables --- */
+@media (max-width: 767px) {
+  .table-wrap {
+    overflow-x: auto !important;
+    position: relative !important;
+    width: 100% !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+  
+  .table-wrap table {
+    min-width: 750px !important; /* Forces scroll bar rather than squeezing */
+  }
+
+  .table-wrap th, 
+  .table-wrap td {
+    white-space: nowrap !important;
+  }
+
+  /* Sticky first column on mobile scroll */
+  .table-wrap th:first-child,
+  .table-wrap td:first-child {
+    position: sticky !important;
+    left: 0 !important;
+    z-index: 10 !important;
+    background-color: var(--card) !important;
+    border-right: 1px solid var(--border) !important;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05) !important;
+  }
+  
+  :root.dark .table-wrap th:first-child,
+  :root.dark .table-wrap td:first-child {
+    background-color: var(--card) !important;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.25) !important;
+  }
+}
+
+/* --- Responsive Form Layout Utilities --- */
+.form-grid-2 {
+  display: grid !important;
+  grid-template-columns: repeat(2, 1fr) !important;
+  gap: 16px !important;
+}
+
+.form-grid-3 {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 16px !important;
+}
+
+.form-grid-2-1 {
+  display: grid !important;
+  grid-template-columns: 2fr 1fr !important;
+  gap: 24px !important;
+}
+
+@media (max-width: 767px) {
+  .form-grid-2,
+  .form-grid-3,
+  .form-grid-2-1 {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+}
