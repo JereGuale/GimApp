@@ -30,6 +30,7 @@ export default function Products() {
   const [categoryId, setCategoryId] = useState('');
   const [isFeatured, setIsFeatured] = useState(false);
   const [condition, setCondition] = useState('nuevo');
+  const [stock, setStock] = useState('');
   const [imageFiles, setImageFiles] = useState([]); // Support multiple files array
   const [existingImages, setExistingImages] = useState([]); // Support tracking existing images list
 
