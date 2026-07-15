@@ -10,8 +10,6 @@ import {
   FlatList,
   ActivityIndicator,
   Platform,
-  useWindowDimensions,
-  Linking,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,11 +19,8 @@ import { useAuth } from '../../context/AuthContext';
 import { CategoryService, BannerService, API_URL } from '../../services/api';
 import { useResponsive } from '../../hooks/useResponsive';
 
-import { Alert } from 'react-native';
-
 const MAX_CONTENT_WIDTH = 1100; // max width for content sections on web
 const AUTO_SCROLL_INTERVAL = 4000;
-
 const BASE_URL = API_URL.replace('/api', '');
 
 export default function HomeScreen() {
@@ -36,23 +31,16 @@ export default function HomeScreen() {
 
   // Responsive sizing
   const isDesktop = !isSmallScreen;
-
-  // Banner: full width on all platforms
   const bannerWidth = winWidth;
   const bannerHeight = isDesktop ? Math.min(winWidth * 0.3, 380) : winWidth * 0.52;
-  // Content padding: center within max width
   const innerWidth = Math.min(winWidth, MAX_CONTENT_WIDTH);
   const contentPadding = isDesktop ? Math.max((winWidth - MAX_CONTENT_WIDTH) / 2, 20) : 16;
-  // Products: responsive card count
-  const PRODUCTS_PER_PAGE = isDesktop ? 4 : 2;
+  
   const productGap = isDesktop ? 16 : 12;
   const productCardWidth = isDesktop
     ? Math.min((innerWidth - productGap * 5) / 4, 270)
-    : (winWidth - 40) / 2; // More fluid width for mobile (2 cards with 20px margins and 12px gap)
+    : (winWidth - 44) / 2; // Exact 2-column layout width
   const productImageHeight = productCardWidth * 1.1;
-
-  const productScrollRef = useRef(null);
-  const [productScrollX, setProductScrollX] = useState(0);
 
   // Banner carousel state
   const [banners, setBanners] = useState([]);
@@ -61,15 +49,24 @@ export default function HomeScreen() {
   const bannerFlatListRef = useRef(null);
   const autoScrollTimer = useRef(null);
 
-  // Products state
+  // Products & Categories states
   const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]); // Saved category state
   const [loading, setLoading] = useState(true);
   const [favorites, setFavorites] = useState([]);
   const [searchText, setSearchText] = useState('');
 
+  // ── Catalog Integrated Filter States ──
+  const [showFullCatalog, setShowFullCatalog] = useState(false);
+  const [selectedCategories, setSelectedCategories] = useState([]);
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
+  const [sortBy, setSortBy] = useState('default'); // 'default' | 'price_asc' | 'price_desc'
+  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
+
   const borderColors = [theme.colors.primary, theme.colors.primary, theme.colors.primary, theme.colors.primary];
 
-  // Fallback banners when no API data
+  // Fallback banners
   const fallbackBanners = [
     {
       id: 'fallback-1',
@@ -89,18 +86,9 @@ export default function HomeScreen() {
       button_text: 'Suscribirse',
       button_action: 'subscription',
     },
-    {
-      id: 'fallback-3',
-      title: 'Nuevos Suplementos',
-      description: 'Los mejores productos para tu entrenamiento',
-      price: null,
-      image_url: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=60&w=800&auto=format&fit=crop',
-      button_text: 'Ver Productos',
-      button_action: 'explore',
-    },
   ];
 
-  // Fetch banners from API
+  // Fetch banners
   useEffect(() => {
     let isMounted = true;
     const loadBanners = async () => {
@@ -111,7 +99,6 @@ export default function HomeScreen() {
 
         const bannerData = response?.data || response || [];
         if (Array.isArray(bannerData) && bannerData.length > 0) {
-          // Fix image URLs for API banners
           const fixedBanners = bannerData.map(b => ({
             ...b,
             image_url: b.image_url
@@ -126,7 +113,6 @@ export default function HomeScreen() {
         }
       } catch (error) {
         if (!isMounted) return;
-        console.log('Banner fetch error, using fallbacks:', error.message);
         setBanners(fallbackBanners);
       } finally {
         if (isMounted) setBannersLoading(false);
@@ -134,11 +120,10 @@ export default function HomeScreen() {
     };
 
     loadBanners();
-
     return () => { isMounted = false; };
   }, [token]);
 
-  // Auto-scroll carousel
+  // Auto-scroll banners
   useEffect(() => {
     if (banners.length <= 1) return;
 
@@ -162,34 +147,19 @@ export default function HomeScreen() {
     const offsetX = event.nativeEvent.contentOffset.x;
     const index = Math.round(offsetX / bannerWidth);
     setCurrentBannerIndex(index);
+  }, [bannerWidth]);
 
-    // Reset auto-scroll timer on manual scroll
-    if (autoScrollTimer.current) {
-      clearInterval(autoScrollTimer.current);
-      autoScrollTimer.current = setInterval(() => {
-        setCurrentBannerIndex((prev) => {
-          const next = (prev + 1) % banners.length;
-          bannerFlatListRef.current?.scrollToOffset({
-            offset: next * bannerWidth,
-            animated: true,
-          });
-          return next;
-        });
-      }, AUTO_SCROLL_INTERVAL);
-    }
-  }, [banners, bannerWidth]);
-
-  // Fetch products
+  // Fetch products and populate categories
   useEffect(() => {
     let isMounted = true;
     const loadProducts = async () => {
       try {
         setLoading(true);
-        const categories = await CategoryService.getAll(token);
+        const categoriesData = await CategoryService.getAll(token);
         if (!isMounted) return;
 
-        const catsArray = Array.isArray(categories) ? categories : (categories?.data || []);
-        console.log('[HomeScreen] fetched categories count:', catsArray.length);
+        const catsArray = Array.isArray(categoriesData) ? categoriesData : (categoriesData?.data || []);
+        setCategories(catsArray);
 
         const allProds = [];
         catsArray.forEach((cat) => {
@@ -204,7 +174,6 @@ export default function HomeScreen() {
         setProducts(allProds);
       } catch (error) {
         if (!isMounted) return;
-        console.error('[HomeScreen] Error loading products:', error);
         setProducts([]);
       } finally {
         if (isMounted) setLoading(false);
@@ -227,21 +196,37 @@ export default function HomeScreen() {
     if (banner?.button_action === 'subscription') {
       navigation.navigate('Suscripción');
     } else if (banner?.button_action === 'explore') {
-      navigation.navigate('Categorías');
+      setShowFullCatalog(true);
     }
   };
 
-  const filteredProducts = searchText
-    ? products.filter((p) =>
-      p.name?.toLowerCase().includes(searchText.toLowerCase())
-    )
-    : products;
+  const toggleCategoryFilter = (catId) => {
+    setSelectedCategories(prev =>
+      prev.includes(catId) ? prev.filter(id => id !== catId) : [...prev, catId]
+    );
+  };
 
-  // ─── Banner Item ───
+  // Filter and Sort logic
+  const filteredProducts = products.filter((product) => {
+    const matchSearch = !searchText || product.name?.toLowerCase().includes(searchText.toLowerCase());
+    const matchCategory = selectedCategories.length === 0 || selectedCategories.includes(product.category_id);
+    const priceNum = parseFloat(product.price) || 0;
+    const matchMinPrice = minPrice === '' || priceNum >= parseFloat(minPrice);
+    const matchMaxPrice = maxPrice === '' || priceNum <= parseFloat(maxPrice);
+    
+    return matchSearch && matchCategory && matchMinPrice && matchMaxPrice;
+  });
+
+  const sortedProducts = [...filteredProducts];
+  if (sortBy === 'price_asc') {
+    sortedProducts.sort((a, b) => (parseFloat(a.price) || 0) - (parseFloat(b.price) || 0));
+  } else if (sortBy === 'price_desc') {
+    sortedProducts.sort((a, b) => (parseFloat(b.price) || 0) - (parseFloat(a.price) || 0));
+  }
+
+  // Render Banner Slide
   const renderBannerItem = ({ item }) => (
-    <View
-      style={[styles.bannerSlide, { width: bannerWidth, height: bannerHeight }]}
-    >
+    <View style={[styles.bannerSlide, { width: bannerWidth, height: bannerHeight }]}>
       <Image
         source={{ uri: item.image_url || 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=60&w=800&auto=format&fit=crop' }}
         style={styles.bannerImage}
@@ -249,32 +234,13 @@ export default function HomeScreen() {
         transition={300}
         cachePolicy="memory-disk"
       />
-      {/* Dark gradient overlay */}
       <View style={styles.bannerGradient} />
-
-      {/* Banner content — centered */}
       <View style={styles.bannerContent}>
-        {item.title ? (
-          <Text style={styles.bannerTitle} numberOfLines={2}>
-            {item.title}
-          </Text>
-        ) : null}
-        {item.price ? (
-          <Text style={styles.bannerPrice}>
-            ${Number(item.price).toFixed(2)}
-          </Text>
-        ) : null}
-        {item.description ? (
-          <Text style={styles.bannerDescription} numberOfLines={2}>
-            {item.description}
-          </Text>
-        ) : null}
+        {item.title ? <Text style={styles.bannerTitle} numberOfLines={2}>{item.title}</Text> : null}
+        {item.price ? <Text style={styles.bannerPrice}>${Number(item.price).toFixed(2)}</Text> : null}
+        {item.description ? <Text style={styles.bannerDescription} numberOfLines={2}>{item.description}</Text> : null}
         {item.button_text ? (
-          <TouchableOpacity
-            style={styles.bannerButton}
-            onPress={() => handleBannerPress(item)}
-            activeOpacity={0.8}
-          >
+          <TouchableOpacity style={styles.bannerButton} onPress={() => handleBannerPress(item)} activeOpacity={0.8}>
             <Text style={styles.bannerButtonText}>{item.button_text}</Text>
           </TouchableOpacity>
         ) : null}
@@ -282,22 +248,16 @@ export default function HomeScreen() {
     </View>
   );
 
-  // ─── Product Card ───
+  // Render Product Card
   const renderProductCard = ({ item: product, index }) => {
-    const borderColor = borderColors[index % borderColors.length];
     const isFavorite = favorites.includes(product.id);
-
     const imageRaw = product.images && product.images.length > 0 ? product.images[0] : product.image;
 
     let imageUri = null;
     if (imageRaw) {
       if (imageRaw.match(/^http:\/\/(192\.168\.\d+\.\d+|localhost|127\.0\.0\.1):\d+/)) {
         const pathPart = imageRaw.split('/storage/')[1];
-        if (pathPart) {
-          imageUri = `${BASE_URL}/storage/${pathPart}`;
-        } else {
-          imageUri = imageRaw;
-        }
+        imageUri = pathPart ? `${BASE_URL}/storage/${pathPart}` : imageRaw;
       } else if (!imageRaw.startsWith('http')) {
         imageUri = `${BASE_URL}/storage/${imageRaw}`;
       } else {
@@ -314,6 +274,7 @@ export default function HomeScreen() {
             width: productCardWidth,
             backgroundColor: theme.colors.surface,
             position: 'relative',
+            marginBottom: 12
           },
         ]}
       >
@@ -354,7 +315,7 @@ export default function HomeScreen() {
           </View>
         </TouchableOpacity>
 
-        {/* Favorite (Sibling Touchable) */}
+        {/* Favorite */}
         <TouchableOpacity
           style={[styles.heartButton, { top: productImageHeight - 48 }]}
           onPress={() => toggleFavorite(product.id)}
@@ -370,30 +331,277 @@ export default function HomeScreen() {
     );
   };
 
+  // ── FULL INTEGRATED CATALOG VIEW ──
+  if (showFullCatalog) {
+    return (
+      <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+        
+        {/* Catalog Navigation Header */}
+        <View style={{ 
+          flexDirection: 'row', 
+          alignItems: 'center', 
+          paddingHorizontal: contentPadding, 
+          paddingVertical: 16, 
+          borderBottomWidth: 1, 
+          borderBottomColor: theme.colors.border,
+          backgroundColor: theme.colors.surface
+        }}>
+          <TouchableOpacity 
+            onPress={() => { setShowFullCatalog(false); setSearchText(''); }} 
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+          >
+            <Ionicons name="arrow-back" size={20} color={theme.colors.text} />
+            <Text style={{ color: theme.colors.text, fontSize: 15, fontWeight: '700' }}>Volver</Text>
+          </TouchableOpacity>
+          <Text style={{ flex: 1, textAlign: 'center', fontSize: 17, fontWeight: '800', color: theme.colors.text, marginRight: 60 }}>
+            Catálogo Completo
+          </Text>
+        </View>
+
+        {/* Search Bar */}
+        <View style={[styles.searchWrapper, { paddingHorizontal: contentPadding, marginTop: 12 }]}>
+          <View style={[styles.searchContainer, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface }]}>
+            <Ionicons name="search" size={22} color={theme.colors.text} style={{ marginRight: 10 }} />
+            <TextInput
+              placeholder="Buscar en el catálogo..."
+              placeholderTextColor="#9CA3AF"
+              style={[styles.searchInput, { color: theme.colors.text }]}
+              value={searchText}
+              onChangeText={setSearchText}
+            />
+            {searchText ? (
+              <TouchableOpacity onPress={() => setSearchText('')}>
+                <Ionicons name="close-circle" size={20} color="#9CA3AF" />
+              </TouchableOpacity>
+            ) : null}
+          </View>
+        </View>
+
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+          
+          {isDesktop ? (
+            /* ── WEB SPLIT GRID LAYOUT ── */
+            <View style={{ flexDirection: 'row', paddingHorizontal: contentPadding, marginTop: 16, alignItems: 'flex-start' }}>
+              
+              {/* Sidebar Filters */}
+              <View style={{ width: 240, marginRight: 28, backgroundColor: theme.colors.surface, borderRadius: 16, borderHeight: 1, borderColor: theme.colors.border, padding: 20 }}>
+                <Text style={{ fontSize: 16, fontWeight: '800', color: theme.colors.text, marginBottom: 16 }}>Filtros</Text>
+                
+                {/* Price range */}
+                <Text style={{ fontSize: 13, fontWeight: '700', color: theme.colors.text, marginBottom: 8 }}>Rango de Precio (USD)</Text>
+                <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
+                  <TextInput 
+                    style={{ flex: 1, height: 36, borderWidth: 1, borderColor: theme.colors.border, borderRadius: 8, paddingHorizontal: 8, fontSize: 12, color: theme.colors.text }}
+                    keyboardType="numeric"
+                    placeholder="Min ($)"
+                    value={minPrice}
+                    onChangeText={setMinPrice}
+                  />
+                  <TextInput 
+                    style={{ flex: 1, height: 36, borderWidth: 1, borderColor: theme.colors.border, borderRadius: 8, paddingHorizontal: 8, fontSize: 12, color: theme.colors.text }}
+                    keyboardType="numeric"
+                    placeholder="Max ($)"
+                    value={maxPrice}
+                    onChangeText={setMaxPrice}
+                  />
+                </View>
+
+                {/* Categories Checkbox List */}
+                <Text style={{ fontSize: 13, fontWeight: '700', color: theme.colors.text, marginBottom: 10 }}>Categorías</Text>
+                <View style={{ gap: 8 }}>
+                  {categories.map((cat) => (
+                    <TouchableOpacity 
+                      key={cat.id} 
+                      onPress={() => toggleCategoryFilter(cat.id)}
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+                    >
+                      <Ionicons 
+                        name={selectedCategories.includes(cat.id) ? "checkbox" : "square-outline"} 
+                        size={18} 
+                        color={selectedCategories.includes(cat.id) ? '#FF6A1A' : theme.colors.text} 
+                      />
+                      <Text style={{ fontSize: 13, color: theme.colors.textSecondary }}>{cat.name}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* Products Side */}
+              <View style={{ flex: 1 }}>
+                
+                {/* Result header & Sort */}
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                  <Text style={{ fontSize: 14, color: theme.colors.textSecondary, fontWeight: '500' }}>
+                    Mostrando {sortedProducts.length} de {products.length} resultados
+                  </Text>
+                  
+                  {/* Sorting pills */}
+                  <View style={{ flexDirection: 'row', gap: 6 }}>
+                    <TouchableOpacity onPress={() => setSortBy('default')} style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 14, backgroundColor: sortBy === 'default' ? '#FF6A1A' : theme.colors.surface }}>
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: sortBy === 'default' ? '#FFF' : theme.colors.text }}>Defecto</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => setSortBy('price_asc')} style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 14, backgroundColor: sortBy === 'price_asc' ? '#FF6A1A' : theme.colors.surface }}>
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: sortBy === 'price_asc' ? '#FFF' : theme.colors.text }}>Precio ↑</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => setSortBy('price_desc')} style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 14, backgroundColor: sortBy === 'price_desc' ? '#FF6A1A' : theme.colors.surface }}>
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: sortBy === 'price_desc' ? '#FFF' : theme.colors.text }}>Precio ↓</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* Grid */}
+                {sortedProducts.length === 0 ? (
+                  <View style={[styles.emptyState, { marginTop: 40 }]}>
+                    <Ionicons name="cube-outline" size={48} color="#4B5563" />
+                    <Text style={{ color: '#9CA3AF', fontSize: 15 }}>No se encontraron productos coincidentes.</Text>
+                  </View>
+                ) : (
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16 }}>
+                    {sortedProducts.map((product, index) => renderProductCard({ item: product, index }))}
+                  </View>
+                )}
+
+              </View>
+
+            </View>
+          ) : (
+            /* ── MOBILE COLLAPSIBLE FILTER LAYOUT ── */
+            <View style={{ paddingHorizontal: contentPadding, marginTop: 12 }}>
+              
+              {/* Header row: counts, sort, filter drawer toggle */}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <Text style={{ fontSize: 13, color: theme.colors.textSecondary, fontWeight: '600' }}>
+                  {sortedProducts.length} productos
+                </Text>
+                
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  {/* Collapsible drawer button */}
+                  <TouchableOpacity 
+                    onPress={() => setFilterDrawerOpen(!filterDrawerOpen)}
+                    style={{ 
+                      flexDirection: 'row', 
+                      alignItems: 'center', 
+                      gap: 4, 
+                      paddingHorizontal: 12, 
+                      paddingVertical: 6, 
+                      borderRadius: 14, 
+                      backgroundColor: filterDrawerOpen ? '#FF6A1A' : theme.colors.surface,
+                      borderWidth: 1,
+                      borderColor: theme.colors.border
+                    }}
+                  >
+                    <Ionicons name="funnel-outline" size={12} color={filterDrawerOpen ? '#FFF' : theme.colors.text} />
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: filterDrawerOpen ? '#FFF' : theme.colors.text }}>Filtros</Text>
+                  </TouchableOpacity>
+
+                  {/* Quick Sort Toggle */}
+                  <TouchableOpacity 
+                    onPress={() => setSortBy(prev => prev === 'default' ? 'price_asc' : prev === 'price_asc' ? 'price_desc' : 'default')}
+                    style={{ 
+                      flexDirection: 'row', 
+                      alignItems: 'center', 
+                      gap: 4, 
+                      paddingHorizontal: 12, 
+                      paddingVertical: 6, 
+                      borderRadius: 14, 
+                      backgroundColor: sortBy !== 'default' ? '#FF6A1A' : theme.colors.surface,
+                      borderWidth: 1,
+                      borderColor: theme.colors.border
+                    }}
+                  >
+                    <Ionicons name="swap-vertical-outline" size={12} color={sortBy !== 'default' ? '#FFF' : theme.colors.text} />
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: sortBy !== 'default' ? '#FFF' : theme.colors.text }}>
+                      {sortBy === 'default' ? 'Ordenar' : sortBy === 'price_asc' ? 'Precio ↑' : 'Precio ↓'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Mobile Filter Drawer */}
+              {filterDrawerOpen && (
+                <View style={{ backgroundColor: theme.colors.surface, borderRadius: 12, padding: 16, marginBottom: 16, borderHeight: 1, borderColor: theme.colors.border }}>
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: theme.colors.text, marginBottom: 8 }}>Rango de Precio</Text>
+                  <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
+                    <TextInput 
+                      style={{ flex: 1, height: 36, borderWidth: 1, borderColor: theme.colors.border, borderRadius: 8, paddingHorizontal: 8, fontSize: 12, color: theme.colors.text, backgroundColor: theme.colors.background }}
+                      keyboardType="numeric"
+                      placeholder="Min ($)"
+                      placeholderTextColor="#9CA3AF"
+                      value={minPrice}
+                      onChangeText={setMinPrice}
+                    />
+                    <TextInput 
+                      style={{ flex: 1, height: 36, borderWidth: 1, borderColor: theme.colors.border, borderRadius: 8, paddingHorizontal: 8, fontSize: 12, color: theme.colors.text, backgroundColor: theme.colors.background }}
+                      keyboardType="numeric"
+                      placeholder="Max ($)"
+                      placeholderTextColor="#9CA3AF"
+                      value={maxPrice}
+                      onChangeText={setMaxPrice}
+                    />
+                  </View>
+
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: theme.colors.text, marginBottom: 8 }}>Filtrar por Categoría</Text>
+                  <View style={{ gap: 8 }}>
+                    {categories.map((cat) => (
+                      <TouchableOpacity 
+                        key={cat.id} 
+                        onPress={() => toggleCategoryFilter(cat.id)}
+                        style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+                      >
+                        <Ionicons 
+                          name={selectedCategories.includes(cat.id) ? "checkbox" : "square-outline"} 
+                          size={18} 
+                          color={selectedCategories.includes(cat.id) ? '#FF6A1A' : theme.colors.text} 
+                        />
+                        <Text style={{ fontSize: 13, color: theme.colors.textSecondary }}>{cat.name}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {/* Grid List */}
+              {sortedProducts.length === 0 ? (
+                <View style={[styles.emptyState, { marginTop: 40 }]}>
+                  <Ionicons name="cube-outline" size={48} color="#4B5563" />
+                  <Text style={{ color: '#9CA3AF', fontSize: 15 }}>No hay productos coincidentes.</Text>
+                </View>
+              ) : (
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 12 }}>
+                  {sortedProducts.map((product, index) => renderProductCard({ item: product, index }))}
+                </View>
+              )}
+
+            </View>
+          )}
+
+        </ScrollView>
+      </View>
+    );
+  }
+
+  // ── LANDING PAGE VIEW ──
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: theme.colors.background }]}
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
     >
-      {/* ─── Search Bar ─── */}
+      {/* Search Bar */}
       <View style={[styles.searchWrapper, { paddingHorizontal: contentPadding }]}>
-        <View
-          style={[
-            styles.searchContainer,
-            {
-              borderColor: theme.colors.border,
-              backgroundColor: theme.colors.surface,
-            },
-          ]}
-        >
+        <View style={[styles.searchContainer, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface }]}>
           <Ionicons name="search" size={22} color={theme.colors.text} style={{ marginRight: 10 }} />
           <TextInput
             placeholder="Busca productos, marcas..."
             placeholderTextColor="#9CA3AF"
             style={[styles.searchInput, { color: theme.colors.text }]}
             value={searchText}
-            onChangeText={setSearchText}
+            onChangeText={(text) => {
+              setSearchText(text);
+              if (text) {
+                setShowFullCatalog(true); // Open catalog immediately on type
+              }
+            }}
           />
           {searchText ? (
             <TouchableOpacity onPress={() => setSearchText('')}>
@@ -403,7 +611,7 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* ─── Banner Carousel ─── */}
+      {/* Banner Carousel */}
       <View style={styles.bannerSection}>
         {bannersLoading ? (
           <View style={[styles.bannerSlide, styles.bannerLoading, { width: bannerWidth, height: bannerHeight }]}>
@@ -425,7 +633,7 @@ export default function HomeScreen() {
               onMomentumScrollEnd={onBannerScroll}
             />
 
-            {/* Pagination Dots — overlaid on banner */}
+            {/* Pagination Dots */}
             {banners.length > 1 && (
               <View style={styles.dotsContainer}>
                 {banners.map((_, index) => (
@@ -445,13 +653,13 @@ export default function HomeScreen() {
         )}
       </View>
 
-      {/* ─── Featured Products - Horizontal Scroll ─── */}
+      {/* Featured Products */}
       <View style={[styles.sectionHeader, { paddingHorizontal: contentPadding }]}>
         <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
           Productos Destacados
         </Text>
         <TouchableOpacity
-          onPress={() => navigation.navigate('Categorías')}
+          onPress={() => setShowFullCatalog(true)}
           style={styles.viewAllButton}
         >
           <Text style={[styles.viewAllText, { color: theme.colors.text }]}>Ver Todos</Text>
@@ -464,7 +672,6 @@ export default function HomeScreen() {
           <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
       ) : filteredProducts.length > 0 ? (
-        // Desktop and Mobile unified grid layout (2 rows)
         <View style={{ paddingHorizontal: contentPadding, gap: 16 }}>
           <View style={{
             flexDirection: 'row',
@@ -479,7 +686,7 @@ export default function HomeScreen() {
 
           <View style={{ alignItems: 'center', marginTop: 24, marginBottom: 8 }}>
             <TouchableOpacity
-              onPress={() => navigation.navigate('Categorías')}
+              onPress={() => setShowFullCatalog(true)}
               style={{
                 backgroundColor: '#FF6A1A',
                 paddingVertical: 12,
@@ -515,7 +722,7 @@ export default function HomeScreen() {
         </View>
       )}
 
-      {/* ─── Motivational Section ─── */}
+      {/* Motivational Section */}
       <View style={[styles.motivationalContainer, { paddingHorizontal: contentPadding }]}>
         <View style={[
           styles.motivationalCard,
@@ -549,7 +756,7 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* ─── Ubicación ─── */}
+      {/* Ubicación */}
       <View style={[styles.locationContainer, { paddingHorizontal: contentPadding }]}>
         <View style={styles.locationHeader}>
           <Text style={[styles.locationSubtitle, { color: theme.colors.primary }]}>
@@ -577,18 +784,15 @@ export default function HomeScreen() {
             }
           ]}>
             <View style={styles.locationTextContent}>
-              <Text style={[styles.locationGymName, { color: theme.colors.text }]}>
-                Gigafit Gim
-              </Text>
-              <Text style={[styles.locationAddress, { color: theme.colors.textSecondary || '#9CA3AF' }]}>
-                Zona "Costa Azul" • Fácil estacionamiento • Acceso 24/7
-              </Text>
+              <Text style={[styles.locationGymName, { color: theme.colors.text }]}>Fitness Club Gym</Text>
+              <Text style={[styles.locationAddress, { color: theme.colors.textSecondary || '#9CA3AF' }]}>Calle 15 y Av. 24, Barrio Córdoba, Manta, Ecuador</Text>
             </View>
             <TouchableOpacity
-              style={[styles.locationButton, { alignSelf: isDesktop ? 'center' : 'stretch' }]}
-              onPress={() => Linking.openURL('https://www.google.com/maps?q=-0.9674838,-80.6790125&z=17&hl=es')}
+              onPress={() => Linking.openURL('https://maps.google.com/?q=Calle+15+y+Av.+24,+Manta,+Ecuador')}
+              style={styles.locationButton}
+              activeOpacity={0.8}
             >
-              <Text style={styles.locationButtonText}>Ver en mapa</Text>
+              <Text style={styles.locationButtonText}>Cómo Llegar</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -602,146 +806,130 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 20,
+    paddingBottom: 24,
   },
-
-  // ─── Search ───
+  
+  // ─── Search Bar ───
   searchWrapper: {
-    paddingTop: 16,
-    paddingBottom: 12,
+    marginTop: 16,
+    marginBottom: 12,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    height: 52,
-    borderWidth: 0,
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    height: 48,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 2,
   },
   searchInput: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 14,
+    fontWeight: '500',
+    padding: 0,
   },
 
   // ─── Banner Carousel ───
   bannerSection: {
-    marginBottom: 24,
+    marginBottom: 20,
   },
   bannerSlide: {
-    overflow: 'hidden',
-  },
-  bannerLoading: {
+    position: 'relative',
     justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#111827',
   },
   bannerImage: {
-    ...StyleSheet.absoluteFillObject,
     width: '100%',
     height: '100%',
   },
   bannerGradient: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.40)',
+    backgroundColor: 'rgba(0,0,0,0.4)',
   },
   bannerContent: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 30,
-    paddingBottom: 28,
+    position: 'absolute',
+    left: 24,
+    bottom: 24,
+    right: 24,
+    alignItems: 'flex-start',
   },
   bannerTitle: {
-    color: '#FFFFFF',
+    color: '#FFF',
     fontSize: 24,
-    fontWeight: '800',
-    fontStyle: 'italic',
-    marginBottom: 6,
-    textAlign: 'center',
-    textShadowColor: 'rgba(0, 0, 0, 0.8)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 8,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    marginBottom: 4,
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
   },
   bannerPrice: {
-    color: '#FB923C',
-    fontSize: 38,
+    color: '#FF6A1A',
+    fontSize: 20,
     fontWeight: '900',
-    marginBottom: 4,
-    textAlign: 'center',
-    textShadowColor: 'rgba(0, 0, 0, 0.9)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 8,
+    marginBottom: 8,
   },
   bannerDescription: {
-    color: '#E2E8F0',
-    fontSize: 14,
+    color: '#E5E7EB',
+    fontSize: 13,
+    lineHeight: 18,
     marginBottom: 16,
-    textAlign: 'center',
-    textShadowColor: 'rgba(0, 0, 0, 0.7)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
   bannerButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF', // Botón blanco como referencia
-    paddingVertical: 14,
-    paddingHorizontal: 40,
-    borderRadius: 30,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 8,
+    backgroundColor: '#FF6A1A',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 20,
   },
   bannerButtonText: {
-    color: '#000000', // Texto negro para contraste
+    color: '#FFF',
     fontWeight: '800',
-    fontSize: 16,
+    fontSize: 13,
     letterSpacing: 0.5,
   },
-
-  // ─── Dots (overlaid on banner) ───
+  bannerLoading: {
+    backgroundColor: '#1F2937',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   dotsContainer: {
-    position: 'absolute',
-    bottom: 12,
-    left: 0,
-    right: 0,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 8,
+    position: 'absolute',
+    bottom: 12,
+    alignSelf: 'center',
   },
   dot: {
-    borderRadius: 6,
+    height: 6,
+    borderRadius: 3,
+    marginHorizontal: 4,
   },
   dotActive: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: 20,
   },
   dotInactive: {
-    width: 10,
-    height: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.5)',
-    borderRadius: 5,
+    width: 6,
+    backgroundColor: 'rgba(255,255,255,0.4)',
   },
 
-  // ─── Section Header ───
+  // ─── Headers ───
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 18,
+    marginBottom: 14,
     marginTop: 8,
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 17,
     fontWeight: '800',
     letterSpacing: 0.3,
   },
@@ -1085,7 +1273,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   locationButton: {
-    backgroundColor: '#D95C2B', // Naranja oscuro como en la imagen
+    backgroundColor: '#D95C2B',
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 12,
