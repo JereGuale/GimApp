@@ -43,10 +43,17 @@ export default function Reports() {
 
   // ── Manual Membership Registration State ──
   const [manualSubModalOpen, setManualSubModalOpen] = useState(false);
+  const [userType, setUserType] = useState('existente'); // 'existente' | 'nuevo'
   const [users, setUsers] = useState([]);
   const [plans, setPlans] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState('');
   const [selectedPlanId, setSelectedPlanId] = useState('');
+  
+  // Offline client form state
+  const [newClientName, setNewClientName] = useState('');
+  const [newClientEmail, setNewClientEmail] = useState('');
+  const [newClientPhone, setNewClientPhone] = useState('');
+
   const [manualSubError, setManualSubError] = useState('');
   const [manualSubSuccess, setManualSubSuccess] = useState('');
   const [submittingManualSub, setSubmittingManualSub] = useState(false);
@@ -60,7 +67,7 @@ export default function Reports() {
   // Form for daily visits
   const [dailyModalOpen, setDailyModalOpen] = useState(false);
   const [dailyClientName, setDailyClientName] = useState('');
-  const [dailyAmount, setDailyAmount] = useState('2.50'); // default gym entrance price
+  const [dailyAmount, setDailyAmount] = useState('2.00'); // default gym entrance price set to $2.00
   const [dailyEntryDate, setDailyEntryDate] = useState(todayStr);
   const [dailyError, setDailyError] = useState('');
   const [dailySuccess, setDailySuccess] = useState('');
@@ -149,6 +156,10 @@ export default function Reports() {
 
   // Open manual membership modal and pre-load lists
   const handleOpenManualSub = async () => {
+    setUserType('existente');
+    setNewClientName('');
+    setNewClientEmail('');
+    setNewClientPhone('');
     setManualSubError('');
     setManualSubSuccess('');
     setSelectedUserId('');
@@ -172,8 +183,16 @@ export default function Reports() {
   // Submit manual membership
   const handleSaveManualSub = async (e) => {
     e.preventDefault();
-    if (!selectedUserId || !selectedPlanId) {
-      setManualSubError('Debes seleccionar un usuario y un plan.');
+    if (userType === 'existente' && !selectedUserId) {
+      setManualSubError('Debes seleccionar un usuario.');
+      return;
+    }
+    if (userType === 'nuevo' && !newClientName.trim()) {
+      setManualSubError('Debes ingresar el nombre del cliente.');
+      return;
+    }
+    if (!selectedPlanId) {
+      setManualSubError('Debes seleccionar un plan de suscripción.');
       return;
     }
 
@@ -182,13 +201,43 @@ export default function Reports() {
     setManualSubSuccess('');
 
     try {
+      let finalUserId = selectedUserId;
+
+      if (userType === 'nuevo') {
+        // Generate credentials to satisfy backend registration validations
+        const tempId = Date.now();
+        const randomNum = Math.floor(Math.random() * 1000);
+        const generatedUsername = `user_${tempId}_${randomNum}`;
+        const generatedEmail = newClientEmail.trim() || `cliente_${tempId}_${randomNum}@gimnasio.com`;
+        
+        // Register the client profile in the backend database
+        const regRes = await apiFetch('/register', {
+          method: 'POST',
+          body: JSON.stringify({
+            name: newClientName.trim(),
+            username: generatedUsername,
+            email: generatedEmail,
+            password: 'gym12345678',
+            password_confirmation: 'gym12345678',
+            phone: newClientPhone.trim() || null
+          })
+        });
+
+        if (!regRes || !regRes.user || !regRes.user.id) {
+          throw new Error('No se pudo registrar el nuevo cliente en el sistema.');
+        }
+
+        finalUserId = regRes.user.id;
+      }
+
       await apiFetch('/trainer/subscriptions/create', {
         method: 'POST',
         body: JSON.stringify({
-          user_id: parseInt(selectedUserId),
+          user_id: parseInt(finalUserId),
           subscription_plan_id: parseInt(selectedPlanId)
         })
       });
+
       setManualSubSuccess('Membresía creada y activada exitosamente');
       setTimeout(() => {
         setManualSubModalOpen(false);
@@ -204,7 +253,7 @@ export default function Reports() {
   // Open daily attendance modal
   const handleOpenDailyModal = () => {
     setDailyClientName('');
-    setDailyAmount('2.50');
+    setDailyAmount('2.00'); // default gym entrance price is now $2.00
     setDailyEntryDate(selectedDailyDate);
     setDailyError('');
     setDailySuccess('');
@@ -649,15 +698,76 @@ export default function Reports() {
             {manualSubSuccess && <div className="alert alert--success" style={{ marginBottom: 16 }}><CheckCircle2 size={14} /> <span>{manualSubSuccess}</span></div>}
 
             <form onSubmit={handleSaveManualSub} className="modal-form">
-              <div className="form-group">
-                <label>Seleccionar Usuario *</label>
-                <select value={selectedUserId} onChange={e => setSelectedUserId(e.target.value)} required>
-                  <option value="">Selecciona un usuario...</option>
-                  {users.map(u => (
-                    <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
-                  ))}
-                </select>
+              <div className="form-group" style={{ marginBottom: 16 }}>
+                <label style={{ display: 'block', marginBottom: 6 }}>Tipo de Cliente</label>
+                <div style={{ display: 'flex', gap: 20 }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', color: 'var(--text)', fontSize: 13 }}>
+                    <input 
+                      type="radio" 
+                      name="userType" 
+                      checked={userType === 'existente'} 
+                      onChange={() => setUserType('existente')} 
+                      style={{ width: 'auto', margin: 0 }}
+                    />
+                    <span>Usuario Registrado</span>
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', color: 'var(--text)', fontSize: 13 }}>
+                    <input 
+                      type="radio" 
+                      name="userType" 
+                      checked={userType === 'nuevo'} 
+                      onChange={() => setUserType('nuevo')} 
+                      style={{ width: 'auto', margin: 0 }}
+                    />
+                    <span>Nuevo Cliente (Sin App)</span>
+                  </label>
+                </div>
               </div>
+
+              {userType === 'existente' ? (
+                <div className="form-group">
+                  <label>Seleccionar Usuario Registrado *</label>
+                  <select value={selectedUserId} onChange={e => setSelectedUserId(e.target.value)} required={userType === 'existente'}>
+                    <option value="">Selecciona un usuario...</option>
+                    {users.map(u => (
+                      <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 12 }}>
+                  <div className="form-group">
+                    <label>Nombre Completo del Cliente *</label>
+                    <input 
+                      type="text" 
+                      value={newClientName} 
+                      onChange={e => setNewClientName(e.target.value)} 
+                      placeholder="Ej. Juan Pérez" 
+                      required={userType === 'nuevo'} 
+                    />
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                    <div className="form-group">
+                      <label>Correo Electrónico (Opcional)</label>
+                      <input 
+                        type="email" 
+                        value={newClientEmail} 
+                        onChange={e => setNewClientEmail(e.target.value)} 
+                        placeholder="Ej. juan@gmail.com" 
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Teléfono (Opcional)</label>
+                      <input 
+                        type="text" 
+                        value={newClientPhone} 
+                        onChange={e => setNewClientPhone(e.target.value)} 
+                        placeholder="Ej. 0987654321" 
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="form-group">
                 <label>Plan de Suscripción *</label>
@@ -718,7 +828,7 @@ export default function Reports() {
                   step="0.01" 
                   value={dailyAmount} 
                   onChange={e => setDailyAmount(e.target.value)} 
-                  placeholder="Ej. 2.50 (ingresa 0 si es gratis o cortesía)" 
+                  placeholder="Ej. 2.00 (ingresa 0 si es gratis o cortesía)" 
                   required 
                 />
               </div>
