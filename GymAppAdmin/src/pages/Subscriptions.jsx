@@ -14,7 +14,13 @@ import {
   User,
   Tag,
   Layers,
-  Calendar
+  Calendar,
+  Search,
+  Users,
+  Clock,
+  ZoomIn,
+  ZoomOut,
+  RotateCw
 } from 'lucide-react';
 import '../components/Layout.css';
 import './Subscriptions.css';
@@ -29,6 +35,8 @@ export default function Subscriptions() {
   const [filter, setFilter] = useState('all');
   const [actionLoading, setActionLoading] = useState(null);
   const [receiptModal, setReceiptModal] = useState(null); // stores the entire sub object
+  const [zoom, setZoom] = useState(1);
+  const [rotation, setRotation] = useState(0);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   
@@ -38,6 +46,12 @@ export default function Subscriptions() {
 
   // Custom Confirmation Modal State
   const [confirmModal, setConfirmModal] = useState(null);
+
+  const handleOpenReceiptModal = (sub) => {
+    setZoom(1);
+    setRotation(0);
+    setReceiptModal(sub);
+  };
 
   const getUserAvatarUrl = (user) => {
     if (!user) return null;
@@ -182,23 +196,115 @@ export default function Subscriptions() {
       {success && <div className="alert alert--success"><CheckCircle2 size={16} /> <span>{success}</span></div>}
 
       <div className="page-header">
-        <h2>Gestión de Suscripciones</h2>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <input className="search-input" placeholder="Buscar usuario…" value={search} onChange={e => setSearch(e.target.value)} />
-          <select value={filter} onChange={e => setFilter(e.target.value)}>
-            <option value="all">Todos</option>
-            <option value="pending">Pendientes</option>
-            <option value="active">Activas</option>
-            <option value="cancelled">Canceladas</option>
-            <option value="expired">Expiradas</option>
-          </select>
+        <div>
+          <h2 style={{ margin: 0 }}>Suscripciones</h2>
+          <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: 'var(--text-secondary)' }}>Controla los ingresos y membresías de los clientes</p>
+        </div>
+      </div>
+
+      {/* SaaS Stats Grid */}
+      <div className="subscriptions-stats-grid">
+        <div className="sub-stat-card">
+          <div className="sub-stat-icon-wrapper active">
+            <Users size={20} />
+          </div>
+          <div className="sub-stat-content">
+            <span className="sub-stat-label">Total Suscriptores</span>
+            <span className="sub-stat-value">{subs.length}</span>
+          </div>
+        </div>
+        
+        <div className="sub-stat-card">
+          <div className="sub-stat-icon-wrapper pending">
+            <Clock size={20} />
+          </div>
+          <div className="sub-stat-content">
+            <span className="sub-stat-label">Pendientes de Pago</span>
+            <span className="sub-stat-value">{subs.filter(s => s.status === 'pending').length}</span>
+          </div>
+        </div>
+
+        <div className="sub-stat-card">
+          <div className="sub-stat-icon-wrapper success">
+            <CheckCircle2 size={20} />
+          </div>
+          <div className="sub-stat-content">
+            <span className="sub-stat-label">Suscripciones Activas</span>
+            <span className="sub-stat-value">{subs.filter(s => s.status === 'active').length}</span>
+          </div>
+        </div>
+
+        <div className="sub-stat-card">
+          <div className="sub-stat-icon-wrapper danger">
+            <X size={20} />
+          </div>
+          <div className="sub-stat-content">
+            <span className="sub-stat-label">Expiradas / Canceladas</span>
+            <span className="sub-stat-value">{subs.filter(s => s.status === 'expired' || s.status === 'cancelled').length}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Toolbar with Search and Segmented Filters */}
+      <div className="subscriptions-toolbar">
+        <div className="search-wrapper">
+          <Search size={16} className="search-icon" />
+          <input 
+            className="search-input-premium" 
+            placeholder="Buscar por cliente o email..." 
+            value={search} 
+            onChange={e => setSearch(e.target.value)} 
+          />
+        </div>
+        
+        <div className="filter-tabs">
+          <button 
+            type="button"
+            className={`filter-tab ${filter === 'all' ? 'active' : ''}`}
+            onClick={() => setFilter('all')}
+          >
+            <span>Todos</span>
+            <span className="tab-count">{subs.length}</span>
+          </button>
+          <button 
+            type="button"
+            className={`filter-tab ${filter === 'pending' ? 'active' : ''}`}
+            onClick={() => setFilter('pending')}
+          >
+            <span>Pendientes</span>
+            <span className="tab-count pending">{subs.filter(s => s.status === 'pending').length}</span>
+          </button>
+          <button 
+            type="button"
+            className={`filter-tab ${filter === 'active' ? 'active' : ''}`}
+            onClick={() => setFilter('active')}
+          >
+            <span>Activas</span>
+            <span className="tab-count active">{subs.filter(s => s.status === 'active').length}</span>
+          </button>
+          <button 
+            type="button"
+            className={`filter-tab ${filter === 'cancelled' ? 'active' : ''}`}
+            onClick={() => setFilter('cancelled')}
+          >
+            <span>Canceladas</span>
+            <span className="tab-count cancelled">{subs.filter(s => s.status === 'cancelled').length}</span>
+          </button>
+          <button 
+            type="button"
+            className={`filter-tab ${filter === 'expired' ? 'active' : ''}`}
+            onClick={() => setFilter('expired')}
+          >
+            <span>Expiradas</span>
+            <span className="tab-count expired">{subs.filter(s => s.status === 'expired').length}</span>
+          </button>
         </div>
       </div>
 
       {loading ? (
         <div className="loading-state"><Loader2 className="spin" size={24} /> <span>Cargando…</span></div>
       ) : filtered.length === 0 ? (
-        <div className="empty-state"><div className="empty-icon"><CreditCard size={40} /></div><p>No hay suscripciones</p></div>
+        <div className="empty-state"><div className="empty-icon"><CreditCard size={40} /></div><p>No hay suscripciones que coincidan con los filtros</p></div>
       ) : (
         <>
           {/* Desktop Table View */}
@@ -241,19 +347,28 @@ export default function Subscriptions() {
                       </td>
                       <td>
                         {getReceiptUrl(s) ? (
-                          <button 
-                            type="button"
-                            className="btn btn--secondary" 
-                            style={{ padding: '6px 12px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4, minHeight: 'auto' }}
-                            onClick={() => setReceiptModal(s)}
-                          >
-                            <Eye size={12} />
-                            <span>Ver comprobante</span>
-                          </button>
-                        ) : <span style={{ color: 'var(--text-secondary)' }}>—</span>}
+                          <div className="receipt-thumbnail-wrapper">
+                            <img 
+                              src={getReceiptUrl(s)} 
+                              alt="Mini comprobante" 
+                              className="receipt-thumbnail"
+                              onClick={() => handleOpenReceiptModal(s)}
+                            />
+                            <button 
+                              type="button"
+                              className="receipt-zoom-btn"
+                              onClick={() => handleOpenReceiptModal(s)}
+                              title="Ampliar comprobante"
+                            >
+                              <Eye size={10} />
+                            </button>
+                          </div>
+                        ) : (
+                          <span style={{ color: 'var(--text-secondary)' }}>—</span>
+                        )}
                       </td>
                       <td style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
-                        {s.created_at ? new Date(s.created_at).toLocaleDateString('es-MX') : '—'}
+                        {s.created_at ? new Date(s.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
                       </td>
                       <td style={{ textAlign: 'right' }}>
                         {s.status === 'pending' ? (
@@ -363,7 +478,7 @@ export default function Subscriptions() {
                         type="button"
                         className="btn btn--secondary" 
                         style={{ width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 38 }}
-                        onClick={() => setReceiptModal(s)}
+                        onClick={() => handleOpenReceiptModal(s)}
                       >
                         <Eye size={14} />
                         <span>Ver comprobante</span>
@@ -423,35 +538,82 @@ export default function Subscriptions() {
         </>
       )}
 
-      {/* Receipt Modal (Split View) */}
+      {/* Receipt Modal (Split View with controls) */}
       {receiptModal && (
         <div className="modal-overlay" onClick={() => setReceiptModal(null)}>
-          <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 16, padding: 24, maxWidth: '850px', width: '90%', maxHeight: '90vh', overflowY: 'auto' }}
-            onClick={e => e.stopPropagation()}>
+          <div className="premium-receipt-modal" onClick={e => e.stopPropagation()}>
             
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h3 style={{ margin: 0, color: 'var(--text)' }}>Verificación de Suscripción</h3>
+            <div className="premium-modal-header">
+              <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                <div className="modal-header-icon">
+                  <CreditCard size={20} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, color: 'var(--text)', fontSize: '18px', fontWeight: 700 }}>Verificación de Pago</h3>
+                  <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: 'var(--text-secondary)' }}>Valida el comprobante para activar la membresía</p>
+                </div>
+              </div>
               <button className="btn btn--ghost" style={{ padding: 6, borderRadius: '50%' }} onClick={() => setReceiptModal(null)}><X size={16} /></button>
             </div>
             
             <div className="modal-split-container">
               {/* Left Pane: Preview */}
               <div className="modal-split-preview">
-                {getReceiptUrl(receiptModal) ? (
-                  <img
-                    src={getReceiptUrl(receiptModal)}
-                    alt="Comprobante"
-                    onError={e => {
-                      e.target.style.display = 'none';
-                      e.target.nextSibling.style.display = 'flex';
-                    }}
-                  />
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: 'var(--text-secondary)', gap: 12 }}>
-                    <AlertTriangle size={48} />
-                    <p style={{ margin: 0 }}>No hay comprobante disponible</p>
+                <div className="modal-preview-header">
+                  <span className="modal-preview-title">Visualización del Comprobante</span>
+                  <div className="modal-zoom-controls">
+                    <button 
+                      type="button" 
+                      onClick={() => setZoom(prev => Math.max(prev - 0.2, 0.5))} 
+                      title="Zoom Out"
+                    >
+                      <ZoomOut size={15} />
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={() => { setZoom(1); setRotation(0); }} 
+                      title="Restablecer"
+                      className="zoom-reset-btn"
+                    >
+                      100%
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={() => setZoom(prev => Math.min(prev + 0.2, 3))} 
+                      title="Zoom In"
+                    >
+                      <ZoomIn size={15} />
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={() => setRotation(prev => prev + 90)} 
+                      title="Rotar 90°"
+                    >
+                      <RotateCw size={15} />
+                    </button>
                   </div>
-                )}
+                </div>
+                <div className="modal-image-viewport">
+                  {getReceiptUrl(receiptModal) ? (
+                    <img
+                      src={getReceiptUrl(receiptModal)}
+                      alt="Comprobante"
+                      style={{
+                        transform: `scale(${zoom}) rotate(${rotation}deg)`,
+                        transition: 'transform 0.2s ease-out'
+                      }}
+                      onError={e => {
+                        e.target.style.display = 'none';
+                        e.target.parentNode.nextSibling.style.display = 'flex';
+                      }}
+                    />
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: 'var(--text-secondary)', gap: 12 }}>
+                      <AlertTriangle size={48} />
+                      <p style={{ margin: 0 }}>No hay comprobante disponible</p>
+                    </div>
+                  )}
+                </div>
                 <div style={{ display: 'none', flexDirection: 'column', alignItems: 'center', padding: 40, color: 'var(--text-secondary)', gap: 12 }}>
                   <AlertTriangle size={48} />
                   <p style={{ margin: 0, fontSize: 14 }}>No se pudo cargar el comprobante</p>

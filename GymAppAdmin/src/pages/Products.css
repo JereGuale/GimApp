@@ -256,15 +256,6 @@
   background-color: var(--danger-light);
 }
 
-/* Invisible overlay to close dropdown */
-.actions-dropdown-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 90;
-  background: transparent;
-  cursor: default;
-}
-
 /* Mobile Cards View styling */
 .mobile-products-grid {
   display: flex;

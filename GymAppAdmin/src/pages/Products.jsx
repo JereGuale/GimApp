@@ -220,6 +220,20 @@ export default function Products() {
     setCurrentPage(1);
   }, [products.length]);
 
+  // Close active dropdown when clicking outside
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (activeDropdown === null) return;
+      if (!e.target.closest('.actions-dropdown-wrapper')) {
+        setActiveDropdown(null);
+      }
+    };
+    document.addEventListener('click', handleOutsideClick);
+    return () => {
+      document.removeEventListener('click', handleOutsideClick);
+    };
+  }, [activeDropdown]);
+
   const handleOpenAdd = () => {
     setEditId(null);
     setName('');
@@ -452,8 +466,6 @@ export default function Products() {
         <div className="empty-state"><div className="empty-icon"><Package size={40} /></div><p>No hay productos en inventario</p></div>
       ) : (
         <>
-          {activeDropdown && <div className="actions-dropdown-overlay" onClick={() => setActiveDropdown(null)} />}
-
           {/* Desktop Table Layout */}
           <div className="products-desktop-view">
             <div className="products-table-container">
