@@ -20,6 +20,12 @@ import EmptyState from '../../components/EmptyState';
 
 const BASE_URL = API_URL.replace('/api', '');
 
+const resolveStorageUrl = (path) => {
+    if (!path) return null;
+    if (path.startsWith('http')) return path;
+    return `${BASE_URL}/storage/${path}`;
+};
+
 export default function AdminSubscriptionManagement() {
     const { theme } = useTheme();
 
@@ -113,6 +119,7 @@ export default function AdminSubscriptionManagement() {
 
     const handleViewReceipt = (subscription) => {
         if (subscription.payment_receipt) {
+            const receiptUrl = resolveStorageUrl(subscription.payment_receipt);
             setSelectedImage(receiptUrl);
             setImageModalVisible(true);
         } else {
@@ -216,7 +223,7 @@ export default function AdminSubscriptionManagement() {
                 {subscription.payment_receipt && (
                     <TouchableOpacity style={[styles.receiptBtn, { borderColor: theme.colors.border }]} onPress={() => handleViewReceipt(subscription)}>
                         <Ionicons name="image-outline" size={18} color="#22D3EE" />
-                        <Text style={{ color: '#22D3EE', fontSize: 13, fontWeight: '600' }}>Ver Comprobante</Text>
+                        <Text style={{ color: '#22D3EE', fontSize: 13, fontWeight: '600' }}>Ver</Text>
                     </TouchableOpacity>
                 )}
                 <View style={styles.actionRow}>

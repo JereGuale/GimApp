@@ -8,8 +8,12 @@ import { SubscriptionAPI, SubscriptionPlanAPI } from '../../services/subscriptio
 import SubscriptionStatusBadge from '../../components/SubscriptionStatusBadge';
 import ReceiptUploader from '../../components/ReceiptUploader';
 import AuthModal from '../../components/AuthModal';
+import OrderConfirmationModal from '../../components/OrderConfirmationModal';
+import CustomAlertModal from '../../components/CustomAlertModal';
 import { useNavigation } from '@react-navigation/native';
 import { useResponsive } from '../../hooks/useResponsive';
+import BillingModal from '../../components/BillingModal';
+import { ProfileAPI } from '../../services/notificationService';
 
 const getPlanCategory = (planName) => {
   const name = planName.toLowerCase();
@@ -22,7 +26,7 @@ export default function SubscriptionScreen() {
   const { theme } = useTheme();
   const { isSmallScreen } = useResponsive();
   const navigation = useNavigation();
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -31,6 +35,12 @@ export default function SubscriptionScreen() {
   const [pendingPlan, setPendingPlan] = useState(null);
   const [receiptModalVisible, setReceiptModalVisible] = useState(false);
   const [authModalVisible, setAuthModalVisible] = useState(false);
+  const [confirmModalVisible, setConfirmModalVisible] = useState(false);
+  const [billingModalVisible, setBillingModalVisible] = useState(false);
+  const [confirmedBilling, setConfirmedBilling] = useState(null);
+
+  // Custom Alert State
+  const [customAlert, setCustomAlert] = React.useState({ visible: false, title: '', message: '' });
 
   // Suscripción existente
   const [existingSub, setExistingSub] = useState(null);
@@ -87,9 +97,22 @@ export default function SubscriptionScreen() {
       );
       return;
     }
-    // Solo transferencia bancaria: ir directo al uploader
+    // Abrir confirmación de facturación antes del comprobante
     setSelectedPlan(plan);
-    setReceiptModalVisible(true);
+    const hasBilling = user?.billing_id_number && user?.billing_city && user?.billing_address;
+    if (hasBilling) {
+      setConfirmedBilling({
+        billing_name: user.name,
+        billing_email: user.email,
+        billing_phone: user.phone,
+        billing_id_number: user.billing_id_number,
+        billing_city: user.billing_city,
+        billing_address: user.billing_address
+      });
+      setReceiptModalVisible(true);
+    } else {
+      setBillingModalVisible(true);
+    }
   };
 
   const handleAuthSuccess = () => {
@@ -100,43 +123,57 @@ export default function SubscriptionScreen() {
       setTimeout(() => {
         fetchExistingSubscription().then(() => {
           setSelectedPlan(planToOpen);
-          setReceiptModalVisible(true);
+          const hasBilling = user?.billing_id_number && user?.billing_city && user?.billing_address;
+          if (hasBilling) {
+            setConfirmedBilling({
+              billing_name: user.name,
+              billing_email: user.email,
+              billing_phone: user.phone,
+              billing_id_number: user.billing_id_number,
+              billing_city: user.billing_city,
+              billing_address: user.billing_address
+            });
+            setReceiptModalVisible(true);
+          } else {
+            setBillingModalVisible(true);
+          }
         });
       }, 450);
     }
   };
 
-  const handlePaymentMethodSelect = (method) => {
-    setPaymentModalVisible(false);
-    if (method === 'card') {
-      setCardFormVisible(true);
-    } else if (method === 'transfer') {
-      setReceiptModalVisible(true);
+  const handleConfirmBilling = async (billingData) => {
+    setConfirmedBilling(billingData);
+    setBillingModalVisible(false);
+    
+    // Guardar en el perfil del usuario para no volver a pedírselo en el futuro
+    try {
+      const result = await ProfileAPI.updateProfile({
+        billing_id_number: billingData.billing_id_number,
+        billing_city: billingData.billing_city,
+        billing_address: billingData.billing_address
+      });
+      if (result.success && updateUser) {
+        updateUser({
+          ...user,
+          billing_id_number: billingData.billing_id_number,
+          billing_city: billingData.billing_city,
+          billing_address: billingData.billing_address
+        });
+      }
+    } catch (e) {
+      console.log('[SubscriptionScreen] Error saving billing data to profile:', e);
     }
+
+    setTimeout(() => {
+      setReceiptModalVisible(true);
+    }, 450);
   };
 
-  const handleCardPayment = async (cardData) => {
-    try {
-      const result = await SubscriptionAPI.createSubscription(
-        selectedPlan.id,
-        'card',
-        cardData
-      );
 
-      if (result.success) {
-        Alert.alert(
-          '¡Suscripción adquirida exitosamente!',
-          'Tu suscripción ha sido activada inmediatamente.',
-          [{ text: 'Aceptar', onPress: () => navigation.navigate('Profile') }]
-        );
-        setCardFormVisible(false);
-        setSelectedPlan(null);
-      } else {
-        Alert.alert('Error', result.error || 'No se pudo procesar el pago');
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Ocurrió un error al procesar el pago');
-    }
+
+  const showAlert = (title, message) => {
+    setCustomAlert({ visible: true, title, message });
   };
 
   const handleReceiptUpload = async (imageAsset) => {
@@ -150,14 +187,16 @@ export default function SubscriptionScreen() {
         subscriptionId = mySubResult.data.id;
         console.log('[ReceiptUpload] Using existing pending subscription:', subscriptionId);
       } else {
-        // Crear nueva suscripción
+        // Crear nueva suscripción con datos de facturación
         const createResult = await SubscriptionAPI.createSubscription(
           selectedPlan.id,
-          'transfer'
+          'transfer',
+          {},
+          confirmedBilling
         );
 
         if (!createResult.success) {
-          Alert.alert('Error', createResult.error || 'No se pudo crear la suscripción');
+          showAlert('Error', createResult.error || 'No se pudo crear la suscripción');
           return;
         }
         subscriptionId = createResult.data.id;
@@ -174,20 +213,16 @@ export default function SubscriptionScreen() {
       console.log('[ReceiptUpload] Upload result:', uploadResult);
 
       if (uploadResult.success) {
-        Alert.alert(
-          '¡Comprobante enviado con éxito!',
-          'Tu suscripción está en estado PENDIENTE. Un administrador revisará tu comprobante y aprobará tu suscripción. Te notificaremos cuando sea activada.',
-          [{ text: 'Ir a mi perfil', onPress: () => navigation.navigate('Profile') }]
-        );
         setReceiptModalVisible(false);
         setSelectedPlan(null);
         fetchExistingSubscription();
+        setConfirmModalVisible(true);
       } else {
-        Alert.alert('Error', uploadResult.error || 'No se pudo subir el comprobante');
+        showAlert('Error', uploadResult.error || 'No se pudo subir el comprobante');
       }
     } catch (error) {
       console.error('[ReceiptUpload] Unexpected error:', error);
-      Alert.alert('Error', 'Ocurrió un error al subir el comprobante');
+      showAlert('Error', 'Ocurrió un error al subir el comprobante');
     }
   };
 
@@ -367,7 +402,7 @@ export default function SubscriptionScreen() {
               {mappedPlans.map((plan) => {
                 const isElite = plan.badge === 'PREMIUM';
                 const cardColor = plan.accentColor;
-                
+
                 const cardContent = (
                   <View style={[
                     styles.planCardInner,
@@ -406,13 +441,13 @@ export default function SubscriptionScreen() {
                         const isFirstEliteFeature = isElite && index === 0;
                         return (
                           <View key={index} style={styles.featureRow}>
-                            <Ionicons 
-                              name={isFirstEliteFeature ? 'star' : 'checkmark-sharp'} 
-                              size={18} 
-                              color={cardColor} 
+                            <Ionicons
+                              name={isFirstEliteFeature ? 'star' : 'checkmark-sharp'}
+                              size={18}
+                              color={cardColor}
                             />
                             <Text style={[
-                              styles.featureText, 
+                              styles.featureText,
                               { color: textMain },
                               isFirstEliteFeature && { fontWeight: '700' }
                             ]}>
@@ -425,7 +460,7 @@ export default function SubscriptionScreen() {
 
                     <TouchableOpacity
                       style={
-                        existingSub 
+                        existingSub
                           ? [styles.planButton, { backgroundColor: '#9CA3AF' }]
                           : [styles.planButton, { backgroundColor: cardColor }]
                       }
@@ -465,17 +500,7 @@ export default function SubscriptionScreen() {
               })}
             </ScrollView>
 
-            {/* Bento Grid Info Section */}
-            <View style={styles.bentoSection}>
-              <View style={[styles.bentoCard, { backgroundColor: bentoBg, borderColor: cardBorder }]}>
-                <Ionicons name="shield-checkmark" size={28} color="#5B3DF5" />
-                <Text style={[styles.bentoText, { color: textMain }]}>Pagos seguros</Text>
-              </View>
-              <View style={[styles.bentoCard, { backgroundColor: bentoBg, borderColor: cardBorder }]}>
-                <Ionicons name="calendar" size={28} color="#00C2FF" />
-                <Text style={[styles.bentoText, { color: textMain }]}>Cancela cuando quieras</Text>
-              </View>
-            </View>
+
           </>
         )}
       </ScrollView>
@@ -495,6 +520,27 @@ export default function SubscriptionScreen() {
         visible={authModalVisible}
         onClose={() => setAuthModalVisible(false)}
         onSuccess={handleAuthSuccess}
+      />
+
+      <OrderConfirmationModal
+        visible={confirmModalVisible}
+        type="subscription"
+        onClose={() => { setConfirmModalVisible(false); navigation.navigate('Perfil'); }}
+        onGoToOrders={() => { setConfirmModalVisible(false); navigation.navigate('Perfil'); }}
+      />
+
+      <CustomAlertModal
+        visible={customAlert.visible}
+        title={customAlert.title}
+        message={customAlert.message}
+        onClose={() => setCustomAlert({ ...customAlert, visible: false })}
+      />
+
+      <BillingModal
+        visible={billingModalVisible}
+        onClose={() => setBillingModalVisible(false)}
+        onConfirm={handleConfirmBilling}
+        initialData={user}
       />
     </View>
   );

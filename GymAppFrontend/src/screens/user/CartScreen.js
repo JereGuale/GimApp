@@ -12,10 +12,12 @@ import { useAuth } from '../../context/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { API_URL, OfferService } from '../../services/api';
 import { OrderAPI } from '../../services/orderService';
-import PaymentMethodModal from '../../components/PaymentMethodModal';
-import CardPaymentForm from '../../components/CardPaymentForm';
 import ReceiptUploader from '../../components/ReceiptUploader';
 import AuthModal from '../../components/AuthModal';
+import { ProfileAPI } from '../../services/notificationService';
+import OrderConfirmationModal from '../../components/OrderConfirmationModal';
+import CustomAlertModal from '../../components/CustomAlertModal';
+import BillingModal from '../../components/BillingModal';
 
 const BASE_URL = API_URL.replace('/api', '');
 
@@ -26,7 +28,7 @@ export default function CartScreen() {
   const { theme } = useTheme();
   const navigation = useNavigation();
   const { items, removeFromCart, updateQuantity, clearCart, totalItems, totalPrice } = useCart();
-  const { user, token } = useAuth();
+  const { user, token, updateUser } = useAuth();
 
   const [activeOffer, setActiveOffer] = React.useState(null);
 
@@ -34,16 +36,14 @@ export default function CartScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   // Payment Modals State
-  const [paymentModalVisible, setPaymentModalVisible] = React.useState(false);
-  const [cardFormVisible, setCardFormVisible] = React.useState(false);
   const [receiptModalVisible, setReceiptModalVisible] = React.useState(false);
   const [authModalVisible, setAuthModalVisible] = React.useState(false);
-
-  // Mock plan for payment modales
-  const checkoutPlan = {
-    name: 'Pedido del Carrito',
-    price: totalPrice || 0
-  };
+  const [confirmModalVisible, setConfirmModalVisible] = React.useState(false);
+  const [billingModalVisible, setBillingModalVisible] = React.useState(false);
+  const [confirmedBilling, setConfirmedBilling] = React.useState(null);
+  
+  // Custom Alert State
+  const [customAlert, setCustomAlert] = React.useState({ visible: false, title: '', message: '' });
 
   // Animar apertura y cargar oferta activa
   useEffect(() => {
@@ -94,49 +94,80 @@ export default function CartScreen() {
       setAuthModalVisible(true);
       return;
     }
-    setPaymentModalVisible(true);
+    const hasBilling = user?.billing_id_number && user?.billing_city && user?.billing_address;
+    if (hasBilling) {
+      setConfirmedBilling({
+        billing_name: user.name,
+        billing_email: user.email,
+        billing_phone: user.phone,
+        billing_id_number: user.billing_id_number,
+        billing_city: user.billing_city,
+        billing_address: user.billing_address
+      });
+      setReceiptModalVisible(true);
+    } else {
+      setBillingModalVisible(true);
+    }
   };
 
   const handleAuthSuccess = () => {
     setAuthModalVisible(false);
     setTimeout(() => {
-      setPaymentModalVisible(true);
+      const hasBilling = user?.billing_id_number && user?.billing_city && user?.billing_address;
+      if (hasBilling) {
+        setConfirmedBilling({
+          billing_name: user.name,
+          billing_email: user.email,
+          billing_phone: user.phone,
+          billing_id_number: user.billing_id_number,
+          billing_city: user.billing_city,
+          billing_address: user.billing_address
+        });
+        setReceiptModalVisible(true);
+      } else {
+        setBillingModalVisible(true);
+      }
     }, 450);
   };
 
-  const handlePaymentMethodSelect = (method) => {
-    setPaymentModalVisible(false);
-    if (method === 'card') {
-      setCardFormVisible(true);
-    } else if (method === 'transfer') {
-      setReceiptModalVisible(true);
+  const handleConfirmBilling = async (billingData) => {
+    setConfirmedBilling(billingData);
+    setBillingModalVisible(false);
+    
+    // Guardar en el perfil del usuario para no volver a pedírselo en el futuro
+    try {
+      const result = await ProfileAPI.updateProfile({
+        billing_id_number: billingData.billing_id_number,
+        billing_city: billingData.billing_city,
+        billing_address: billingData.billing_address
+      });
+      if (result.success && updateUser) {
+        updateUser({
+          ...user,
+          billing_id_number: billingData.billing_id_number,
+          billing_city: billingData.billing_city,
+          billing_address: billingData.billing_address
+        });
+      }
+    } catch (e) {
+      console.log('[CartScreen] Error saving billing data to profile:', e);
     }
+
+    setTimeout(() => {
+      setReceiptModalVisible(true);
+    }, 450);
   };
 
-  const handleCardPayment = async (cardData) => {
-    // For now, card payments create an order and auto-approve
-    try {
-      const result = await OrderAPI.createOrder(items, 'card');
-      if (result.success) {
-        setCardFormVisible(false);
-        clearCart();
-        Alert.alert('¡Compra Exitosa!', 'Tu pedido ha sido procesado.', [
-          { text: 'OK', onPress: closeDrawer }
-        ]);
-      } else {
-        Alert.alert('Error', result.error || 'No se pudo procesar el pago');
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Ocurrió un error al procesar el pago');
-    }
+  const showAlert = (title, message) => {
+    setCustomAlert({ visible: true, title, message });
   };
 
   const handleReceiptUpload = async (imageAsset) => {
     try {
-      // Step 1: Create the order
-      const createResult = await OrderAPI.createOrder(items, 'transfer');
+      // Step 1: Create the order with billing data
+      const createResult = await OrderAPI.createOrder(items, 'transfer', '', confirmedBilling);
       if (!createResult.success) {
-        Alert.alert('Error', createResult.error || 'No se pudo crear el pedido');
+        showAlert('Error', createResult.error || 'No se pudo crear el pedido');
         return;
       }
 
@@ -148,17 +179,13 @@ export default function CartScreen() {
       if (uploadResult.success) {
         setReceiptModalVisible(false);
         clearCart();
-        Alert.alert(
-          '¡Comprobante enviado con éxito!',
-          'Tu pedido será revisado por un administrador. Te notificaremos cuando sea aprobado.',
-          [{ text: 'Aceptar', onPress: closeDrawer }]
-        );
+        setConfirmModalVisible(true);
       } else {
-        Alert.alert('Error', uploadResult.error || 'No se pudo subir el comprobante');
+        showAlert('Error', uploadResult.error || 'No se pudo subir el comprobante');
       }
     } catch (error) {
       console.error('[CartScreen] Receipt upload error:', error);
-      Alert.alert('Error', 'Ocurrió un error al procesar el pedido');
+      showAlert('Error', 'Ocurrió un error al procesar el pedido');
     }
   };
 
@@ -364,19 +391,6 @@ export default function CartScreen() {
       </Animated.View>
 
       {/* Payment Modals */}
-      <PaymentMethodModal
-        visible={paymentModalVisible}
-        onClose={() => setPaymentModalVisible(false)}
-        onSelectMethod={handlePaymentMethodSelect}
-        plan={checkoutPlan}
-      />
-
-      <CardPaymentForm
-        visible={cardFormVisible}
-        onClose={() => setCardFormVisible(false)}
-        onSubmit={handleCardPayment}
-        plan={checkoutPlan}
-      />
 
       <ReceiptUploader
         visible={receiptModalVisible}
@@ -389,10 +403,32 @@ export default function CartScreen() {
         }}
       />
 
+
       <AuthModal
         visible={authModalVisible}
         onClose={() => setAuthModalVisible(false)}
         onSuccess={handleAuthSuccess}
+      />
+
+      <OrderConfirmationModal
+        visible={confirmModalVisible}
+        type="order"
+        onClose={() => { setConfirmModalVisible(false); closeDrawer(); }}
+        onGoToOrders={() => { setConfirmModalVisible(false); closeDrawer(); setTimeout(() => navigation.navigate('Mis Compras'), 350); }}
+      />
+
+      <CustomAlertModal
+        visible={customAlert.visible}
+        title={customAlert.title}
+        message={customAlert.message}
+        onClose={() => setCustomAlert({ ...customAlert, visible: false })}
+      />
+
+      <BillingModal
+        visible={billingModalVisible}
+        onClose={() => setBillingModalVisible(false)}
+        onConfirm={handleConfirmBilling}
+        initialData={user}
       />
     </View>
   );

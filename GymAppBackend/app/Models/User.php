@@ -30,6 +30,9 @@ class User extends Authenticatable
         'phone',
         'is_active',
         'suspended_until',
+        'billing_id_number',
+        'billing_city',
+        'billing_address',
     ];
 
     /**

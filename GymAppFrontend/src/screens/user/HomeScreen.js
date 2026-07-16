@@ -10,6 +10,7 @@ import {
   FlatList,
   ActivityIndicator,
   Platform,
+  Linking,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -33,10 +34,10 @@ export default function HomeScreen() {
   // Responsive sizing
   const isDesktop = !isSmallScreen;
   const bannerWidth = winWidth;
-  const bannerHeight = isDesktop ? Math.min(winWidth * 0.3, 380) : winWidth * 0.52;
+  const bannerHeight = isDesktop ? Math.min(winWidth * 0.38, 480) : winWidth * 0.65;
   const innerWidth = Math.min(winWidth, MAX_CONTENT_WIDTH);
   const contentPadding = isDesktop ? Math.max((winWidth - MAX_CONTENT_WIDTH) / 2, 20) : 16;
-  
+
   const productGap = isDesktop ? 16 : 12;
   const productCardWidth = isDesktop
     ? Math.min((innerWidth - productGap * 5) / 4, 285)
@@ -214,7 +215,7 @@ export default function HomeScreen() {
     const priceNum = parseFloat(product.price) || 0;
     const matchMinPrice = minPrice === '' || priceNum >= parseFloat(minPrice);
     const matchMaxPrice = maxPrice === '' || priceNum <= parseFloat(maxPrice);
-    
+
     return matchSearch && matchCategory && matchMinPrice && matchMaxPrice;
   });
 
@@ -339,19 +340,19 @@ export default function HomeScreen() {
   if (showFullCatalog) {
     return (
       <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
-        
+
         {/* Catalog Navigation Header */}
-        <View style={{ 
-          flexDirection: 'row', 
-          alignItems: 'center', 
-          paddingHorizontal: contentPadding, 
-          paddingVertical: 16, 
-          borderBottomWidth: 1, 
+        <View style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          paddingHorizontal: contentPadding,
+          paddingVertical: 16,
+          borderBottomWidth: 1,
           borderBottomColor: theme.colors.border,
           backgroundColor: theme.colors.surface
         }}>
-          <TouchableOpacity 
-            onPress={() => { setShowFullCatalog(false); setSearchText(''); }} 
+          <TouchableOpacity
+            onPress={() => { setShowFullCatalog(false); setSearchText(''); }}
             style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
           >
             <Ionicons name="arrow-back" size={20} color={theme.colors.text} />
@@ -382,26 +383,26 @@ export default function HomeScreen() {
         </View>
 
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
-          
+
           {isDesktop ? (
             /* ── WEB SPLIT GRID LAYOUT ── */
             <View style={{ flexDirection: 'row', paddingHorizontal: contentPadding, marginTop: 16, alignItems: 'flex-start' }}>
-              
+
               {/* Sidebar Filters */}
               <View style={{ width: 240, marginRight: 28, backgroundColor: theme.colors.surface, borderRadius: 16, borderHeight: 1, borderColor: theme.colors.border, padding: 20 }}>
                 <Text style={{ fontSize: 16, fontWeight: '800', color: theme.colors.text, marginBottom: 16 }}>Filtros</Text>
-                
+
                 {/* Price range */}
                 <Text style={{ fontSize: 13, fontWeight: '700', color: theme.colors.text, marginBottom: 8 }}>Rango de Precio (USD)</Text>
                 <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
-                  <TextInput 
+                  <TextInput
                     style={{ flex: 1, height: 36, borderWidth: 1, borderColor: theme.colors.border, borderRadius: 8, paddingHorizontal: 8, fontSize: 12, color: theme.colors.text }}
                     keyboardType="numeric"
                     placeholder="Min ($)"
                     value={minPrice}
                     onChangeText={setMinPrice}
                   />
-                  <TextInput 
+                  <TextInput
                     style={{ flex: 1, height: 36, borderWidth: 1, borderColor: theme.colors.border, borderRadius: 8, paddingHorizontal: 8, fontSize: 12, color: theme.colors.text }}
                     keyboardType="numeric"
                     placeholder="Max ($)"
@@ -414,15 +415,15 @@ export default function HomeScreen() {
                 <Text style={{ fontSize: 13, fontWeight: '700', color: theme.colors.text, marginBottom: 10 }}>Categorías</Text>
                 <View style={{ gap: 8 }}>
                   {categories.map((cat) => (
-                    <TouchableOpacity 
-                      key={cat.id} 
+                    <TouchableOpacity
+                      key={cat.id}
                       onPress={() => toggleCategoryFilter(cat.id)}
                       style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
                     >
-                      <Ionicons 
-                        name={selectedCategories.includes(cat.id) ? "checkbox" : "square-outline"} 
-                        size={18} 
-                        color={selectedCategories.includes(cat.id) ? '#FF6A1A' : theme.colors.text} 
+                      <Ionicons
+                        name={selectedCategories.includes(cat.id) ? "checkbox" : "square-outline"}
+                        size={18}
+                        color={selectedCategories.includes(cat.id) ? '#FF6A1A' : theme.colors.text}
                       />
                       <Text style={{ fontSize: 13, color: theme.colors.textSecondary }}>{cat.name}</Text>
                     </TouchableOpacity>
@@ -432,13 +433,13 @@ export default function HomeScreen() {
 
               {/* Products Side */}
               <View style={{ flex: 1 }}>
-                
+
                 {/* Result header & Sort */}
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                   <Text style={{ fontSize: 14, color: theme.colors.textSecondary, fontWeight: '500' }}>
                     Mostrando {sortedProducts.length} de {products.length} resultados
                   </Text>
-                  
+
                   {/* Sorting pills */}
                   <View style={{ flexDirection: 'row', gap: 6 }}>
                     <TouchableOpacity onPress={() => setSortBy('default')} style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 14, backgroundColor: sortBy === 'default' ? '#FF6A1A' : theme.colors.surface }}>
@@ -471,24 +472,24 @@ export default function HomeScreen() {
           ) : (
             /* ── MOBILE COLLAPSIBLE FILTER LAYOUT ── */
             <View style={{ paddingHorizontal: contentPadding, marginTop: 12 }}>
-              
+
               {/* Header row: counts, sort, filter drawer toggle */}
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                 <Text style={{ fontSize: 13, color: theme.colors.textSecondary, fontWeight: '600' }}>
                   {sortedProducts.length} productos
                 </Text>
-                
+
                 <View style={{ flexDirection: 'row', gap: 8 }}>
                   {/* Collapsible drawer button */}
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     onPress={() => setFilterDrawerOpen(!filterDrawerOpen)}
-                    style={{ 
-                      flexDirection: 'row', 
-                      alignItems: 'center', 
-                      gap: 4, 
-                      paddingHorizontal: 12, 
-                      paddingVertical: 6, 
-                      borderRadius: 14, 
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 4,
+                      paddingHorizontal: 12,
+                      paddingVertical: 6,
+                      borderRadius: 14,
                       backgroundColor: filterDrawerOpen ? '#FF6A1A' : theme.colors.surface,
                       borderWidth: 1,
                       borderColor: theme.colors.border
@@ -499,15 +500,15 @@ export default function HomeScreen() {
                   </TouchableOpacity>
 
                   {/* Quick Sort Toggle */}
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     onPress={() => setSortBy(prev => prev === 'default' ? 'price_asc' : prev === 'price_asc' ? 'price_desc' : 'default')}
-                    style={{ 
-                      flexDirection: 'row', 
-                      alignItems: 'center', 
-                      gap: 4, 
-                      paddingHorizontal: 12, 
-                      paddingVertical: 6, 
-                      borderRadius: 14, 
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 4,
+                      paddingHorizontal: 12,
+                      paddingVertical: 6,
+                      borderRadius: 14,
                       backgroundColor: sortBy !== 'default' ? '#FF6A1A' : theme.colors.surface,
                       borderWidth: 1,
                       borderColor: theme.colors.border
@@ -526,7 +527,7 @@ export default function HomeScreen() {
                 <View style={{ backgroundColor: theme.colors.surface, borderRadius: 12, padding: 16, marginBottom: 16, borderHeight: 1, borderColor: theme.colors.border }}>
                   <Text style={{ fontSize: 13, fontWeight: '800', color: theme.colors.text, marginBottom: 8 }}>Rango de Precio</Text>
                   <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
-                    <TextInput 
+                    <TextInput
                       style={{ flex: 1, height: 36, borderWidth: 1, borderColor: theme.colors.border, borderRadius: 8, paddingHorizontal: 8, fontSize: 12, color: theme.colors.text, backgroundColor: theme.colors.background }}
                       keyboardType="numeric"
                       placeholder="Min ($)"
@@ -534,7 +535,7 @@ export default function HomeScreen() {
                       value={minPrice}
                       onChangeText={setMinPrice}
                     />
-                    <TextInput 
+                    <TextInput
                       style={{ flex: 1, height: 36, borderWidth: 1, borderColor: theme.colors.border, borderRadius: 8, paddingHorizontal: 8, fontSize: 12, color: theme.colors.text, backgroundColor: theme.colors.background }}
                       keyboardType="numeric"
                       placeholder="Max ($)"
@@ -547,15 +548,15 @@ export default function HomeScreen() {
                   <Text style={{ fontSize: 13, fontWeight: '800', color: theme.colors.text, marginBottom: 8 }}>Filtrar por Categoría</Text>
                   <View style={{ gap: 8 }}>
                     {categories.map((cat) => (
-                      <TouchableOpacity 
-                        key={cat.id} 
+                      <TouchableOpacity
+                        key={cat.id}
                         onPress={() => toggleCategoryFilter(cat.id)}
                         style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
                       >
-                        <Ionicons 
-                          name={selectedCategories.includes(cat.id) ? "checkbox" : "square-outline"} 
-                          size={18} 
-                          color={selectedCategories.includes(cat.id) ? '#FF6A1A' : theme.colors.text} 
+                        <Ionicons
+                          name={selectedCategories.includes(cat.id) ? "checkbox" : "square-outline"}
+                          size={18}
+                          color={selectedCategories.includes(cat.id) ? '#FF6A1A' : theme.colors.text}
                         />
                         <Text style={{ fontSize: 13, color: theme.colors.textSecondary }}>{cat.name}</Text>
                       </TouchableOpacity>
@@ -808,7 +809,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 24,
   },
-  
+
   // ─── Search Bar ───
   searchWrapper: {
     marginTop: 16,

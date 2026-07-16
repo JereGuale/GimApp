@@ -38,6 +38,13 @@ class SubscriptionController extends Controller
             'card_name' => 'required_if:payment_method,card',
             'card_expiry' => 'required_if:payment_method,card',
             'card_cvv' => 'required_if:payment_method,card',
+            // Campos de facturación
+            'billing_name' => 'nullable|string|max:255',
+            'billing_email' => 'nullable|email',
+            'billing_phone' => 'nullable|string|max:20',
+            'billing_id_number' => 'nullable|string|max:30',
+            'billing_city' => 'nullable|string|max:100',
+            'billing_address' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
@@ -58,12 +65,19 @@ class SubscriptionController extends Controller
         }
 
         $plan = SubscriptionPlan::findOrFail($request->subscription_plan_id);
+        $user = $request->user();
 
         $subscriptionData = [
-            'user_id' => $request->user()->id,
+            'user_id' => $user->id,
             'subscription_plan_id' => $plan->id,
             'price' => $plan->price,
             'payment_method' => $request->payment_method,
+            'billing_name' => $request->input('billing_name') ?: $user->name,
+            'billing_email' => $request->input('billing_email') ?: $user->email,
+            'billing_phone' => $request->input('billing_phone') ?: $user->phone,
+            'billing_id_number' => $request->input('billing_id_number') ?: $user->billing_id_number,
+            'billing_city' => $request->input('billing_city') ?: $user->billing_city,
+            'billing_address' => $request->input('billing_address') ?: $user->billing_address,
         ];
 
         if ($request->payment_method === 'card') {

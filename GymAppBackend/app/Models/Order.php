@@ -17,6 +17,12 @@ class Order extends Model
         'approved_at',
         'rejection_reason',
         'notes',
+        'billing_name',
+        'billing_email',
+        'billing_phone',
+        'billing_id_number',
+        'billing_city',
+        'billing_address',
     ];
 
     protected $casts = [

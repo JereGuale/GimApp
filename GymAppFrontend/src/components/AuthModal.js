@@ -28,6 +28,7 @@ export default function AuthModal({ visible, onClose, onSuccess }) {
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
@@ -35,6 +36,7 @@ export default function AuthModal({ visible, onClose, onSuccess }) {
     setName('');
     setUsername('');
     setEmail('');
+    setPhone('');
     setPassword('');
     setConfirmPassword('');
     setErrorMsg('');
@@ -46,14 +48,23 @@ export default function AuthModal({ visible, onClose, onSuccess }) {
   };
 
   const handleLoginSubmit = async () => {
-    if (!email.trim() || !password.trim()) {
-      setErrorMsg('Ingresa tu correo/usuario y contraseña');
+    const inputVal = email.trim();
+    if (!inputVal || !password.trim()) {
+      setErrorMsg('Ingresa tu nombre de usuario y contraseña');
+      return;
+    }
+    if (inputVal.includes('@')) {
+      setErrorMsg('Por favor ingresa tu nombre de usuario, no tu correo');
+      return;
+    }
+    if (inputVal.length > 10) {
+      setErrorMsg('El nombre de usuario no debe superar los 10 caracteres');
       return;
     }
     setErrorMsg('');
     setLoading(true);
     try {
-      const { user, token } = await authLogin(email.trim(), password);
+      const { user, token } = await authLogin(inputVal, password);
       await login(user, token, true);
       resetForm();
       if (onSuccess) onSuccess();
@@ -61,7 +72,7 @@ export default function AuthModal({ visible, onClose, onSuccess }) {
       console.error('[AuthModal] Login error:', error);
       const msg = error.message || '';
       if (msg.includes('401') || msg.includes('Invalid') || msg.includes('credentials')) {
-        setErrorMsg('Correo, usuario o contraseña incorrectos');
+        setErrorMsg('Nombre de usuario o contraseña incorrectos');
       } else if (msg.includes('Network') || msg.includes('fetch')) {
         setErrorMsg('Sin conexión al servidor');
       } else {
@@ -73,8 +84,16 @@ export default function AuthModal({ visible, onClose, onSuccess }) {
   };
 
   const handleRegisterSubmit = async () => {
-    if (!name.trim() || !username.trim() || !email.trim() || !password.trim() || !confirmPassword.trim()) {
+    if (!name.trim() || !username.trim() || !email.trim() || !phone.trim() || !password.trim() || !confirmPassword.trim()) {
       setErrorMsg('Todos los campos son obligatorios');
+      return;
+    }
+    if (name.trim().length > 40) {
+      setErrorMsg('El nombre completo no debe superar los 40 caracteres');
+      return;
+    }
+    if (username.trim().length > 10) {
+      setErrorMsg('El nombre de usuario no debe superar los 10 caracteres');
       return;
     }
     const usernameRegex = /^[a-zA-Z0-9_-]+$/;
@@ -86,6 +105,11 @@ export default function AuthModal({ visible, onClose, onSuccess }) {
       setErrorMsg('La contraseña debe tener al menos 8 caracteres');
       return;
     }
+    const specialCharRegex = /[!@#$%^&*(),.?":{}|<>_#$-]/;
+    if (!specialCharRegex.test(password)) {
+      setErrorMsg('La contraseña debe incluir al menos un carácter especial');
+      return;
+    }
     if (password !== confirmPassword) {
       setErrorMsg('Las contraseñas no coinciden');
       return;
@@ -93,7 +117,7 @@ export default function AuthModal({ visible, onClose, onSuccess }) {
     setErrorMsg('');
     setLoading(true);
     try {
-      const { user, token } = await authRegister(name.trim(), username.trim(), email.trim(), password, confirmPassword);
+      const { user, token } = await authRegister(name.trim(), username.trim(), email.trim(), password, confirmPassword, phone.trim());
       await login(user, token, true);
       resetForm();
       if (onSuccess) onSuccess();
@@ -194,13 +218,14 @@ export default function AuthModal({ visible, onClose, onSuccess }) {
                 /* LOGIN FORM */
                 <View style={styles.form}>
                   <View style={styles.inputContainer}>
-                    <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>Correo electrónico o usuario</Text>
+                    <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>Nombre de usuario</Text>
                     <TextInput
                       style={[styles.input, { color: theme.colors.text, borderColor: theme.colors.border, backgroundColor: theme.colors.background }]}
-                      placeholder="correo@ejemplo.com o mi_usuario"
+                      placeholder="Tu Nombre de usuario"
                       placeholderTextColor="#6B7280"
                       autoCapitalize="none"
                       autoCorrect={false}
+                      maxLength={10}
                       value={email}
                       onChangeText={setEmail}
                     />
@@ -240,19 +265,21 @@ export default function AuthModal({ visible, onClose, onSuccess }) {
                       placeholder="Nombre completo"
                       placeholderTextColor="#6B7280"
                       autoCapitalize="words"
+                      maxLength={40}
                       value={name}
                       onChangeText={setName}
                     />
                   </View>
 
                   <View style={styles.inputContainer}>
-                    <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>Nombre de Usuario</Text>
+                    <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>Nombre de usuario único</Text>
                     <TextInput
                       style={[styles.input, { color: theme.colors.text, borderColor: theme.colors.border, backgroundColor: theme.colors.background }]}
                       placeholder="mi_usuario (sin espacios)"
                       placeholderTextColor="#6B7280"
                       autoCapitalize="none"
                       autoCorrect={false}
+                      maxLength={10}
                       value={username}
                       onChangeText={(t) => setUsername(t.replace(/\s/g, ''))}
                     />
@@ -272,10 +299,22 @@ export default function AuthModal({ visible, onClose, onSuccess }) {
                   </View>
 
                   <View style={styles.inputContainer}>
+                    <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>Teléfono (WhatsApp)</Text>
+                    <TextInput
+                      style={[styles.input, { color: theme.colors.text, borderColor: theme.colors.border, backgroundColor: theme.colors.background }]}
+                      placeholder="+593 99 999 9999"
+                      placeholderTextColor="#6B7280"
+                      keyboardType="phone-pad"
+                      value={phone}
+                      onChangeText={setPhone}
+                    />
+                  </View>
+
+                  <View style={styles.inputContainer}>
                     <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>Contraseña</Text>
                     <TextInput
                       style={[styles.input, { color: theme.colors.text, borderColor: theme.colors.border, backgroundColor: theme.colors.background }]}
-                      placeholder="Mínimo 6 caracteres"
+                      placeholder="Mínimo 8 caracteres"
                       placeholderTextColor="#6B7280"
                       secureTextEntry
                       value={password}
@@ -287,7 +326,7 @@ export default function AuthModal({ visible, onClose, onSuccess }) {
                     <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>Confirmar Contraseña</Text>
                     <TextInput
                       style={[styles.input, { color: theme.colors.text, borderColor: theme.colors.border, backgroundColor: theme.colors.background }]}
-                      placeholder="Mínimo 6 caracteres"
+                      placeholder="Mínimo 8 caracteres"
                       placeholderTextColor="#6B7280"
                       secureTextEntry
                       value={confirmPassword}

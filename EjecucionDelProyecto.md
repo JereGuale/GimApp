@@ -5,8 +5,21 @@ Este repositorio contiene los tres componentes de la aplicación del Gimnasio: e
 A continuación se detalla cómo encender y ejecutar cada uno de ellos en tu entorno local.
 
 ---
+## 1. 🖥️ Backend (supabase)
+php artisan serve --host=0.0.0.0 --port=8000
+
+2. Comandos de limpieza y optimización (si te dan problemas las rutas o la config)
+bash
+php artisan config:clear
+php artisan route:clear
+php artisan optimize 
+
+q lo conecte para q sea accesible al servideor local de red 
 
 ## 1. 🖥️ Backend (Laravel)
+
+
+
 El servidor que gestiona la base de datos y la API de la aplicación.
 
 1. Abre una terminal y ve a la carpeta del backend:

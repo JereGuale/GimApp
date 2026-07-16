@@ -1,11 +1,12 @@
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator, TextInput, Modal, Animated, Dimensions, Platform } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { ProfileAPI } from '../../services/notificationService';
 import { SubscriptionAPI } from '../../services/subscriptionService';
+import { OrderAPI } from '../../services/orderService';
 import { useResponsive } from '../../hooks/useResponsive';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useState, useRef, useCallback } from 'react';
@@ -19,6 +20,7 @@ export default function ProfileScreen() {
   const { user, logout, updateUser } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigation = useNavigation();
+  const route = useRoute();
   const { width, isSmallScreen, isTablet, isDesktop } = useResponsive();
 
   const DRAWER_WIDTH = width * 0.75 > 300 ? 300 : width * 0.75;
@@ -32,22 +34,48 @@ export default function ProfileScreen() {
   const [editName, setEditName] = useState(user?.name || '');
   const [editEmail, setEditEmail] = useState(user?.email || '');
   const [editPhone, setEditPhone] = useState(user?.phone || '');
+  const [billingIdNumber, setBillingIdNumber] = useState(user?.billing_id_number || '');
+  const [billingCity, setBillingCity] = useState(user?.billing_city || '');
+  const [billingAddress, setBillingAddress] = useState(user?.billing_address || '');
+  const [billingEditVisible, setBillingEditVisible] = useState(false);
   const [saving, setSaving] = useState(false);
   const [photoKey, setPhotoKey] = useState(Date.now());
   const [localPhotoUri, setLocalPhotoUri] = useState(null);
 
   const [subscription, setSubscription] = useState({ data: null, loading: true });
+  const [rejectedOrders, setRejectedOrders] = useState([]);
+
+  // Escuchar el parámetro editProfile de la cabecera superior para abrir el modal de edición de perfil
+  React.useEffect(() => {
+    if (route.params?.editProfile) {
+      setEditName(user?.name || '');
+      setEditEmail(user?.email || '');
+      setEditPhone(user?.phone || '');
+      setEditModalVisible(true);
+    }
+  }, [route.params?.editProfile]);
 
   useFocusEffect(
     useCallback(() => {
       let mounted = true;
-      const fetchSubscription = async () => {
-        const result = await SubscriptionAPI.getMySubscription();
+      const fetchProfileData = async () => {
+        const [subscriptionResult, ordersResult] = await Promise.all([
+          SubscriptionAPI.getMySubscription(),
+          OrderAPI.getMyOrders(),
+        ]);
+
         if (mounted) {
           setSubscription({
-            data: result.success ? result.data : null,
+            data: subscriptionResult.success ? subscriptionResult.data : null,
             loading: false
           });
+
+          if (ordersResult.success) {
+            const allRejected = (ordersResult.data || []).filter(order => order.status === 'rejected');
+            setRejectedOrders(allRejected);
+          } else {
+            setRejectedOrders([]);
+          }
         }
       };
 
@@ -56,7 +84,7 @@ export default function ProfileScreen() {
         setSubscription(prev => ({ ...prev, loading: true }));
       }
 
-      fetchSubscription();
+      fetchProfileData();
       return () => { mounted = false; };
     }, [])
   );
@@ -107,11 +135,46 @@ export default function ProfileScreen() {
 
   const handleSaveProfile = async () => {
     setSaving(true);
-    const result = await ProfileAPI.updateProfile({ name: editName, email: editEmail, phone: editPhone });
+    const result = await ProfileAPI.updateProfile({
+      name: editName,
+      email: editEmail,
+      phone: editPhone
+    });
     if (result.success) {
       Alert.alert('¡Éxito!', 'Perfil actualizado');
-      if (updateUser) updateUser({ ...user, name: editName, email: editEmail, phone: editPhone });
+      if (updateUser) {
+        updateUser({
+          ...user,
+          name: editName,
+          email: editEmail,
+          phone: editPhone
+        });
+      }
       setEditModalVisible(false);
+    } else {
+      Alert.alert('Error', result.error || 'No se pudo actualizar');
+    }
+    setSaving(false);
+  };
+
+  const handleSaveBilling = async () => {
+    setSaving(true);
+    const result = await ProfileAPI.updateProfile({
+      billing_id_number: billingIdNumber,
+      billing_city: billingCity,
+      billing_address: billingAddress
+    });
+    if (result.success) {
+      Alert.alert('¡Éxito!', 'Datos de facturación actualizados');
+      if (updateUser) {
+        updateUser({
+          ...user,
+          billing_id_number: billingIdNumber,
+          billing_city: billingCity,
+          billing_address: billingAddress
+        });
+      }
+      setBillingEditVisible(false);
     } else {
       Alert.alert('Error', result.error || 'No se pudo actualizar');
     }
@@ -146,17 +209,31 @@ export default function ProfileScreen() {
       </View>
       <ScrollView>
         <Text style={[styles.drawerSection, { color: theme.colors.textSecondary }]}>MI CUENTA</Text>
-        <DrawerItem icon="person-outline" label="Editar Perfil" onPress={() => { closeDrawer(); setEditName(user?.name || ''); setEditEmail(user?.email || ''); setEditPhone(user?.phone || ''); setEditModalVisible(true); }} />
+        <DrawerItem icon="person-outline" label="Editar Perfil" onPress={() => {
+          closeDrawer();
+          setEditName(user?.name || '');
+          setEditEmail(user?.email || '');
+          setEditPhone(user?.phone || '');
+          setEditModalVisible(true);
+        }} />
         <DrawerItem icon="card-outline" label="Mi Suscripción" onPress={() => { closeDrawer(); navigation.navigate('Suscripción'); }} />
-        <DrawerItem icon="cart-outline" label="Mis Compras" onPress={() => { closeDrawer(); }} />
+        <DrawerItem icon="cart-outline" label="Mis Compras" onPress={() => { closeDrawer(); navigation.navigate('Mis Compras'); }} />
+        <DrawerItem icon="document-text-outline" label="Datos de facturación" onPress={() => {
+          closeDrawer();
+          setBillingIdNumber(user?.billing_id_number || '');
+          setBillingCity(user?.billing_city || '');
+          setBillingAddress(user?.billing_address || '');
+          setBillingEditVisible(true);
+        }} />
 
         <Text style={[styles.drawerSection, { color: theme.colors.textSecondary, marginTop: 24 }]}>PREFERENCIAS</Text>
         <DrawerItem icon={theme.isDark ? 'sunny-outline' : 'moon-outline'} label={theme.isDark ? 'Modo Claro' : 'Modo Oscuro'} onPress={toggleTheme} />
+
+        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+          <Ionicons name="log-out-outline" size={20} color="#DC2626" />
+          <Text style={styles.logoutText}>Cerrar Sesión</Text>
+        </TouchableOpacity>
       </ScrollView>
-      <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-        <Ionicons name="log-out-outline" size={20} color="#DC2626" />
-        <Text style={styles.logoutText}>Cerrar Sesión</Text>
-      </TouchableOpacity>
     </View>
   );
 
@@ -226,6 +303,18 @@ export default function ProfileScreen() {
   };
 
   const isStacked = isSmallScreen;
+  const hasRejectedSubscription = subscription.data?.status === 'rejected';
+  const hasRejectedOrder = rejectedOrders.length > 0;
+  const subscriptionBadgeColor = hasRejectedSubscription
+    ? '#EF4444'
+    : subscription.data?.status === 'active'
+      ? '#22C55E'
+      : '#F59E0B';
+  const subscriptionBadgeLabel = hasRejectedSubscription
+    ? 'RECHAZADA'
+    : subscription.data?.status === 'active'
+      ? 'ACTIVA'
+      : 'PENDIENTE';
 
   return (
     <View style={[styles.container, { backgroundColor: screenBg }]}>
@@ -243,25 +332,6 @@ export default function ProfileScreen() {
           <TouchableOpacity onPress={openDrawer} style={[styles.menuButton, { backgroundColor: cardBg, borderColor: cardBorder }]}>
             <Ionicons name="menu-outline" size={26} color={textMain} />
           </TouchableOpacity>
-          <View style={{ flex: 1 }} />
-          <TouchableOpacity onPress={toggleTheme} style={[styles.themeButton, { backgroundColor: cardBg, borderColor: cardBorder, marginRight: 12 }]}>
-            <Ionicons name={theme.isDark ? 'sunny-outline' : 'moon-outline'} size={22} color={textMain} />
-          </TouchableOpacity>
-          <TouchableOpacity 
-            onPress={() => { setEditName(user?.name || ''); setEditEmail(user?.email || ''); setEditPhone(user?.phone || ''); setEditModalVisible(true); }}
-            style={styles.headerAvatarWrapper}
-          >
-            {profilePhotoUri ? (
-              <Image source={{ uri: profilePhotoUri }} style={styles.headerAvatar} contentFit="cover" transition={300} cachePolicy="memory-disk" />
-            ) : (
-              <View style={[styles.headerAvatarPlaceholder, { backgroundColor: theme.isDark ? '#1F2937' : '#F3F4F6' }]}>
-                <Ionicons name="person" size={18} color={textMuted} />
-              </View>
-            )}
-            <View style={styles.avatarEditBadge}>
-              <Ionicons name="camera-sharp" size={10} color="#FFFFFF" />
-            </View>
-          </TouchableOpacity>
         </View>
 
         {/* Hero Header (Apple Fitness style) */}
@@ -271,7 +341,7 @@ export default function ProfileScreen() {
               Hola, {user?.name ? user.name.split(' ')[0] : 'Usuario'} 👋
             </Text>
             <Text style={[styles.heroLevel, { color: textMuted }]}>Nivel 1 • Principiante</Text>
-            
+
             {/* XP progress bar inside header */}
             <View style={styles.headerXpContainer}>
               <View style={[styles.headerXpBarBg, { backgroundColor: theme.isDark ? '#1F2937' : '#F3F4F6' }]}>
@@ -320,7 +390,7 @@ export default function ProfileScreen() {
 
         {/* Membership Platinum Section */}
         <Text style={[styles.sectionTitle, { color: textMain }]}>Membresía Activa</Text>
-        
+
         {subscription.loading ? (
           <View style={[styles.loadingCard, { backgroundColor: cardBg, borderColor: cardBorder }]}>
             <ActivityIndicator size="large" color="#5B3DF5" />
@@ -330,7 +400,7 @@ export default function ProfileScreen() {
             <Ionicons name="card-outline" size={48} color={textMuted} style={{ marginBottom: 16 }} />
             <Text style={[styles.noSubTitle, { color: textMain }]}>Sin membresía activa</Text>
             <Text style={[styles.noSubDesc, { color: textMuted }]}>Únete al club fitness hoy mismo y obtén acceso ilimitado a nuestras sedes, planes nutricionales y entrenadores expertos.</Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.primaryActionButton}
               onPress={() => navigation.navigate('Suscripción')}
             >
@@ -352,11 +422,11 @@ export default function ProfileScreen() {
                   <Text style={styles.platinumPlanName}>⭐ {subscription.data.plan?.name || 'Membresía Gym'}</Text>
                 </View>
                 <View style={[
-                  styles.platinumBadge, 
-                  { backgroundColor: subscription.data.status === 'active' ? '#22C55E' : '#F59E0B' }
+                  styles.platinumBadge,
+                  { backgroundColor: subscriptionBadgeColor }
                 ]}>
                   <Text style={styles.platinumBadgeText}>
-                    {subscription.data.status === 'active' ? 'ACTIVA' : 'PENDIENTE'}
+                    {subscriptionBadgeLabel}
                   </Text>
                 </View>
               </View>
@@ -369,7 +439,7 @@ export default function ProfileScreen() {
                   </Text>
                   <Text style={[styles.platinumPeriod, { color: textMuted }]}>/mes</Text>
                 </View>
-                
+
                 <View style={styles.platinumDetailList}>
                   <View style={styles.platinumDetailItem}>
                     <Ionicons name="card-sharp" size={14} color="#5B3DF5" />
@@ -383,6 +453,14 @@ export default function ProfileScreen() {
                       Siguiente cobro: {subscription.data.ends_at ? new Date(subscription.data.ends_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }) : '—'}
                     </Text>
                   </View>
+                  {hasRejectedSubscription && (
+                    <View style={styles.platinumDetailItem}>
+                      <Ionicons name="warning" size={14} color="#EF4444" />
+                      <Text style={[styles.platinumDetailText, { color: '#EF4444' }]}>
+                        Motivo: {subscription.data.rejection_reason || 'Comprobante no válido'}
+                      </Text>
+                    </View>
+                  )}
                 </View>
               </View>
 
@@ -400,13 +478,13 @@ export default function ProfileScreen() {
 
               {/* Platinum Card Action Buttons */}
               <View style={styles.platinumActions}>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[styles.platinumButtonOutlined, { borderColor: theme.isDark ? '#475569' : '#D1D5DB' }]}
                   onPress={() => navigation.navigate('Suscripción')}
                 >
                   <Text style={[styles.platinumButtonTextOutlined, { color: textMain }]}>Cambiar plan</Text>
                 </TouchableOpacity>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.platinumButtonSolid}
                   onPress={() => navigation.navigate('Suscripción')}
                 >
@@ -414,6 +492,48 @@ export default function ProfileScreen() {
                 </TouchableOpacity>
               </View>
             </LinearGradient>
+          </View>
+        )}
+
+        {(hasRejectedSubscription || hasRejectedOrder) && (
+          <View style={styles.rejectionSection}>
+            <Text style={[styles.sectionTitle, { color: textMain }]}>Estado de revisión</Text>
+
+            {hasRejectedSubscription && (
+              <View style={[styles.rejectionCard, { borderColor: '#FCA5A5', backgroundColor: theme.isDark ? 'rgba(127, 29, 29, 0.2)' : '#FEF2F2' }]}>
+                <View style={styles.rejectionHeader}>
+                  <Ionicons name="alert-circle" size={18} color="#EF4444" />
+                  <Text style={[styles.rejectionTitle, { color: '#B91C1C' }]}>Suscripción rechazada</Text>
+                </View>
+                <Text style={[styles.rejectionText, { color: textMain }]}>
+                  Motivo: {subscription.data?.rejection_reason || 'Comprobante no válido'}
+                </Text>
+                <View style={styles.rejectionActionsRow}>
+                  <TouchableOpacity style={styles.rejectionActionBtn} onPress={() => navigation.navigate('Suscripción')}>
+                    <Ionicons name="card-outline" size={14} color="#FFFFFF" />
+                    <Text style={styles.rejectionActionText}>Volver a suscribirme</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+
+            {hasRejectedOrder && rejectedOrders.map((rejOrder) => (
+              <View key={rejOrder.id} style={[styles.rejectionCard, { borderColor: '#FCA5A5', backgroundColor: theme.isDark ? 'rgba(127, 29, 29, 0.2)' : '#FEF2F2' }]}>
+                <View style={styles.rejectionHeader}>
+                  <Ionicons name="alert-circle" size={18} color="#EF4444" />
+                  <Text style={[styles.rejectionTitle, { color: '#B91C1C' }]}>Compra rechazada #{rejOrder.id}</Text>
+                </View>
+                <Text style={[styles.rejectionText, { color: textMain }]}>
+                  Motivo: {rejOrder.rejection_reason || 'Comprobante no válido'}
+                </Text>
+                <View style={styles.rejectionActionsRow}>
+                  <TouchableOpacity style={styles.rejectionActionBtn} onPress={() => navigation.navigate('Mis Compras')}>
+                    <Ionicons name="bag-handle-outline" size={14} color="#FFFFFF" />
+                    <Text style={styles.rejectionActionText}>Ver mis compras</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
           </View>
         )}
 
@@ -450,8 +570,8 @@ export default function ProfileScreen() {
             <Text style={[styles.sectionTitle, { color: textMain }]}>Compras Recientes</Text>
             <View style={[styles.purchaseContainer, { borderColor: cardBorder, backgroundColor: cardBg }]}>
               <View style={[styles.purchaseItem, { borderBottomColor: cardBorder }]}>
-                <Image 
-                  source={{ uri: 'https://images.unsplash.com/photo-1593095948071-474c5cc2989d?q=80&w=800&auto=format&fit=crop' }} 
+                <Image
+                  source={{ uri: 'https://images.unsplash.com/photo-1593095948071-474c5cc2989d?q=80&w=800&auto=format&fit=crop' }}
                   style={styles.purchaseImg}
                   contentFit="cover"
                 />
@@ -468,8 +588,8 @@ export default function ProfileScreen() {
               </View>
 
               <View style={styles.purchaseItem}>
-                <Image 
-                  source={{ uri: 'https://images.unsplash.com/photo-1602143407151-7111542de6e8?q=80&w=800&auto=format&fit=crop' }} 
+                <Image
+                  source={{ uri: 'https://images.unsplash.com/photo-1602143407151-7111542de6e8?q=80&w=800&auto=format&fit=crop' }}
                   style={styles.purchaseImg}
                   contentFit="cover"
                 />
@@ -530,7 +650,7 @@ export default function ProfileScreen() {
             </View>
             <View style={styles.editField}>
               <Text style={[styles.editLabel, { color: theme.colors.textSecondary }]}>Teléfono</Text>
-              <TextInput style={[styles.editInput, { color: theme.colors.text, borderColor: theme.colors.border }]} value={editPhone} onChangeText={setEditPhone} placeholder="+52 000 000 0000" placeholderTextColor={theme.colors.textSecondary} keyboardType="phone-pad" />
+              <TextInput style={[styles.editInput, { color: theme.colors.text, borderColor: theme.colors.border }]} value={editPhone} onChangeText={setEditPhone} placeholder="+593 99 999 9999" placeholderTextColor={theme.colors.textSecondary} keyboardType="phone-pad" />
             </View>
 
             <View style={styles.editModalBtns}>
@@ -538,7 +658,40 @@ export default function ProfileScreen() {
                 <Text style={[styles.editModalBtnText, { color: theme.colors.text }]}>Cancelar</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.editModalBtn, { backgroundColor: theme.colors.primary }]} onPress={handleSaveProfile} disabled={saving}>
-              {saving ? <ActivityIndicator size="small" color="#fff" /> : <Text style={[styles.editModalBtnText, { color: theme.colors.background }]}>Guardar</Text>}
+                {saving ? <ActivityIndicator size="small" color="#fff" /> : <Text style={[styles.editModalBtnText, { color: theme.colors.background }]}>Guardar</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Edit Billing Modal */}
+      <Modal visible={billingEditVisible} transparent animationType="slide" onRequestClose={() => setBillingEditVisible(false)}>
+        <View style={styles.editModalOverlay}>
+          <View style={[styles.editModalContent, { backgroundColor: theme.colors.surface }]}>
+            <Text style={[styles.editModalTitle, { color: theme.colors.text }]}>Datos de Facturación</Text>
+            
+            <View style={styles.editField}>
+              <Text style={[styles.editLabel, { color: theme.colors.textSecondary }]}>Cédula o RUC</Text>
+              <TextInput style={[styles.editInput, { color: theme.colors.text, borderColor: theme.colors.border }]} value={billingIdNumber} onChangeText={setBillingIdNumber} placeholder="Ej: 1309876543" placeholderTextColor={theme.colors.textSecondary} keyboardType="numeric" />
+            </View>
+
+            <View style={styles.editField}>
+              <Text style={[styles.editLabel, { color: theme.colors.textSecondary }]}>Ciudad</Text>
+              <TextInput style={[styles.editInput, { color: theme.colors.text, borderColor: theme.colors.border }]} value={billingCity} onChangeText={setBillingCity} placeholder="Ej: Manta" placeholderTextColor={theme.colors.textSecondary} />
+            </View>
+
+            <View style={styles.editField}>
+              <Text style={[styles.editLabel, { color: theme.colors.textSecondary }]}>Dirección de Domicilio</Text>
+              <TextInput style={[styles.editInput, { color: theme.colors.text, borderColor: theme.colors.border, height: 60, paddingTop: 8 }]} value={billingAddress} onChangeText={setBillingAddress} placeholder="Ej: Calle 15 y Av. 24" placeholderTextColor={theme.colors.textSecondary} multiline />
+            </View>
+
+            <View style={styles.editModalBtns}>
+              <TouchableOpacity style={[styles.editModalBtn, { borderColor: theme.colors.border, borderWidth: 1.5 }]} onPress={() => setBillingEditVisible(false)}>
+                <Text style={[styles.editModalBtnText, { color: theme.colors.text }]}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.editModalBtn, { backgroundColor: theme.colors.primary }]} onPress={handleSaveBilling} disabled={saving}>
+                {saving ? <ActivityIndicator size="small" color="#fff" /> : <Text style={[styles.editModalBtnText, { color: theme.colors.background }]}>Guardar</Text>}
               </TouchableOpacity>
             </View>
           </View>
@@ -560,7 +713,7 @@ const styles = StyleSheet.create({
   drawerSection: { fontSize: 12, fontWeight: '700', letterSpacing: 1, marginBottom: 12 },
   drawerItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, borderBottomWidth: StyleSheet.hairlineWidth },
   drawerItemText: { fontSize: 16, fontWeight: '600', flex: 1 },
-  logoutBtn: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 'auto', paddingTop: 20 },
+  logoutBtn: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 32, paddingVertical: 14, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(220, 38, 38, 0.2)' },
   logoutText: { color: '#DC2626', fontSize: 16, fontWeight: '700' },
 
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
@@ -571,7 +724,7 @@ const styles = StyleSheet.create({
   heroTextContainer: { flex: 1 },
   heroGreeting: { fontSize: 32, fontWeight: '800', letterSpacing: -0.5, fontFamily: Platform.OS === 'web' ? 'Plus Jakarta Sans, sans-serif' : undefined },
   heroLevel: { fontSize: 14, fontWeight: '600', marginTop: 4 },
-  
+
   headerXpContainer: { flexDirection: 'row', alignItems: 'center', marginTop: 12, gap: 12 },
   headerXpBarBg: { height: 6, borderRadius: 3, flex: 1, overflow: 'hidden' },
   headerXpBarFill: { height: '100%', borderRadius: 3 },
@@ -607,7 +760,7 @@ const styles = StyleSheet.create({
   platinumPlanName: { fontSize: 24, fontWeight: '800', color: '#5B3DF5', marginTop: 4, fontFamily: Platform.OS === 'web' ? 'Plus Jakarta Sans, sans-serif' : undefined },
   platinumBadge: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 99 },
   platinumBadgeText: { color: '#FFFFFF', fontSize: 10, fontWeight: '800', letterSpacing: 0.5 },
-  
+
   platinumBody: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginVertical: 24 },
   platinumPriceSection: { flexDirection: 'row', alignItems: 'baseline' },
   platinumPrice: { fontSize: 48, fontWeight: '800', letterSpacing: -1, fontFamily: Platform.OS === 'web' ? 'Plus Jakarta Sans, sans-serif' : undefined },
@@ -632,6 +785,41 @@ const styles = StyleSheet.create({
   bottomColLeft: { flex: 1 },
   bottomColRight: { flex: 1.5 },
   bottomColMobile: { width: '100%' },
+
+  rejectionSection: { marginBottom: 12 },
+  rejectionCard: {
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 14,
+    gap: 10,
+    marginBottom: 10,
+  },
+  rejectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  rejectionTitle: { fontSize: 15, fontWeight: '800' },
+  rejectionText: { fontSize: 13, fontWeight: '500', lineHeight: 18 },
+  rejectionActionsRow: { flexDirection: 'row', gap: 8, marginTop: 4, flexWrap: 'wrap' },
+  rejectionActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    alignSelf: 'flex-start',
+    backgroundColor: '#111827',
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: 10,
+  },
+  rejectionActionBtnOutline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    alignSelf: 'flex-start',
+    borderWidth: 1.5,
+    borderColor: '#D1D5DB',
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: 10,
+  },
+  rejectionActionText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
 
   benefitsContainer: { borderRadius: 28, borderWidth: 1, padding: 24, gap: 16 },
   benefitsHeaderTitle: { fontSize: 12, fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase' },

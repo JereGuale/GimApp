@@ -6,6 +6,7 @@ import HomeScreen from '../screens/user/HomeScreen';
 import CategoriesScreen from '../screens/user/CategoriesScreen';
 import SubscriptionScreen from '../screens/user/SubscriptionScreen';
 import ProfileScreen from '../screens/user/ProfileScreen';
+import MyPurchasesScreen from '../screens/user/MyPurchasesScreen';
 import { Image as ExpoImage } from 'expo-image';
 import { useTheme } from '../context/ThemeContext';
 import { useCart } from '../context/CartContext';
@@ -16,13 +17,13 @@ import { useResponsive } from '../hooks/useResponsive';
 const Tab = createBottomTabNavigator();
 
 export default function UserTabs() {
-  const { theme, toggleTheme } = useTheme();
+  const { theme } = useTheme();
   const { totalItems } = useCart();
   const { user } = useAuth();
-  const { isSmallScreen } = useResponsive();
-  const isDesktop = !isSmallScreen;
+  const { width, isSmallScreen } = useResponsive();
   
-  const tabWidth = isDesktop ? 380 : 340;
+  const tabHorizontalInset = isSmallScreen ? 8 : 16;
+  const tabWidth = Math.max(320, width - (tabHorizontalInset * 2));
   const translateXOffset = -tabWidth / 2;
   
   // Lógica para mostrar la foto de perfil
@@ -62,16 +63,16 @@ export default function UserTabs() {
           headerRight: () => (
             <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 8 }}>
               <TouchableOpacity style={{ padding: 8 }}>
-                <Ionicons name="notifications-outline" size={22} color={theme.colors.text} />
+                <Ionicons name="notifications-outline" size={30} color={theme.colors.text} />
               </TouchableOpacity>
               <TouchableOpacity
                 style={{ padding: 8, position: 'relative' }}
                 onPress={() => navigation.navigate('Cart')}
               >
-                <Ionicons name="cart-outline" size={23} color={theme.colors.text} />
+                <Ionicons name="cart-outline" size={31} color={theme.colors.text} />
                 {totalItems > 0 && (
                   <View style={{
-                    position: 'absolute', top: 2, right: 2,
+                    position: 'absolute', top: -2, right: -2,
                     backgroundColor: '#EF4444', borderRadius: 9,
                     minWidth: 18, height: 18,
                     alignItems: 'center', justifyContent: 'center',
@@ -84,15 +85,15 @@ export default function UserTabs() {
                 )}
               </TouchableOpacity>
               <TouchableOpacity
-                onPress={() => navigation.navigate('Perfil')}
+                onPress={() => navigation.navigate('Perfil', { editProfile: Date.now() })}
                 style={{
-                  width: 34, height: 34,
-                  borderRadius: 17,
+                  width: 48, height: 48,
+                  borderRadius: 24,
                   overflow: 'hidden',
                   alignItems: 'center', justifyContent: 'center',
                   backgroundColor: theme.isDark ? '#374151' : '#F3F4F6',
                   marginLeft: 8,
-                  borderWidth: 1,
+                  borderWidth: 1.5,
                   borderColor: theme.colors.border,
                 }}
               >
@@ -105,7 +106,7 @@ export default function UserTabs() {
                     cachePolicy="memory-disk"
                   />
                 ) : (
-                  <Ionicons name="person" size={20} color={theme.colors.textSecondary || '#9CA3AF'} />
+                  <Ionicons name="person" size={28} color={theme.colors.textSecondary || '#9CA3AF'} />
                 )}
               </TouchableOpacity>
             </View>
@@ -163,6 +164,16 @@ export default function UserTabs() {
               <Ionicons name="card-outline" size={size} color={color} />
             ),
             title: 'Suscripción',
+          }}
+        />
+        <Tab.Screen
+          name="Mis Compras"
+          component={MyPurchasesScreen}
+          options={{
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="bag-handle-outline" size={size} color={color} />
+            ),
+            title: 'Mis Compras',
           }}
         />
         <Tab.Screen

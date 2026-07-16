@@ -24,6 +24,12 @@ class OrderController extends Controller
             'items.*.quantity' => 'required|integer|min:1',
             'payment_method' => 'required|in:transfer,card',
             'notes' => 'nullable|string|max:500',
+            'billing_name' => 'nullable|string|max:255',
+            'billing_email' => 'nullable|email',
+            'billing_phone' => 'nullable|string|max:20',
+            'billing_id_number' => 'nullable|string|max:30',
+            'billing_city' => 'nullable|string|max:100',
+            'billing_address' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
@@ -62,13 +68,20 @@ class OrderController extends Controller
             ];
         }
 
+        $user = $request->user();
         $order = Order::create([
-            'user_id' => $request->user()->id,
+            'user_id' => $user->id,
             'status' => 'pending',
             'payment_method' => $request->payment_method,
             'total' => $total,
             'items' => $orderItems,
             'notes' => $request->notes,
+            'billing_name' => $request->input('billing_name') ?: $user->name,
+            'billing_email' => $request->input('billing_email') ?: $user->email,
+            'billing_phone' => $request->input('billing_phone') ?: $user->phone,
+            'billing_id_number' => $request->input('billing_id_number') ?: $user->billing_id_number,
+            'billing_city' => $request->input('billing_city') ?: $user->billing_city,
+            'billing_address' => $request->input('billing_address') ?: $user->billing_address,
         ]);
 
         $order->load('user');

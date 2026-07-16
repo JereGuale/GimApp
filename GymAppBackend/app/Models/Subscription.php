@@ -18,7 +18,13 @@ class Subscription extends Model
         'rejection_reason',
         'starts_at',
         'ends_at',
-        'price'
+        'price',
+        'billing_name',
+        'billing_email',
+        'billing_phone',
+        'billing_id_number',
+        'billing_city',
+        'billing_address',
     ];
 
     protected $casts = [

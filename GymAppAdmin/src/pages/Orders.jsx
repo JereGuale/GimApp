@@ -678,6 +678,55 @@ export default function Orders() {
                   {renderUserCell(receiptModal.user)}
                 </div>
 
+                {/* Billing Details & WhatsApp Trigger */}
+                <div>
+                  <div className="order-verification-section-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>Datos de Facturación</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const clientPhone = receiptModal.billing_phone || receiptModal.user?.phone || '';
+                        const clientName = receiptModal.billing_name || receiptModal.user?.name || '';
+                        const orderId = receiptModal.id;
+                        const message = `Hola ${clientName}, tu pedido #${orderId} en Fitness Club Gym fue recibido y está en proceso de validación. ¡Pronto nos contactaremos contigo para la entrega! 🛍️`;
+                        let formattedPhone = clientPhone.replace(/\s+/g, '').replace(/[+\-]/g, '');
+                        if (formattedPhone.startsWith('0')) {
+                          formattedPhone = '593' + formattedPhone.substring(1);
+                        } else if (!formattedPhone.startsWith('593') && formattedPhone.length === 9) {
+                          formattedPhone = '593' + formattedPhone;
+                        }
+                        window.open(`https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`, '_blank');
+                      }}
+                      style={{
+                        backgroundColor: '#25D366',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: '6px',
+                        padding: '4px 10px',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
+                    >
+                      <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
+                        <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.37 9.863-9.73.001-2.597-1.006-5.038-2.836-6.87C16.634 2.16 14.204.975 11.623.975c-5.442 0-9.866 4.372-9.87 9.737-.002 1.84.482 3.636 1.4 5.2l-.37 1.353 1.385-.363zm10.963-7.53c-.313-.157-1.854-.915-2.14-1.018-.287-.105-.497-.157-.707.157-.21.314-.813 1.018-.996 1.228-.183.21-.366.236-.679.079-.313-.157-1.32-.486-2.515-1.553-.93-.83-1.558-1.855-1.74-2.17-.183-.313-.02-.482.137-.638.14-.14.313-.367.47-.55.157-.185.21-.315.314-.525.105-.21.053-.394-.026-.55-.08-.158-.708-1.703-.97-2.336-.255-.618-.516-.534-.707-.544-.183-.01-.393-.01-.602-.01-.21 0-.55.08-.838.393-.288.315-1.1 1.077-1.1 2.628 0 1.552 1.127 3.042 1.284 3.253.158.21 2.217 3.385 5.372 4.747.75.324 1.336.518 1.794.662.753.24 1.438.207 1.98.127.604-.09 1.853-.758 2.115-1.454.26-.697.26-1.295.183-1.42-.077-.125-.287-.203-.6-.36z"/>
+                      </svg>
+                      <span>WhatsApp</span>
+                    </button>
+                  </div>
+                  <div style={{ padding: 12, backgroundColor: 'rgba(16, 185, 129, 0.03)', border: '1px solid var(--border)', borderRadius: 8, display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12, marginBottom: 12 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-secondary)' }}>Nombre:</span><span style={{ fontWeight: 600 }}>{receiptModal.billing_name || receiptModal.user?.name || '—'}</span></div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-secondary)' }}>Cédula:</span><span style={{ fontWeight: 600 }}>{receiptModal.billing_id_number || receiptModal.user?.billing_id_number || '—'}</span></div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-secondary)' }}>Email:</span><span style={{ fontWeight: 600 }}>{receiptModal.billing_email || receiptModal.user?.email || '—'}</span></div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-secondary)' }}>Teléfono:</span><span style={{ fontWeight: 600 }}>{receiptModal.billing_phone || receiptModal.user?.phone || '—'}</span></div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-secondary)' }}>Ciudad:</span><span style={{ fontWeight: 600 }}>{receiptModal.billing_city || receiptModal.user?.billing_city || '—'}</span></div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}><span style={{ color: 'var(--text-secondary)' }}>Dirección:</span><span style={{ fontWeight: 600, wordBreak: 'break-all', marginTop: 4 }}>{receiptModal.billing_address || receiptModal.user?.billing_address || '—'}</span></div>
+                  </div>
+                </div>
+
                 <div>
                   <div className="order-verification-section-title">Información del Pedido</div>
                   <div className="order-verification-info-row">

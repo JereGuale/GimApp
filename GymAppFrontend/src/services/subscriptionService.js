@@ -1,6 +1,8 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL } from './api';
+import { Platform } from 'react-native';
+
 // Helper para obtener el token
 const getToken = async () => {
     try {
@@ -23,6 +25,8 @@ const getAuthHeaders = async () => {
     };
 };
 
+
+
 export const SubscriptionAPI = {
     /**
      * Obtener suscripción actual del usuario
@@ -44,7 +48,7 @@ export const SubscriptionAPI = {
     /**
      * Crear nueva suscripción
      */
-    async createSubscription(planId, paymentMethod, cardData = {}) {
+    async createSubscription(planId, paymentMethod, cardData = {}, billingData = null) {
         try {
             console.log('[SubscriptionAPI] Creating subscription...', {
                 planId,
@@ -53,16 +57,22 @@ export const SubscriptionAPI = {
             });
 
             const token = await getToken();
-            console.log('[SubscriptionAPI] Token retrieved:', token ? `${token.substring(0, 20)}...` : 'NO TOKEN');
-
             const headers = await getAuthHeaders();
-            console.log('[SubscriptionAPI] Headers:', headers);
 
             const payload = {
                 subscription_plan_id: planId,
                 payment_method: paymentMethod,
                 ...cardData
             };
+
+            if (billingData) {
+                payload.billing_name = billingData.billing_name;
+                payload.billing_email = billingData.billing_email;
+                payload.billing_phone = billingData.billing_phone;
+                payload.billing_id_number = billingData.billing_id_number;
+                payload.billing_city = billingData.billing_city;
+                payload.billing_address = billingData.billing_address;
+            }
 
             console.log('[SubscriptionAPI] Payload:', payload);
             console.log('[SubscriptionAPI] Making request to:', `${API_URL}/subscription/subscribe`);
@@ -122,13 +132,19 @@ export const SubscriptionAPI = {
             const fileExtension = cleanUri.split('.').pop().toLowerCase() || 'jpg';
             const mimeType = fileExtension === 'png' ? 'image/png' : 'image/jpeg';
 
-            // Para React Native (Expo ImagePicker), solo necesitamos pasar un objeto con uri, name y type
-            const fileObj = {
-                uri: imageUri,
-                type: mimeType,
-                name: `receipt_${Date.now()}.${fileExtension}`
-            };
-            formData.append('receipt', fileObj);
+            if (Platform.OS === 'web') {
+                // En web, convertimos la URI a Blob y luego a File
+                const res = await fetch(imageUri);
+                const blob = await res.blob();
+                const fileObj = new File([blob], `receipt_${Date.now()}.${fileExtension}`, { type: mimeType });
+                formData.append('receipt', fileObj);
+            } else {
+                formData.append('receipt', {
+                    uri: imageUri,
+                    type: mimeType,
+                    name: `receipt_${Date.now()}.${fileExtension}`
+                });
+            }
 
             console.log('FormData prepared, making request to API...');
 
@@ -138,7 +154,6 @@ export const SubscriptionAPI = {
                 {
                     headers: {
                         'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'multipart/form-data',
                         'Accept': 'application/json'
                     },
                     timeout: 30000 // 30 segundos

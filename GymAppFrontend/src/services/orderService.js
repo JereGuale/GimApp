@@ -1,6 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL } from './api';
 
+import { Platform } from 'react-native';
+
 // Helper para obtener el token
 const getToken = async () => {
     try {
@@ -16,7 +18,7 @@ export const OrderAPI = {
     /**
      * Crear nuevo pedido de productos
      */
-    async createOrder(items, paymentMethod = 'transfer', notes = '') {
+    async createOrder(items, paymentMethod = 'transfer', notes = '', billingData = null) {
         try {
             const token = await getToken();
             if (!token) {
@@ -28,6 +30,24 @@ export const OrderAPI = {
                 paymentMethod,
             });
 
+            const bodyData = {
+                items: items.map(item => ({
+                    product_id: item.product.id,
+                    quantity: item.quantity,
+                })),
+                payment_method: paymentMethod,
+                notes,
+            };
+
+            if (billingData) {
+                bodyData.billing_name = billingData.billing_name;
+                bodyData.billing_email = billingData.billing_email;
+                bodyData.billing_phone = billingData.billing_phone;
+                bodyData.billing_id_number = billingData.billing_id_number;
+                bodyData.billing_city = billingData.billing_city;
+                bodyData.billing_address = billingData.billing_address;
+            }
+
             const response = await fetch(`${API_URL}/orders`, {
                 method: 'POST',
                 headers: {
@@ -35,14 +55,7 @@ export const OrderAPI = {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
                 },
-                body: JSON.stringify({
-                    items: items.map(item => ({
-                        product_id: item.product.id,
-                        quantity: item.quantity,
-                    })),
-                    payment_method: paymentMethod,
-                    notes,
-                }),
+                body: JSON.stringify(bodyData),
             });
 
             const data = await response.json();
@@ -51,9 +64,7 @@ export const OrderAPI = {
                 console.error('[OrderAPI] Error creating order:', data);
                 return {
                     success: false,
-                    error: data.message || data.errors
-                        ? Object.values(data.errors).flat().join(', ')
-                        : 'Error al crear pedido',
+                    error: data.message || (data.errors ? Object.values(data.errors).flat().join(', ') : 'Error al crear pedido'),
                 };
             }
 
@@ -82,7 +93,7 @@ export const OrderAPI = {
                 return { success: false, error: 'No hay token de autenticación' };
             }
 
-            console.log('[OrderAPI] Uploading receipt for order:', orderId);
+            console.log('[OrderAPI] Uploading receipt for order:', orderId, 'URI:', imageUri);
 
             const formData = new FormData();
 
@@ -91,11 +102,19 @@ export const OrderAPI = {
             const fileExtension = cleanUri.split('.').pop().toLowerCase() || 'jpg';
             const mimeType = fileExtension === 'png' ? 'image/png' : 'image/jpeg';
 
-            formData.append('receipt', {
-                uri: imageUri,
-                type: mimeType,
-                name: `order_receipt_${Date.now()}.${fileExtension}`,
-            });
+            if (Platform.OS === 'web') {
+                // En la plataforma web, convertimos la URI (sea dataURI o blobURL) en un Blob real
+                const res = await fetch(imageUri);
+                const blob = await res.blob();
+                const fileObj = new File([blob], `order_receipt_${Date.now()}.${fileExtension}`, { type: mimeType });
+                formData.append('receipt', fileObj);
+            } else {
+                formData.append('receipt', {
+                    uri: imageUri,
+                    type: mimeType,
+                    name: `order_receipt_${Date.now()}.${fileExtension}`,
+                });
+            }
 
             const response = await fetch(
                 `${API_URL}/orders/${orderId}/upload-receipt`,
@@ -103,7 +122,6 @@ export const OrderAPI = {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'multipart/form-data',
                         'Accept': 'application/json',
                     },
                     body: formData,
