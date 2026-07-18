@@ -19,7 +19,9 @@ import {
   DollarSign,
   ZoomIn,
   ZoomOut,
-  RotateCw
+  RotateCw,
+  XCircle,
+  AlertCircle
 } from 'lucide-react';
 import '../components/Layout.css';
 import './Orders.css';
@@ -107,6 +109,30 @@ export default function Orders() {
     );
   };
 
+  const renderStatusCell = (o) => {
+    let IconComponent = Clock;
+    if (o.status === 'approved' || o.status === 'completed') {
+      IconComponent = CheckCircle2;
+    } else if (o.status === 'rejected') {
+      IconComponent = XCircle;
+    }
+
+    return (
+      <div className="status-pill-container">
+        <span className={`status-pill status-pill--${STATUS_BADGE[o.status] || 'expired'}`}>
+          <IconComponent size={14} className="status-pill-icon" />
+          <span>{STATUS_LABELS[o.status] || o.status}</span>
+        </span>
+        {o.status === 'rejected' && o.rejection_reason && (
+          <div className="status-rejection-info">
+            <AlertCircle size={12} className="status-rejection-info-icon" />
+            <span>Motivo: {o.rejection_reason}</span>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const fetchOrders = () => {
     setLoading(true);
     // Fetch all orders from backend first, then filter frontend-side to get clean stats badges
@@ -179,6 +205,26 @@ export default function Orders() {
         body: JSON.stringify({ reason: rejectionReason || 'Comprobante no válido o stock insuficiente' })
       });
       setSuccess('Pedido rechazado correctamente');
+      fetchOrders();
+    } catch (e) { setError(e.message); }
+    finally { setActionLoading(null); }
+  };
+
+  const handleDeleteClick = (id) => {
+    setConfirmModal({
+      title: '¿Eliminar Pedido?',
+      message: '¿Estás seguro de que deseas eliminar este pedido permanentemente? Esta acción no se puede deshacer y liberará los registros.',
+      type: 'danger',
+      onConfirm: () => executeDelete(id)
+    });
+  };
+
+  const executeDelete = async (id) => {
+    setActionLoading(id + '_delete');
+    setError(''); setSuccess('');
+    try {
+      await apiFetch(`/admin/orders/${id}`, { method: 'DELETE' });
+      setSuccess('Pedido eliminado correctamente');
       fetchOrders();
     } catch (e) { setError(e.message); }
     finally { setActionLoading(null); }
@@ -352,39 +398,75 @@ export default function Orders() {
                     <th>Total</th>
                     <th>Estado</th>
                     <th>Método</th>
-                    <th>Comprobante</th>
                     <th>Fecha</th>
                     <th style={{ textAlign: 'right' }}>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {paginatedOrders.map(o => (
-                    <tr key={o.id}>
+                  {paginatedOrders.map((o, index) => {
+                    const isLastRows = index >= paginatedOrders.length - 2;
+                    return (
+                      <tr key={o.id}>
                       <td style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>#{o.id}</td>
                       <td>{renderUserCell(o.user)}</td>
                       <td>
                         <div style={{ maxHeight: 110, overflowY: 'auto', fontSize: 13, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                          {Array.isArray(o.items) ? o.items.map((item, idx) => (
-                            <div key={idx} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', display: 'flex', justifyContent: 'space-between', gap: 10, maxWidth: 300 }}>
-                              <span style={{ fontWeight: 600, color: 'var(--text)' }}>{item.name} <span style={{ opacity: 0.6, fontSize: 11 }}>x{item.quantity}</span></span>
-                              <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>${Number(item.price).toFixed(2)}</span>
-                            </div>
-                          )) : '—'}
+                          {Array.isArray(o.items) ? o.items.map((item, idx) => {
+                            const itemImage = item.image;
+                            const imageUrl = itemImage
+                              ? (itemImage.startsWith('http') ? itemImage : `${API_BASE_URL.replace('/api', '')}/storage/${itemImage}`)
+                              : null;
+                            return (
+                              <div key={idx} style={{ 
+                                background: 'var(--bg)', 
+                                border: '1px solid var(--border)', 
+                                borderRadius: '8px', 
+                                padding: '6px 10px', 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: 10, 
+                                maxWidth: 300 
+                              }}>
+                                <div style={{ 
+                                  width: 32, 
+                                  height: 32, 
+                                  borderRadius: 6, 
+                                  overflow: 'hidden', 
+                                  border: '1px solid var(--border)', 
+                                  backgroundColor: 'var(--card)', 
+                                  flexShrink: 0,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center'
+                                }}>
+                                  {imageUrl ? (
+                                    <img 
+                                      src={imageUrl} 
+                                      alt={item.name} 
+                                      style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                                    />
+                                  ) : (
+                                    <Package size={16} style={{ color: 'var(--text-secondary)' }} />
+                                  )}
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
+                                  <span style={{ fontWeight: 600, color: 'var(--text)', fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={item.name}>
+                                    {item.name}
+                                  </span>
+                                  <span style={{ opacity: 0.6, fontSize: 10, fontWeight: 500, color: 'var(--text-secondary)' }}>
+                                    x{item.quantity} · ${Number(item.price).toFixed(2)}
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          }) : '—'}
                         </div>
                       </td>
                       <td style={{ fontWeight: 700, color: 'var(--primary)', fontSize: 14 }}>
                         ${Number(o.total).toFixed(2)}
                       </td>
                       <td>
-                        <span className={`badge-status badge-status--${STATUS_BADGE[o.status] || 'expired'}`}>
-                          <span className={`badge-status-dot badge-status-dot--${STATUS_BADGE[o.status] || 'expired'}`} />
-                          {STATUS_LABELS[o.status] || o.status}
-                        </span>
-                        {o.status === 'rejected' && o.rejection_reason && (
-                          <div style={{ fontSize: 11, color: 'var(--danger-text)', marginTop: 4, maxWidth: 160, whiteSpace: 'normal', lineHeight: 1.3 }}>
-                            Motivo: {o.rejection_reason}
-                          </div>
-                        )}
+                        {renderStatusCell(o)}
                       </td>
                       <td>
                         <span className="badge badge--blue" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, margin: 0 }}>
@@ -401,28 +483,6 @@ export default function Orders() {
                           )}
                         </span>
                       </td>
-                      <td>
-                        {getReceiptUrl(o) ? (
-                          <div className="order-thumbnail-wrapper">
-                            <img 
-                              src={getReceiptUrl(o)} 
-                              alt="Mini comprobante" 
-                              className="order-thumbnail"
-                              onClick={() => handleOpenReceiptModal(o)}
-                            />
-                            <button 
-                              type="button"
-                              className="order-zoom-btn"
-                              onClick={() => handleOpenReceiptModal(o)}
-                              title="Ampliar comprobante"
-                            >
-                              <Eye size={10} />
-                            </button>
-                          </div>
-                        ) : (
-                          <span style={{ color: 'var(--text-secondary)' }}>—</span>
-                        )}
-                      </td>
                       <td style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
                         {o.created_at ? new Date(o.created_at).toLocaleDateString('es-MX', {
                           day: 'numeric',
@@ -433,35 +493,89 @@ export default function Orders() {
                         }) : '—'}
                       </td>
                       <td style={{ textAlign: 'right' }}>
-                        {o.status === 'pending' ? (
-                          <div style={{ display: 'inline-flex', gap: 8 }}>
-                            <button
-                              type="button"
-                              className="btn btn--success"
-                              style={{ padding: '8px', borderRadius: '8px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: 34 }}
-                              disabled={actionLoading === o.id + '_approve'}
-                              onClick={() => handleApprove(o.id)}
-                              title="Aprobar Pedido"
-                            >
-                              {actionLoading === o.id + '_approve' ? <Loader2 className="spin" size={14} /> : <Check size={14} />}
-                            </button>
-                            <button
-                              type="button"
-                              className="btn btn--danger"
-                              style={{ padding: '8px', borderRadius: '8px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: 34 }}
-                              disabled={actionLoading === o.id + '_reject'}
-                              onClick={() => handleRejectClick(o.id)}
-                              title="Rechazar Pedido"
-                            >
-                              {actionLoading === o.id + '_reject' ? <Loader2 className="spin" size={14} /> : <X size={14} />}
-                            </button>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end', width: '100%' }}>
+                          {/* Eye icon slot */}
+                          <div style={{ width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {getReceiptUrl(o) && (
+                              <button
+                                type="button"
+                                className="btn-eye-action"
+                                onClick={() => handleOpenReceiptModal(o)}
+                                title="Ver comprobante"
+                              >
+                                <Eye size={16} />
+                              </button>
+                            )}
                           </div>
-                        ) : (
-                          <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>—</span>
-                        )}
+                          
+                          {/* Actions dropdown slot */}
+                          <div style={{ width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {(o.status === 'pending' || o.status === 'rejected') && (
+                              <div className="actions-dropdown-wrapper">
+                                <button 
+                                  type="button"
+                                  className={`actions-dropdown-trigger ${activeDropdown === o.id ? 'active' : ''}`}
+                                  onClick={() => setActiveDropdown(activeDropdown === o.id ? null : o.id)}
+                                  title="Acciones"
+                                  disabled={actionLoading === o.id + '_approve' || actionLoading === o.id + '_reject' || actionLoading === o.id + '_delete'}
+                                >
+                                  {actionLoading === o.id + '_approve' || actionLoading === o.id + '_reject' || actionLoading === o.id + '_delete' ? (
+                                    <Loader2 className="spin" size={16} />
+                                  ) : (
+                                    <MoreVertical size={18} />
+                                  )}
+                                </button>
+                                {activeDropdown === o.id && (
+                                  <div className={`actions-dropdown-menu ${isLastRows ? 'open-up' : ''}`}>
+                                    {o.status === 'pending' && (
+                                      <>
+                                        <button 
+                                          type="button"
+                                          className="actions-dropdown-item"
+                                          onClick={() => {
+                                            handleApprove(o.id);
+                                            setActiveDropdown(null);
+                                          }}
+                                        >
+                                          <Check size={14} style={{ color: '#16a34a' }} />
+                                          <span style={{ color: '#16a34a', fontWeight: 600 }}>Aprobar pedido</span>
+                                        </button>
+                                        <button 
+                                          type="button"
+                                          className="actions-dropdown-item"
+                                          onClick={() => {
+                                            handleRejectClick(o.id);
+                                            setActiveDropdown(null);
+                                          }}
+                                        >
+                                          <X size={14} style={{ color: '#dc2626' }} />
+                                          <span style={{ color: '#dc2626', fontWeight: 600 }}>Rechazar pedido</span>
+                                        </button>
+                                      </>
+                                    )}
+                                    {o.status === 'rejected' && (
+                                      <button 
+                                        type="button"
+                                        className="actions-dropdown-item actions-dropdown-item--danger"
+                                        onClick={() => {
+                                          handleDeleteClick(o.id);
+                                          setActiveDropdown(null);
+                                        }}
+                                      >
+                                        <Trash2 size={14} />
+                                        <span>Eliminar registro</span>
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -513,7 +627,6 @@ export default function Orders() {
                               </button>
                             </>
                           )}
-                          
                           {getReceiptUrl(o) && (
                             <button 
                               type="button"
@@ -525,6 +638,20 @@ export default function Orders() {
                             >
                               <Eye size={14} />
                               <span>Ver comprobante</span>
+                            </button>
+                          )}
+                          
+                          {o.status === 'rejected' && (
+                            <button 
+                              type="button"
+                              className="actions-dropdown-item actions-dropdown-item--danger"
+                              onClick={() => {
+                                handleDeleteClick(o.id);
+                                setActiveDropdown(null);
+                              }}
+                            >
+                              <Trash2 size={14} />
+                              <span>Eliminar registro</span>
                             </button>
                           )}
                         </div>
@@ -560,13 +687,10 @@ export default function Orders() {
                       </span>
                     </div>
 
-                    <div className="order-mobile-card-row">
+                    <div className="order-mobile-card-row" style={{ alignItems: 'flex-start' }}>
                       <span className="order-mobile-card-label">Estado</span>
                       <span className="order-mobile-card-val">
-                        <span className={`badge-status badge-status--${STATUS_BADGE[o.status] || 'expired'}`}>
-                          <span className={`badge-status-dot badge-status-dot--${STATUS_BADGE[o.status] || 'expired'}`} />
-                          {STATUS_LABELS[o.status] || o.status}
-                        </span>
+                        {renderStatusCell(o)}
                       </span>
                     </div>
                   </div>

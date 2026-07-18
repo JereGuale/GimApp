@@ -90,6 +90,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/trainer/subscriptions/{id}', [TrainerSubscriptionController::class , 'destroy']);
     Route::post('/trainer/subscriptions/create', [TrainerSubscriptionController::class , 'create']);
 
+    // User management (accessible by admin role without requiring Spatie super_admin)
+    Route::get('/admin/users/list', [SuperAdminUserController::class , 'index']);
+    Route::put('/admin/users/{id}/manage', [SuperAdminUserController::class , 'update']);
+
     // Admin routes - In development mode, all authenticated users can access these
     Route::apiResource('admin/categories', CategoryController::class);
     Route::apiResource('admin/products', ProductController::class);
@@ -111,6 +115,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/admin/orders/pending-count', [OrderController::class , 'pendingCount']);
         Route::post('/admin/orders/{id}/approve', [OrderController::class , 'approve']);
         Route::post('/admin/orders/{id}/reject', [OrderController::class , 'reject']);
+        Route::delete('/admin/orders/{id}', [OrderController::class , 'destroy']);
 
         Route::get('/admin/metrics', [SuperAdminMetricsController::class , 'index']);
 

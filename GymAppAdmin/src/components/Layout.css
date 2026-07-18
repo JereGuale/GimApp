@@ -1157,5 +1157,175 @@ select option {
   background: rgba(37, 99, 235, 0.15);
 }
 
+/* ══════════════════════════════════════════════════════════════
+   RESPONSIVE — MOBILE & TABLET
+══════════════════════════════════════════════════════════════ */
 
+/* ── Sidebar overlay (mobile drawer backdrop) ── */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 199;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
 
+.sidebar-overlay--open {
+  opacity: 1;
+}
+
+/* ── Hamburger/menu button in topbar ── */
+.topbar-menu-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  margin-right: 12px;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.topbar-menu-btn:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+/* ── Desktop: hide the hamburger, sidebar is always visible ── */
+@media (min-width: 769px) {
+  .sidebar-overlay {
+    display: none !important;
+  }
+
+  .sidebar {
+    position: relative !important;
+    transform: none !important;
+    z-index: auto;
+  }
+
+  .topbar-menu-btn {
+    display: none;
+  }
+}
+
+/* ── Tablet & Mobile (≤768px): sidebar becomes a drawer ── */
+@media (max-width: 768px) {
+  .layout {
+    overflow: hidden;
+  }
+
+  /* Sidebar hidden off-screen by default */
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    z-index: 200;
+    transform: translateX(-100%);
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
+  }
+
+  /* Sidebar visible when open */
+  .sidebar--open {
+    transform: translateX(0);
+  }
+
+  /* Overlay visible when sidebar is open */
+  .sidebar-overlay {
+    display: block;
+  }
+
+  /* Main takes full width */
+  .main {
+    width: 100%;
+  }
+
+  /* Topbar: more compact on mobile */
+  .topbar {
+    padding: 0 16px;
+    height: 56px;
+  }
+
+  /* Hide topbar text labels on very small screens */
+  .topbar-profile-name {
+    display: none;
+  }
+
+  .topbar-breadcrumb {
+    display: none;
+  }
+
+  .topbar-title {
+    font-size: 14px;
+  }
+
+  /* Content area: less padding */
+  .content {
+    padding: 16px;
+  }
+
+  /* Page headers */
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  /* Stat grid: single column */
+  .stat-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  /* Cards: reduce padding */
+  .card {
+    padding: 16px;
+  }
+
+  /* Modals: full width on mobile */
+  .modal-overlay {
+    padding: 12px;
+    align-items: flex-end;
+  }
+
+  .modal {
+    max-width: 100% !important;
+    border-radius: 20px 20px 16px 16px;
+    padding: 20px 16px;
+    animation: slideUp 0.3s ease;
+  }
+
+  @keyframes slideUp {
+    from { transform: translateY(40px); opacity: 0; }
+    to   { transform: translateY(0);   opacity: 1; }
+  }
+
+  /* Tables: horizontal scroll */
+  .users-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* ── Very small phones (≤ 400px) ── */
+@media (max-width: 400px) {
+  .topbar {
+    padding: 0 12px;
+  }
+
+  .content {
+    padding: 12px;
+  }
+
+  .topbar-right {
+    gap: 6px;
+  }
+}

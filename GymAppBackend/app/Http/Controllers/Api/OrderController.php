@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
+use App\Services\SupabaseStorage;
 
 class OrderController extends Controller
 {
@@ -123,13 +124,25 @@ class OrderController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        // Delete old receipt if exists
-        if ($order->payment_receipt && Storage::disk('public')->exists($order->payment_receipt)) {
-            Storage::disk('public')->delete($order->payment_receipt);
+        $receiptFile = $request->file('receipt');
+        $supabase = new SupabaseStorage();
+        $path = null;
+
+        if ($supabase->isConfigured()) {
+            $ext = $receiptFile->getClientOriginalExtension() ?: 'jpg';
+            $fileName = 'order_' . $id . '_' . time() . '_' . uniqid() . '.' . $ext;
+            $filePath = 'order_receipts/' . $fileName;
+            $path = $supabase->uploadFile($receiptFile, $filePath);
         }
 
-        // Store new receipt
-        $path = $request->file('receipt')->store('order_receipts', 'public');
+        if (!$path) {
+            // Delete old local receipt if exists
+            if ($order->payment_receipt && strpos($order->payment_receipt, 'http') !== 0 && Storage::disk('public')->exists($order->payment_receipt)) {
+                Storage::disk('public')->delete($order->payment_receipt);
+            }
+            // Store new local receipt
+            $path = $receiptFile->store('order_receipts', 'public');
+        }
 
         $order->update([
             'payment_receipt' => $path,
@@ -279,6 +292,25 @@ class OrderController extends Controller
         return response()->json([
             'message' => 'Pedido rechazado',
             'order' => $order->load(['user', 'approvedBy']),
+        ]);
+    }
+
+    /**
+     * Delete an order (admin)
+     */
+    public function destroy($id)
+    {
+        $order = Order::findOrFail($id);
+
+        // Delete payment receipt if it is stored locally
+        if ($order->payment_receipt && strpos($order->payment_receipt, 'http') !== 0 && Storage::disk('public')->exists($order->payment_receipt)) {
+            Storage::disk('public')->delete($order->payment_receipt);
+        }
+
+        $order->delete();
+
+        return response()->json([
+            'message' => 'Pedido eliminado correctamente'
         ]);
     }
 }

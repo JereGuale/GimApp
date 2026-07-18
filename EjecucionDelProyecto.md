@@ -74,3 +74,9 @@ La aplicación para los usuarios y clientes del gimnasio construida con React Na
    npm start
    ```
    *Escanea el código QR generado en la terminal con la aplicación de Expo Go en tu celular (iOS/Android) o presiona `a` para abrir el emulador de Android o `i` para iOS.*
+
+
+hacer Deploy en vercel panel admin para q se suban los cambios 
+
+cd GymAppAdmin
+npx vercel --prod

@@ -12,7 +12,13 @@ class SuperAdminMiddleware
     {
         $user = $request->user();
 
-        if (!$user || !$user->isSuperAdmin()) {
+        // Accept Spatie super_admin role OR users with role column = admin/super_admin
+        $hasAccess = $user && (
+            $user->isSuperAdmin() ||
+            in_array($user->role, ['admin', 'super_admin'])
+        );
+
+        if (!$hasAccess) {
             return response()->json(['message' => 'Forbidden'], 403);
         }
 

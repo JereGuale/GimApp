@@ -9,6 +9,8 @@ use App\Models\SubscriptionPlan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
+use App\Services\SupabaseStorage;
 
 class SubscriptionController extends Controller
 {
@@ -160,8 +162,25 @@ class SubscriptionController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        // Guardar imagen
-        $path = $request->file('receipt')->store('receipts', 'public');
+        $receiptFile = $request->file('receipt');
+        $supabase = new SupabaseStorage();
+        $path = null;
+
+        if ($supabase->isConfigured()) {
+            $ext = $receiptFile->getClientOriginalExtension() ?: 'jpg';
+            $fileName = 'sub_' . $id . '_' . time() . '_' . uniqid() . '.' . $ext;
+            $filePath = 'receipts/' . $fileName;
+            $path = $supabase->uploadFile($receiptFile, $filePath);
+        }
+
+        if (!$path) {
+            // Delete old local receipt if exists
+            if ($subscription->payment_receipt && strpos($subscription->payment_receipt, 'http') !== 0 && Storage::disk('public')->exists($subscription->payment_receipt)) {
+                Storage::disk('public')->delete($subscription->payment_receipt);
+            }
+            // Store new local receipt
+            $path = $receiptFile->store('receipts', 'public');
+        }
 
         $subscription->update([
             'payment_receipt' => $path,

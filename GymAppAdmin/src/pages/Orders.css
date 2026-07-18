@@ -596,3 +596,237 @@
     overflow-y: visible;
   }
 }
+
+/* Dropdown Menu & Action Styles */
+.actions-dropdown-wrapper {
+  position: relative;
+  display: inline-block;
+  z-index: 95;
+}
+
+.actions-dropdown-trigger {
+  background: none;
+  border: 1px solid transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.actions-dropdown-trigger:hover,
+.actions-dropdown-trigger.active {
+  background-color: var(--primary-light);
+  color: var(--primary);
+  border-color: rgba(37, 99, 235, 0.1);
+}
+
+.actions-dropdown-menu {
+  position: absolute;
+  right: 0;
+  top: 105%;
+  z-index: 100;
+  min-width: 180px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.1), 0 8px 16px -6px rgba(0, 0, 0, 0.05);
+  padding: 6px;
+  animation: dropdownSlideIn 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform-origin: top right;
+}
+
+:root.dark .actions-dropdown-menu {
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.5), 0 8px 16px -6px rgba(0, 0, 0, 0.3);
+}
+
+@keyframes dropdownSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.actions-dropdown-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  background: none;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+}
+
+.actions-dropdown-item:hover {
+  background-color: var(--bg);
+}
+
+.actions-dropdown-item--danger {
+  color: var(--danger-text);
+}
+
+.actions-dropdown-item--danger:hover {
+  background-color: var(--danger-light);
+}
+
+.btn-eye-action {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.btn-eye-action:hover {
+  background-color: var(--primary-light);
+  color: var(--primary);
+}
+
+.actions-dropdown-menu.open-up {
+  top: auto;
+  bottom: 105%;
+  transform-origin: bottom right;
+  animation: dropdownSlideInUp 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes dropdownSlideInUp {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Premium Status Pill Badges */
+.status-pill-container {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  animation: statusFadeIn 0.3s ease;
+}
+
+@keyframes statusFadeIn {
+  from { opacity: 0; transform: translateY(2px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  border: 1px solid transparent;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  height: 26px;
+  box-sizing: border-box;
+  white-space: nowrap;
+}
+
+.status-pill:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.status-pill-icon {
+  flex-shrink: 0;
+}
+
+/* Status variants (light background, soft text, light border) */
+.status-pill--pending {
+  background-color: rgba(245, 158, 11, 0.08);
+  color: #d97706;
+  border-color: rgba(245, 158, 11, 0.15);
+}
+.status-pill--pending:hover {
+  background-color: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.25);
+}
+
+:root.dark .status-pill--pending {
+  background-color: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.25);
+}
+
+.status-pill--approved,
+.status-pill--completed {
+  background-color: rgba(34, 197, 94, 0.08);
+  color: #15803d;
+  border-color: rgba(34, 197, 94, 0.15);
+}
+.status-pill--approved:hover,
+.status-pill--completed:hover {
+  background-color: rgba(34, 197, 94, 0.12);
+  border-color: rgba(34, 197, 94, 0.25);
+}
+
+:root.dark .status-pill--approved,
+:root.dark .status-pill--completed {
+  background-color: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+  border-color: rgba(34, 197, 94, 0.25);
+}
+
+.status-pill--rejected {
+  background-color: rgba(239, 68, 68, 0.08);
+  color: #b91c1c;
+  border-color: rgba(239, 68, 68, 0.15);
+}
+.status-pill--rejected:hover {
+  background-color: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.25);
+}
+
+:root.dark .status-pill--rejected {
+  background-color: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.25);
+}
+
+/* Rejection reason visual hierarchy */
+.status-rejection-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  opacity: 0.85;
+  margin-top: 2px;
+  max-width: 180px;
+  line-height: 1.3;
+}
+
+.status-rejection-info-icon {
+  color: #ef4444;
+  flex-shrink: 0;
+}
+

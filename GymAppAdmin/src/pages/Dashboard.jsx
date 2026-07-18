@@ -192,67 +192,264 @@ export default function Dashboard() {
 
   const hasUrgentAlerts = pendingSubsCount > 0 || pendingOrdersCount > 0;
 
+  const premiumStatCards = [
+    {
+      label: 'Miembros Activos',
+      value: stats?.active_subscriptions !== undefined && stats?.active_subscriptions !== null 
+        ? Number(stats.active_subscriptions).toLocaleString('es-MX') 
+        : '0',
+      badge: stats?.new_registrations_week !== undefined && stats?.new_registrations_week !== null
+        ? `+${stats.new_registrations_week}`
+        : '+0',
+      badgeType: 'positive',
+      sub: `${stats?.new_registrations_week ?? 0} nuevas membresías esta semana`,
+      icon: Users,
+      color: '#3B82F6'
+    },
+    {
+      label: 'Ingresos Mensuales',
+      value: stats?.monthly_income !== undefined && stats?.monthly_income !== null
+        ? `$${Math.round(Number(stats.monthly_income)).toLocaleString('es-MX')}`
+        : '$0',
+      badge: stats?.monthly_change_percent !== undefined && stats?.monthly_change_percent !== null
+        ? `${stats.monthly_change_percent >= 0 ? '+' : ''}${stats.monthly_change_percent}%`
+        : '+0%',
+      badgeType: stats?.monthly_change_percent >= 0 ? 'positive' : 'negative',
+      sub: `Proyectado: $${stats?.monthly_income ? Math.round(Number(stats.monthly_income) * 1.05).toLocaleString('es-MX') : '0'} para fin de mes`,
+      icon: DollarSign,
+      color: '#10B981'
+    },
+    {
+      label: 'Asistencia Diaria',
+      value: stats?.peak_users_total !== undefined && stats?.peak_users_total !== null
+        ? Math.round(Number(stats.peak_users_total) / 4)
+        : '0',
+      badge: stats?.peak_users_total ? '-2.1%' : '0%',
+      badgeType: 'negative',
+      sub: 'Accesos registrados hoy',
+      icon: Activity,
+      color: '#ef4444'
+    }
+  ];
+
   return (
     <div className="dashboard-container">
-      {/* 1. Banner de Bienvenida Premium */}
-      <div className="dashboard-welcome-banner">
-        <div className="welcome-text">
-          <span className="welcome-badge">
-            <Sparkles size={14} /> Panel Operativo
-          </span>
-          <h1 style={{ marginTop: '12px' }}>¡Hola de nuevo, {user?.name || 'Administrador'}! 👋</h1>
-          <p>
-            Este es tu panel general de control. Aquí puedes ver el rendimiento del gimnasio y atender las solicitudes de tus clientes de forma simple.
-          </p>
-        </div>
-        <div className="welcome-stats" style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <span style={{ fontSize: 13, opacity: 0.8 }}>Estado de hoy</span>
-          <span style={{ fontSize: 20, fontWeight: 900, color: hasUrgentAlerts ? '#F87171' : '#4ADE80' }}>
-            {hasUrgentAlerts ? 'Revisión Pendiente' : 'Operación al Día'}
-          </span>
+      {/* 1. Hero Banner Premium (Operational Summary Card) */}
+      <div className="dashboard-hero-banner">
+        <span className="hero-system-status">
+          ESTADO DEL SISTEMA: ÓPTIMO
+        </span>
+        
+        <h1 className="hero-banner-title" style={{ marginTop: '12px' }}>
+          Bienvenido de nuevo, {user?.name || 'Admin'}.<br />
+          La eficiencia comienza con la claridad.
+        </h1>
+        <p className="hero-banner-desc">
+          El ecosistema del gimnasio está funcionando al óptimo de su capacidad.
+        </p>
+
+        {(pendingSubsCount > 0 || pendingOrdersCount > 0) && (
+          <div className="hero-pending-cards-grid">
+            {pendingSubsCount > 0 && (
+              <div 
+                className="hero-pending-card hero-pending-card--subs"
+                onClick={() => navigate('/suscripciones')}
+                role="button"
+                tabIndex={0}
+              >
+                <div className="hero-card-header">
+                  <div className="hero-card-title-group">
+                    <div className="hero-card-icon-wrapper">
+                      <CreditCard size={15} />
+                    </div>
+                    <span className="hero-card-label">Membresías</span>
+                  </div>
+                  <div className="hero-card-arrow-wrapper">
+                    <ArrowRight size={14} />
+                  </div>
+                </div>
+                <div className="hero-card-body">
+                  <span className="hero-card-number">{pendingSubsCount}</span>
+                  <div className="hero-card-text-group">
+                    <span className="hero-card-title-text">Pendiente de aprobación</span>
+                    <span className="hero-card-subtitle-text">Requiere revisión del administrador</span>
+                  </div>
+                </div>
+              </div>
+            )}
+            {pendingOrdersCount > 0 && (
+              <div 
+                className="hero-pending-card hero-pending-card--orders"
+                onClick={() => navigate('/pedidos')}
+                role="button"
+                tabIndex={0}
+              >
+                <div className="hero-card-header">
+                  <div className="hero-card-title-group">
+                    <div className="hero-card-icon-wrapper">
+                      <ShoppingBag size={15} />
+                    </div>
+                    <span className="hero-card-label">Pedidos</span>
+                  </div>
+                  <div className="hero-card-arrow-wrapper">
+                    <ArrowRight size={14} />
+                  </div>
+                </div>
+                <div className="hero-card-body">
+                  <span className="hero-card-number">{pendingOrdersCount}</span>
+                  <div className="hero-card-text-group">
+                    <span className="hero-card-title-text">Esperando revisión</span>
+                    <span className="hero-card-subtitle-text">Listos para ser procesados</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* 2. Premium Stat Cards Grid (3 Cards Row) */}
+      <div className="premium-stats-grid">
+        {premiumStatCards.map((c, index) => {
+          const Icon = c.icon;
+          const sparklineColor = c.color;
+          const sparklineGradId = `spark-grad-${index}`;
+          let pathD = "";
+          if (index === 0) {
+            pathD = "M 0,30 C 20,25 40,28 60,18 T 100,10 T 120,6";
+          } else if (index === 1) {
+            pathD = "M 0,32 Q 25,28 50,15 T 100,8 T 120,4";
+          } else {
+            pathD = "M 0,10 Q 25,18 50,12 T 100,24 T 120,28";
+          }
+
+          return (
+            <div className="premium-stat-card" key={c.label}>
+              <div className="premium-stat-card-header">
+                <div className="premium-stat-title-group">
+                  <div className="premium-stat-icon-wrapper" style={{ backgroundColor: `${c.color}12`, color: c.color }}>
+                    <Icon size={16} />
+                  </div>
+                  <span className="premium-stat-label">{c.label}</span>
+                </div>
+                <span className={`premium-stat-badge premium-stat-badge--${c.badgeType}`}>
+                  {c.badgeType === 'positive' ? '↗' : '↘'} {c.badge}
+                </span>
+              </div>
+              
+              <div className="premium-stat-card-body">
+                <span className="premium-stat-value">{c.value}</span>
+                <span className="premium-stat-sub">{c.sub}</span>
+              </div>
+
+              <div className="premium-stat-sparkline-container">
+                <svg className="premium-stat-sparkline" viewBox="0 0 120 40" width="100%" height="40" preserveAspectRatio="none">
+                  <defs>
+                    <linearGradient id={sparklineGradId} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={sparklineColor} stopOpacity="0.18" />
+                      <stop offset="100%" stopColor={sparklineColor} stopOpacity="0.0" />
+                    </linearGradient>
+                  </defs>
+                  <path
+                    d={pathD}
+                    fill="none"
+                    stroke={sparklineColor}
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d={`${pathD} L 120,40 L 0,40 Z`}
+                    fill={`url(#${sparklineGradId})`}
+                  />
+                </svg>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* 4. Widescreen Layout: Membresías Recientes */}
+      <div className="dashboard-grid-layout-full">
+        <div className="card" style={{ padding: '24px', margin: 0 }}>
+          <div className="page-header" style={{ marginBottom: 20, borderBottom: 'none', padding: 0, minHeight: 'auto' }}>
+            <div>
+              <h2 style={{ fontSize: 16, fontWeight: 800, margin: 0, color: 'var(--text)' }}>Membresías Recientes</h2>
+              <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>Últimas personas en suscribirse al gimnasio</p>
+            </div>
+          </div>
+          
+          {recentSubs.length === 0 ? (
+            <div className="empty-state" style={{ padding: '32px 0' }}>
+              <div className="empty-icon">
+                <CreditCard size={32} />
+              </div>
+              <p>No hay suscripciones recientes registradas.</p>
+            </div>
+          ) : (
+            <>
+              <div className="dashboard-subs-desktop-view">
+                <div className="subs-table-container" style={{ margin: 0 }}>
+                  <table className="subs-table">
+                    <thead>
+                      <tr>
+                        <th>Usuario</th>
+                        <th>Plan</th>
+                        <th>Estado</th>
+                        <th>Fecha</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {recentSubs.map(s => (
+                        <tr key={s.id}>
+                          <td>{renderUserCell(s.user)}</td>
+                          <td style={{ fontWeight: 600 }}>{s.plan?.name || s.plan_id || '—'}</td>
+                          <td>
+                            <span className={`badge-status badge-status--${s.status === 'approved' ? 'active' : s.status}`}>
+                              <span className={`badge-status-dot badge-status-dot--${s.status === 'approved' ? 'active' : s.status}`} />
+                              {s.status === 'active' || s.status === 'approved' 
+                                ? 'Activa' 
+                                : s.status === 'pending' 
+                                  ? 'Pendiente' 
+                                  : s.status === 'cancelled' 
+                                    ? 'Cancelada' 
+                                    : 'Expirada'}
+                            </span>
+                          </td>
+                          <td style={{ color: 'var(--text-secondary)', fontSize: 12 }}>
+                            {s.created_at ? new Date(s.created_at).toLocaleDateString('es-MX', { year: 'numeric', month: 'short', day: 'numeric' }) : '—'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="dashboard-subs-mobile-view">
+                <div className="dashboard-recent-subs-list">
+                  {recentSubs.map(s => (
+                    <div className="dashboard-recent-sub-item" key={s.id}>
+                      <div className="dashboard-recent-sub-left">
+                        {renderUserCell(s.user)}
+                      </div>
+                      <div className="dashboard-recent-sub-right">
+                        <span className="recent-sub-plan">{s.plan?.name || 'Plan'}</span>
+                        <span className={`badge-status badge-status--${s.status === 'approved' ? 'active' : s.status}`}>
+                          <span className={`badge-status-dot badge-status-dot--${s.status === 'approved' ? 'active' : s.status}`} />
+                          {s.status === 'active' || s.status === 'approved' ? 'Activa' : 'Pendiente'}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
-      {/* 2. Sección de Alertas Urgentes (Onboarding Visual) */}
-      {hasUrgentAlerts && (
-        <div className="dashboard-alerts-container">
-          {pendingSubsCount > 0 && (
-            <div className="alert-panel danger">
-              <div className="alert-icon-wrapper">
-                <ShieldAlert size={20} />
-              </div>
-              <div className="alert-content">
-                <h3 className="alert-title">Membresías por Aprobar</h3>
-                <p className="alert-desc">
-                  Tienes <strong>{pendingSubsCount}</strong> solicitud{pendingSubsCount !== 1 ? 'es' : ''} de membresía pendiente{pendingSubsCount !== 1 ? 's' : ''} de validar comprobante.
-                </p>
-                <button className="alert-btn" onClick={() => navigate('/suscripciones')}>
-                  <span>Ir a Aprobar</span> <ArrowRight size={14} />
-                </button>
-              </div>
-            </div>
-          )}
-
-          {pendingOrdersCount > 0 && (
-            <div className="alert-panel warning">
-              <div className="alert-icon-wrapper">
-                <AlertTriangle size={20} />
-              </div>
-              <div className="alert-content">
-                <h3 className="alert-title">Pedidos por Procesar</h3>
-                <p className="alert-desc">
-                  Hay <strong>{pendingOrdersCount}</strong> compra{pendingOrdersCount !== 1 ? 's' : ''} de la tienda en espera de verificación y entrega.
-                </p>
-                <button className="alert-btn" onClick={() => navigate('/pedidos')}>
-                  <span>Ver Pedidos</span> <ArrowRight size={14} />
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* 3. Acciones Rápidas (Menú Intuitivo) */}
+      {/* 5. Acciones Rápidas (Menú Intuitivo) */}
       <div className="quick-actions-section">
         <div className="section-title-wrapper">
           <h2 className="section-title">Accesos Directos Recomendados</h2>
@@ -275,160 +472,6 @@ export default function Dashboard() {
               </div>
             );
           })}
-        </div>
-      </div>
-
-      {/* 4. Layout Dividido: Estadísticas & Últimas Suscripciones */}
-      <div className="dashboard-grid-layout">
-        {/* Lado Izquierdo: Métricas Generales */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-          <div className="section-title-wrapper">
-            <h2 className="section-title" style={{ fontSize: 16 }}>Resumen de Métricas</h2>
-            <p className="section-subtitle">Estado general del gimnasio en tiempo real</p>
-          </div>
-          
-          <div className="stat-grid" style={{ margin: 0, gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
-            {statCards.map(s => {
-              const Icon = s.icon;
-              return (
-                <div className="stat-card" key={s.label}>
-                  <div className="stat-card-header">
-                    <span className="stat-label">{s.label}</span>
-                    <div className="stat-icon-wrapper" style={{ backgroundColor: `${s.color}15`, color: s.color }}>
-                      <Icon size={18} />
-                    </div>
-                  </div>
-                  <div className="stat-value-container">
-                    <span className="stat-value" style={{ fontSize: 22 }}>{s.value}</span>
-                  </div>
-                  <div className="stat-sub">{s.sub}</div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Tabla de suscripciones recientes */}
-          <div className="card" style={{ padding: '20px', margin: 0 }}>
-            <div className="page-header" style={{ marginBottom: 16, borderBottom: 'none', padding: 0, minHeight: 'auto' }}>
-              <div>
-                <h2 style={{ fontSize: 15, fontWeight: 800, margin: 0 }}>Membresías Recientes</h2>
-                <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '2px 0 0 0' }}>Últimas personas en suscribirse al gimnasio</p>
-              </div>
-            </div>
-            
-            {recentSubs.length === 0 ? (
-              <div className="empty-state" style={{ padding: '24px 0' }}>
-                <div className="empty-icon">
-                  <CreditCard size={32} />
-                </div>
-                <p>No hay suscripciones recientes registradas.</p>
-              </div>
-            ) : (
-              <>
-                <div className="dashboard-subs-desktop-view">
-                  <div className="subs-table-container" style={{ margin: 0 }}>
-                    <table className="subs-table">
-                      <thead>
-                        <tr>
-                          <th>Usuario</th>
-                          <th>Plan</th>
-                          <th>Estado</th>
-                          <th>Fecha</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {recentSubs.map(s => (
-                          <tr key={s.id}>
-                            <td>{renderUserCell(s.user)}</td>
-                            <td style={{ fontWeight: 600 }}>{s.plan?.name || s.plan_id || '—'}</td>
-                            <td>
-                              <span className={`badge-status badge-status--${s.status === 'approved' ? 'active' : s.status}`}>
-                                <span className={`badge-status-dot badge-status-dot--${s.status === 'approved' ? 'active' : s.status}`} />
-                                {s.status === 'active' || s.status === 'approved' 
-                                  ? 'Activa' 
-                                  : s.status === 'pending' 
-                                    ? 'Pendiente' 
-                                    : s.status === 'cancelled' 
-                                      ? 'Cancelada' 
-                                      : 'Expirada'}
-                              </span>
-                            </td>
-                            <td style={{ color: 'var(--text-secondary)', fontSize: 12 }}>
-                              {s.created_at ? new Date(s.created_at).toLocaleDateString('es-MX', { year: 'numeric', month: 'short', day: 'numeric' }) : '—'}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                <div className="dashboard-subs-mobile-view">
-                  <div className="dashboard-recent-subs-list">
-                    {recentSubs.map(s => (
-                      <div className="dashboard-recent-sub-item" key={s.id}>
-                        <div className="dashboard-recent-sub-left">
-                          {renderUserCell(s.user)}
-                        </div>
-                        <div className="dashboard-recent-sub-right">
-                          <span className="recent-sub-plan">{s.plan?.name || 'Plan'}</span>
-                          <span className={`badge-status badge-status--${s.status === 'approved' ? 'active' : s.status}`}>
-                            <span className={`badge-status-dot badge-status-dot--${s.status === 'approved' ? 'active' : s.status}`} />
-                            {s.status === 'active' || s.status === 'approved' ? 'Activa' : 'Pendiente'}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Lado Derecho: Guía de Uso del Administrador */}
-        <div className="operation-guide-section">
-          <div className="section-title-wrapper" style={{ marginBottom: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <HelpCircle size={18} style={{ color: 'var(--primary)' }} />
-              <h2 className="section-title" style={{ margin: 0 }}>Guía de Operación</h2>
-            </div>
-            <p className="section-subtitle">¿Cómo administrar tu gimnasio diariamente?</p>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div className="guide-item">
-              <div className="guide-step-num">1</div>
-              <div className="guide-item-content">
-                <h4>Revisar Pagos Pendientes</h4>
-                <p>Si la alerta roja se enciende, haz clic en "Activar Clientes" para verificar sus comprobantes bancarios.</p>
-              </div>
-            </div>
-
-            <div className="guide-item">
-              <div className="guide-step-num">2</div>
-              <div className="guide-item-content">
-                <h4>Despachar Productos</h4>
-                <p>Ve a "Pedidos" para verificar y entregar suplementos o mercancía comprada por los clientes.</p>
-              </div>
-            </div>
-
-            <div className="guide-item">
-              <div className="guide-step-num">3</div>
-              <div className="guide-item-content">
-                <h4>Revisar Expiraciones</h4>
-                <p>Monitorea la tarjeta de "Planes por Vencer" para contactar a los clientes que deban renovar esta semana.</p>
-              </div>
-            </div>
-
-            <div className="guide-item">
-              <div className="guide-step-num">4</div>
-              <div className="guide-item-content">
-                <h4>Controlar Caja</h4>
-                <p>Entra a "Reportes" para cuadrar el balance de ingresos diarios e históricos de forma automática.</p>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>

@@ -11,7 +11,9 @@ class SuperAdminUserController extends Controller
 {
     public function index(Request $request)
     {
-        $query = User::query()->orderBy('name');
+        $query = User::query()
+            ->where('is_active', '!=', 0)
+            ->orderBy('name');
 
         if ($request->filled('role')) {
             $query->where('role', $request->string('role'));

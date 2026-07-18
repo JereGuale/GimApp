@@ -22,7 +22,9 @@ import {
   ZoomOut,
   RotateCw,
   RefreshCw,
-  MoreVertical
+  MoreVertical,
+  XCircle,
+  AlertCircle
 } from 'lucide-react';
 import '../components/Layout.css';
 import './Subscriptions.css';
@@ -36,19 +38,23 @@ export default function Subscriptions() {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
   const [actionLoading, setActionLoading] = useState(null);
-  const [receiptModal, setReceiptModal] = useState(null); // stores the entire sub object
+  const [receiptModal, setReceiptModal] = useState(null);
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  
+
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
 
-  // Custom Confirmation Modal State
+  // Standard Confirmation Modal (approve/reject/renew)
   const [confirmModal, setConfirmModal] = useState(null);
+
+  // Multi-step Delete Modal
+  const [deleteModal, setDeleteModal] = useState(null); // { sub, step: 1|2|3, typed: '' }
+  const DELETE_CONFIRM_WORD = 'ELIMINAR';
 
   const handleOpenReceiptModal = (sub) => {
     setZoom(1);
@@ -125,6 +131,30 @@ export default function Subscriptions() {
           <span className="user-name">{user.name}</span>
           <span className="user-email">{user.email}</span>
         </div>
+      </div>
+    );
+  };
+
+  const renderStatusCell = (s) => {
+    let IconComponent = Clock;
+    if (s.status === 'active') {
+      IconComponent = CheckCircle2;
+    } else if (s.status === 'cancelled' || s.status === 'expired') {
+      IconComponent = XCircle;
+    }
+
+    return (
+      <div className="status-pill-container">
+        <span className={`status-pill status-pill--${STATUS_BADGE[s.status] || 'expired'}`}>
+          <IconComponent size={14} className="status-pill-icon" />
+          <span>{STATUS_LABELS[s.status] || s.status}</span>
+        </span>
+        {s.status === 'rejected' && s.rejection_reason && (
+          <div className="status-rejection-info">
+            <AlertCircle size={12} className="status-rejection-info-icon" />
+            <span>Motivo: {s.rejection_reason}</span>
+          </div>
+        )}
       </div>
     );
   };
@@ -214,13 +244,10 @@ export default function Subscriptions() {
     finally { setActionLoading(null); }
   };
 
-  const handleDelete = (id) => {
-    setConfirmModal({
-      title: '¿Eliminar Suscripción?',
-      message: '¿Estás seguro de que deseas eliminar esta suscripción permanentemente? Esta acción es irreversible.',
-      type: 'danger',
-      onConfirm: () => executeDelete(id)
-    });
+  // Open the multi-step delete modal
+  const handleDelete = (sub) => {
+    setDeleteModal({ sub, step: 1, typed: '' });
+    setActiveDropdown(null);
   };
 
   const executeDelete = async (id) => {
@@ -229,6 +256,7 @@ export default function Subscriptions() {
     try {
       await apiFetch(`/trainer/subscriptions/${id}`, { method: 'DELETE' });
       setSuccess('Suscripción eliminada exitosamente');
+      setDeleteModal(null);
       fetchSubs();
     } catch (e) { 
       setError(e.message || 'Error al eliminar la suscripción'); 
@@ -396,22 +424,20 @@ export default function Subscriptions() {
                     <th>Plan</th>
                     <th>Estado</th>
                     <th>Método</th>
-                    <th>Comprobante</th>
                     <th>Vigencia</th>
                     <th style={{ textAlign: 'right' }}>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {paginatedItems.map(s => (
-                    <tr key={s.id}>
+                  {paginatedItems.map((s, index) => {
+                    const isLastRows = index >= paginatedItems.length - 2;
+                    return (
+                      <tr key={s.id}>
                       <td style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{s.id}</td>
                       <td>{renderUserCell(s.user)}</td>
                       <td style={{ fontWeight: 600 }}>{s.plan?.name || s.plan_id || '—'}</td>
                       <td>
-                        <span className={`badge-status badge-status--${s.status}`}>
-                          <span className={`badge-status-dot badge-status-dot--${s.status}`} />
-                          {STATUS_LABELS[s.status] || s.status}
-                        </span>
+                        {renderStatusCell(s)}
                       </td>
                       <td>
                         <span className="badge badge--blue" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, margin: 0 }}>
@@ -422,28 +448,6 @@ export default function Subscriptions() {
                             </>
                           ) : s.payment_method || '—'}
                         </span>
-                      </td>
-                      <td>
-                        {getReceiptUrl(s) ? (
-                          <div className="receipt-thumbnail-wrapper">
-                            <img 
-                              src={getReceiptUrl(s)} 
-                              alt="Mini comprobante" 
-                              className="receipt-thumbnail"
-                              onClick={() => handleOpenReceiptModal(s)}
-                            />
-                            <button 
-                              type="button"
-                              className="receipt-zoom-btn"
-                              onClick={() => handleOpenReceiptModal(s)}
-                              title="Ampliar comprobante"
-                            >
-                              <Eye size={10} />
-                            </button>
-                          </div>
-                        ) : (
-                          <span style={{ color: 'var(--text-secondary)' }}>—</span>
-                        )}
                       </td>
                       <td style={{ fontSize: 13 }}>
                         {s.starts_at && s.ends_at ? (
@@ -464,56 +468,96 @@ export default function Subscriptions() {
                         )}
                       </td>
                       <td style={{ textAlign: 'right' }}>
-                        {s.status === 'pending' ? (
-                          <div style={{ display: 'inline-flex', gap: 8 }}>
-                            <button
-                              type="button"
-                              className="btn btn--success"
-                              style={{ padding: '8px', borderRadius: '8px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: 34 }}
-                              disabled={actionLoading === s.id + '_approve'}
-                              onClick={() => handleApprove(s.id)}
-                              title="Aprobar Suscripción"
-                            >
-                              {actionLoading === s.id + '_approve' ? <Loader2 className="spin" size={14} /> : <Check size={14} />}
-                            </button>
-                            <button
-                              type="button"
-                              className="btn btn--danger"
-                              style={{ padding: '8px', borderRadius: '8px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: 34 }}
-                              disabled={actionLoading === s.id + '_reject'}
-                              onClick={() => handleReject(s.id)}
-                              title="Rechazar y Eliminar"
-                            >
-                              {actionLoading === s.id + '_reject' ? <Loader2 className="spin" size={14} /> : <Trash2 size={14} />}
-                            </button>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end', width: '100%' }}>
+                          {/* Eye icon slot */}
+                          <div style={{ width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {getReceiptUrl(s) && (
+                              <button
+                                type="button"
+                                className="btn-eye-action"
+                                onClick={() => handleOpenReceiptModal(s)}
+                                title="Ver comprobante"
+                              >
+                                <Eye size={16} />
+                              </button>
+                            )}
                           </div>
-                        ) : (
-                          <div style={{ display: 'inline-flex', gap: 8 }}>
-                            <button
-                              type="button"
-                              className="btn btn--success"
-                              style={{ padding: '8px', borderRadius: '8px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: 34 }}
-                              disabled={actionLoading === s.id + '_renew'}
-                              onClick={() => handleRenew(s.id)}
-                              title="Renovar Suscripción"
-                            >
-                              {actionLoading === s.id + '_renew' ? <Loader2 className="spin" size={14} /> : <RefreshCw size={14} />}
-                            </button>
-                            <button
-                              type="button"
-                              className="btn btn--danger"
-                              style={{ padding: '8px', borderRadius: '8px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: 34 }}
-                              disabled={actionLoading === s.id + '_delete'}
-                              onClick={() => handleDelete(s.id)}
-                              title="Eliminar Suscripción"
-                            >
-                              {actionLoading === s.id + '_delete' ? <Loader2 className="spin" size={14} /> : <Trash2 size={14} />}
-                            </button>
+
+                          {/* Actions dropdown slot */}
+                          <div style={{ width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <div className="actions-dropdown-wrapper">
+                              <button 
+                                type="button"
+                                className={`actions-dropdown-trigger ${activeDropdown === s.id ? 'active' : ''}`}
+                                onClick={() => setActiveDropdown(activeDropdown === s.id ? null : s.id)}
+                                title="Acciones"
+                                disabled={actionLoading === s.id + '_approve' || actionLoading === s.id + '_reject' || actionLoading === s.id + '_renew' || actionLoading === s.id + '_delete'}
+                              >
+                                {actionLoading === s.id + '_approve' || actionLoading === s.id + '_reject' || actionLoading === s.id + '_renew' || actionLoading === s.id + '_delete' ? (
+                                  <Loader2 className="spin" size={16} />
+                                ) : (
+                                  <MoreVertical size={18} />
+                                )}
+                              </button>
+                              {activeDropdown === s.id && (
+                                <div className={`actions-dropdown-menu ${isLastRows ? 'open-up' : ''}`}>
+                                  {s.status === 'pending' ? (
+                                    <>
+                                      <button 
+                                        type="button"
+                                        className="actions-dropdown-item"
+                                        onClick={() => {
+                                          handleApprove(s.id);
+                                          setActiveDropdown(null);
+                                        }}
+                                      >
+                                        <Check size={14} style={{ color: '#16a34a' }} />
+                                        <span style={{ color: '#16a34a', fontWeight: 600 }}>Aprobar pago</span>
+                                      </button>
+                                      <button 
+                                        type="button"
+                                        className="actions-dropdown-item actions-dropdown-item--danger"
+                                        onClick={() => {
+                                          handleReject(s.id);
+                                          setActiveDropdown(null);
+                                        }}
+                                      >
+                                        <X size={14} style={{ color: '#dc2626' }} />
+                                        <span style={{ color: '#dc2626', fontWeight: 600 }}>Rechazar pago</span>
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <button 
+                                        type="button"
+                                        className="actions-dropdown-item"
+                                        onClick={() => {
+                                          handleRenew(s.id);
+                                          setActiveDropdown(null);
+                                        }}
+                                      >
+                                        <RefreshCw size={14} style={{ color: '#16a34a' }} />
+                                        <span style={{ color: '#16a34a', fontWeight: 600 }}>Renovar suscripción</span>
+                                      </button>
+                                      <button 
+                                        type="button"
+                                        className="actions-dropdown-item actions-dropdown-item--danger"
+                                        onClick={() => handleDelete(s)}
+                                      >
+                                        <Trash2 size={14} />
+                                        <span>Eliminar suscripción</span>
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        )}
+                        </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -540,7 +584,7 @@ export default function Subscriptions() {
                       </button>
                       {activeDropdown === s.id && (
                         <div className="actions-dropdown-menu">
-                          {s.status === 'pending' && (
+                          {s.status === 'pending' ? (
                             <>
                               <button 
                                 type="button"
@@ -556,7 +600,7 @@ export default function Subscriptions() {
                               
                               <button 
                                 type="button"
-                                className="actions-dropdown-item"
+                                className="actions-dropdown-item actions-dropdown-item--danger"
                                 onClick={() => {
                                   handleReject(s.id);
                                   setActiveDropdown(null);
@@ -566,33 +610,29 @@ export default function Subscriptions() {
                                 <span style={{ color: '#dc2626', fontWeight: 600 }}>Rechazar pago</span>
                               </button>
                             </>
+                          ) : (
+                            <>
+                              <button 
+                                type="button"
+                                className="actions-dropdown-item"
+                                onClick={() => {
+                                  handleRenew(s.id);
+                                  setActiveDropdown(null);
+                                }}
+                              >
+                                <RefreshCw size={14} style={{ color: '#16a34a' }} />
+                                <span style={{ color: '#16a34a', fontWeight: 600 }}>Renovar suscripción</span>
+                              </button>
+                              <button 
+                                type="button"
+                                className="actions-dropdown-item actions-dropdown-item--danger"
+                                onClick={() => handleDelete(s)}
+                              >
+                                <Trash2 size={14} />
+                                <span>Eliminar suscripción</span>
+                              </button>
+                            </>
                           )}
-                          
-                          <button 
-                            type="button"
-                            className="actions-dropdown-item"
-                            onClick={() => {
-                              handleRenew(s.id);
-                              setActiveDropdown(null);
-                            }}
-                          >
-                            <RefreshCw size={14} />
-                            <span>Renovar suscripción</span>
-                          </button>
-
-                          <div style={{ height: '1px', background: 'var(--border)', margin: '4px 0' }} />
-
-                          <button 
-                            type="button"
-                            className="actions-dropdown-item actions-dropdown-item--danger"
-                            onClick={() => {
-                              handleDelete(s.id);
-                              setActiveDropdown(null);
-                            }}
-                          >
-                            <Trash2 size={14} />
-                            <span>Eliminar</span>
-                          </button>
                         </div>
                       )}
                     </div>
@@ -655,16 +695,13 @@ export default function Subscriptions() {
                       </span>
                     </div>
 
-                    <div className="sub-mobile-card-row">
-                      <span className="sub-mobile-card-label">
+                    <div className="sub-mobile-card-row" style={{ alignItems: 'flex-start' }}>
+                      <span className="sub-mobile-card-label" style={{ marginTop: '2px' }}>
                         <CheckCircle2 size={13} style={{ opacity: 0.7 }} />
                         <span>Estado</span>
                       </span>
                       <span className="sub-mobile-card-val">
-                        <span className={`badge-status badge-status--${s.status}`}>
-                          <span className={`badge-status-dot badge-status-dot--${s.status}`} />
-                          {STATUS_LABELS[s.status] || s.status}
-                        </span>
+                        {renderStatusCell(s)}
                       </span>
                     </div>
                   </div>
@@ -962,47 +999,165 @@ export default function Subscriptions() {
         </div>
       )}
 
-      {/* Professional Confirmation Modal */}
+      {/* Standard Confirmation Modal (approve / reject / renew) */}
       {confirmModal && (
         <div className="modal-overlay" onClick={() => setConfirmModal(null)}>
           <div className="modal" style={{ maxWidth: 400, textAlign: 'center', padding: '32px 24px' }} onClick={e => e.stopPropagation()}>
             <div style={{
-              width: 56,
-              height: 56,
-              borderRadius: '50%',
+              width: 56, height: 56, borderRadius: '50%',
               backgroundColor: confirmModal.type === 'danger' ? 'var(--danger-light)' : 'var(--success-light)',
               color: confirmModal.type === 'danger' ? 'var(--danger-text)' : 'var(--success)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto 16px auto'
+              display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto'
             }}>
               {confirmModal.type === 'danger' ? <Trash2 size={24} /> : <Check size={24} />}
             </div>
-            
-            <h3 style={{ margin: '0 0 8px 0', fontSize: 18, fontWeight: 700, color: 'var(--text)' }}>
-              {confirmModal.title}
-            </h3>
-            
-            <p style={{ margin: '0 0 24px 0', fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-              {confirmModal.message}
-            </p>
-            
+            <h3 style={{ margin: '0 0 8px 0', fontSize: 18, fontWeight: 700, color: 'var(--text)' }}>{confirmModal.title}</h3>
+            <p style={{ margin: '0 0 24px 0', fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.5 }}>{confirmModal.message}</p>
             <div style={{ display: 'flex', gap: 12 }}>
-              <button className="btn btn--ghost" style={{ flex: 1 }} onClick={() => setConfirmModal(null)}>
-                Cancelar
-              </button>
-              <button 
-                className={`btn btn--${confirmModal.type === 'danger' ? 'danger' : 'success'}`} 
-                style={{ flex: 1 }} 
-                onClick={() => {
-                  confirmModal.onConfirm();
-                  setConfirmModal(null);
-                }}
-              >
-                Confirmar
-              </button>
+              <button className="btn btn--ghost" style={{ flex: 1 }} onClick={() => setConfirmModal(null)}>Cancelar</button>
+              <button className={`btn btn--${confirmModal.type === 'danger' ? 'danger' : 'success'}`} style={{ flex: 1 }}
+                onClick={() => { confirmModal.onConfirm(); setConfirmModal(null); }}>Confirmar</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════
+          MULTI-STEP DELETE MODAL — 3 pantallas de seguridad
+      ══════════════════════════════════════════════════════ */}
+      {deleteModal && (
+        <div className="modal-overlay" onClick={() => setDeleteModal(null)}>
+          <div className="modal delete-modal" onClick={e => e.stopPropagation()}>
+
+            {/* ── Step indicator ── */}
+            <div className="delete-modal-steps">
+              {[1, 2, 3].map(n => (
+                <div key={n} className={`delete-step-dot ${deleteModal.step >= n ? 'active' : ''} ${deleteModal.step > n ? 'done' : ''}`}/>
+              ))}
+            </div>
+
+            {/* ── STEP 1: Resumen de lo que se va a eliminar ── */}
+            {deleteModal.step === 1 && (
+              <>
+                <div className="delete-modal-icon">
+                  <Trash2 size={32}/>
+                </div>
+                <h3 className="delete-modal-title">Eliminar Suscripción</h3>
+                <p className="delete-modal-subtitle">Estás a punto de eliminar permanentemente la siguiente suscripción:</p>
+
+                {/* Subscription summary card */}
+                <div className="delete-summary-card">
+                  <div className="delete-summary-row">
+                    <span className="delete-summary-label">Usuario</span>
+                    <span className="delete-summary-value">{deleteModal.sub.user?.name || '—'}</span>
+                  </div>
+                  <div className="delete-summary-row">
+                    <span className="delete-summary-label">Email</span>
+                    <span className="delete-summary-value" style={{ fontSize: 12 }}>{deleteModal.sub.user?.email || '—'}</span>
+                  </div>
+                  <div className="delete-summary-row">
+                    <span className="delete-summary-label">Plan</span>
+                    <span className="delete-summary-value">{deleteModal.sub.plan?.name || deleteModal.sub.plan_id || '—'}</span>
+                  </div>
+                  <div className="delete-summary-row">
+                    <span className="delete-summary-label">Estado</span>
+                    <span className="delete-summary-value">{STATUS_LABELS[deleteModal.sub.status] || deleteModal.sub.status}</span>
+                  </div>
+                  <div className="delete-summary-row" style={{ borderBottom: 'none' }}>
+                    <span className="delete-summary-label">ID</span>
+                    <span className="delete-summary-value">#{deleteModal.sub.id}</span>
+                  </div>
+                </div>
+
+                {/* Warning 1 */}
+                <div className="delete-warning-box delete-warning-box--red">
+                  <AlertTriangle size={16}/>
+                  <span>Esta acción <strong>eliminará permanentemente</strong> el registro de la base de datos. No se puede deshacer.</span>
+                </div>
+
+                <div className="delete-modal-actions">
+                  <button className="btn btn--ghost" onClick={() => setDeleteModal(null)}>Cancelar</button>
+                  <button className="btn btn--danger" onClick={() => setDeleteModal(d => ({ ...d, step: 2 }))}>
+                    Continuar <span style={{ fontSize: 12, opacity: 0.8 }}>(1/3)</span>
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* ── STEP 2: Segunda advertencia + confirmación escrita ── */}
+            {deleteModal.step === 2 && (
+              <>
+                <div className="delete-modal-icon delete-modal-icon--orange">
+                  <AlertTriangle size={32}/>
+                </div>
+                <h3 className="delete-modal-title">¿Estás completamente seguro?</h3>
+                <p className="delete-modal-subtitle">Esta operación <strong>no tiene vuelta atrás</strong>. El historial de esta suscripción desaparecerá del sistema.</p>
+
+                {/* Warning 2 */}
+                <div className="delete-warning-box delete-warning-box--orange">
+                  <AlertCircle size={16}/>
+                  <span>Si el usuario tenía acceso activo, <strong>perderá su membresía</strong> de inmediato y no recibirá reembolso automático.</span>
+                </div>
+
+                {/* Typed confirmation */}
+                <div className="delete-type-confirm">
+                  <label className="delete-type-label">
+                    Para confirmar, escribe <strong>{DELETE_CONFIRM_WORD}</strong> en el campo:
+                  </label>
+                  <input
+                    type="text"
+                    className={`delete-type-input ${deleteModal.typed === DELETE_CONFIRM_WORD ? 'valid' : deleteModal.typed ? 'invalid' : ''}`}
+                    placeholder={DELETE_CONFIRM_WORD}
+                    value={deleteModal.typed}
+                    onChange={e => setDeleteModal(d => ({ ...d, typed: e.target.value.toUpperCase() }))}
+                    autoFocus
+                  />
+                </div>
+
+                <div className="delete-modal-actions">
+                  <button className="btn btn--ghost" onClick={() => setDeleteModal(d => ({ ...d, step: 1, typed: '' }))}>← Atrás</button>
+                  <button
+                    className="btn btn--danger"
+                    disabled={deleteModal.typed !== DELETE_CONFIRM_WORD}
+                    onClick={() => setDeleteModal(d => ({ ...d, step: 3 }))}
+                  >
+                    Continuar <span style={{ fontSize: 12, opacity: 0.8 }}>(2/3)</span>
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* ── STEP 3: Confirmación final ── */}
+            {deleteModal.step === 3 && (
+              <>
+                <div className="delete-modal-icon delete-modal-icon--final">
+                  <ShieldAlert size={32}/>
+                </div>
+                <h3 className="delete-modal-title" style={{ color: '#dc2626' }}>Última oportunidad</h3>
+                <p className="delete-modal-subtitle">Al presionar <strong>"Sí, eliminar ahora"</strong> el registro será borrado de forma permanente e irreversible del servidor.</p>
+
+                {/* Final warning */}
+                <div className="delete-warning-box delete-warning-box--red" style={{ marginBottom: 20 }}>
+                  <AlertTriangle size={16}/>
+                  <span>Suscripción de <strong>{deleteModal.sub.user?.name}</strong> · Plan <strong>{deleteModal.sub.plan?.name || '—'}</strong> · ID #{deleteModal.sub.id}</span>
+                </div>
+
+                <div className="delete-modal-actions">
+                  <button className="btn btn--ghost" onClick={() => setDeleteModal(null)} disabled={actionLoading === deleteModal.sub.id + '_delete'}>Cancelar todo</button>
+                  <button
+                    className="btn btn--danger"
+                    disabled={actionLoading === deleteModal.sub.id + '_delete'}
+                    onClick={() => executeDelete(deleteModal.sub.id)}
+                  >
+                    {actionLoading === deleteModal.sub.id + '_delete'
+                      ? <><Loader2 size={14} className="spin"/> Eliminando...</>
+                      : <><Trash2 size={14}/> Sí, eliminar ahora</>
+                    }
+                  </button>
+                </div>
+              </>
+            )}
+
           </div>
         </div>
       )}
