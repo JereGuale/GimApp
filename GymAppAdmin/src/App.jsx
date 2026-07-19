@@ -13,6 +13,7 @@ import Banners from './pages/Banners';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 import SubscriptionPlans from './pages/SubscriptionPlans';
+import Banks from './pages/Banks';
 
 function PrivateRoute({ children }) {
   const { token } = useAuth();
@@ -110,6 +111,14 @@ export default function App() {
               element={
                 <PrivateRoute>
                   <Reports />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/bancos"
+              element={
+                <PrivateRoute>
+                  <Banks />
                 </PrivateRoute>
               }
             />

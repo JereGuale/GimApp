@@ -19,7 +19,8 @@ import {
   Moon,
   ChevronRight,
   Dumbbell,
-  Menu
+  Menu,
+  Landmark
 } from 'lucide-react';
 import './Layout.css';
 
@@ -52,6 +53,7 @@ const navGroups = [
   {
     title: 'Sistema',
     items: [
+      { to: '/bancos', icon: Landmark, label: 'Cuentas Bancarias' },
       { to: '/ajustes', icon: Settings, label: 'Ajustes' },
     ]
   }

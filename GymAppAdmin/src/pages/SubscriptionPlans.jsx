@@ -191,7 +191,6 @@ export default function SubscriptionPlans() {
             <table>
               <thead>
                 <tr>
-                  <th>ID</th>
                   <th>Nombre</th>
                   <th>Precio</th>
                   <th>Duración</th>
@@ -203,7 +202,6 @@ export default function SubscriptionPlans() {
               <tbody>
                 {paginatedPlans.map(plan => (
                   <tr key={plan.id}>
-                    <td style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{plan.id}</td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <span 

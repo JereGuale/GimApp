@@ -45,6 +45,28 @@ export default function CartScreen() {
   // Custom Alert State
   const [customAlert, setCustomAlert] = React.useState({ visible: false, title: '', message: '' });
 
+  // Confirmation Modal State
+  const [confirmModal, setConfirmModal] = React.useState({
+    visible: false,
+    title: '',
+    message: '',
+    onConfirm: null,
+    isDestructive: false
+  });
+
+  const showConfirm = (title, message, onConfirm, isDestructive = false) => {
+    setConfirmModal({
+      visible: true,
+      title,
+      message,
+      onConfirm: () => {
+        onConfirm();
+        setConfirmModal(prev => ({ ...prev, visible: false }));
+      },
+      isDestructive
+    });
+  };
+
   // Animar apertura y cargar oferta activa
   useEffect(() => {
     Animated.parallel([
@@ -191,17 +213,12 @@ export default function CartScreen() {
 
   const handleRemove = (item) => {
     const itemKey = item.key || item.product.id;
-    if (Platform.OS === 'web') {
-      const confirm = window.confirm(`¿Eliminar ${item.product.name}?`);
-      if (confirm) {
-        removeFromCart(itemKey);
-      }
-    } else {
-      Alert.alert('Eliminar', `¿Eliminar ${item.product.name}?`, [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Eliminar', style: 'destructive', onPress: () => removeFromCart(itemKey) }
-      ]);
-    }
+    showConfirm(
+      'Eliminar producto',
+      `¿Estás seguro de que deseas eliminar "${item.product.name}" del carrito?`,
+      () => removeFromCart(itemKey),
+      true
+    );
   };
 
   const getImage = (product) => {
@@ -250,7 +267,7 @@ export default function CartScreen() {
           
           {item.product.selectedOption ? (
             <Text style={[styles.itemSubtitle, { color: '#FB923C', fontWeight: 'bold', marginTop: 2 }]}>
-              Variación: {item.product.selectedOption}
+              {['S', 'M', 'L', 'XL', 'XXL'].includes(item.product.selectedOption) ? 'Talla' : 'Presentación'}: {item.product.selectedOption}
             </Text>
           ) : null}
 
@@ -334,15 +351,12 @@ export default function CartScreen() {
           <View style={styles.clearRow}>
             <TouchableOpacity
               onPress={() => {
-                if (Platform.OS === 'web') {
-                  const confirm = window.confirm('¿Eliminar todo del carrito?');
-                  if (confirm) clearCart();
-                } else {
-                  Alert.alert('Vaciar', '¿Eliminar todo?', [
-                    { text: 'Cancelar', style: 'cancel' },
-                    { text: 'Vaciar', style: 'destructive', onPress: clearCart }
-                  ]);
-                }
+                showConfirm(
+                  'Vaciar carrito',
+                  '¿Estás seguro de que deseas eliminar todos los productos del carrito?',
+                  clearCart,
+                  true
+                );
               }}
               style={styles.clearBtn}
             >
@@ -422,6 +436,19 @@ export default function CartScreen() {
         title={customAlert.title}
         message={customAlert.message}
         onClose={() => setCustomAlert({ ...customAlert, visible: false })}
+      />
+
+      <CustomAlertModal
+        visible={confirmModal.visible}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        showCancel
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        isDestructive={confirmModal.isDestructive}
+        onConfirm={confirmModal.onConfirm}
+        onClose={() => setConfirmModal(prev => ({ ...prev, visible: false }))}
+        type="question"
       />
 
       <BillingModal

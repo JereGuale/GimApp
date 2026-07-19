@@ -125,7 +125,6 @@ export default function Categories() {
             <table>
               <thead>
                 <tr>
-                  <th>ID</th>
                   <th>Nombre</th>
                   <th>Productos Asignados</th>
                   <th>Acciones</th>
@@ -134,7 +133,6 @@ export default function Categories() {
               <tbody>
                 {paginatedCategories.map(c => (
                   <tr key={c.id}>
-                    <td style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{c.id}</td>
                     <td style={{ fontWeight: 600, color: 'var(--text)' }}>{c.name}</td>
                     <td style={{ color: 'var(--text-secondary)' }}>{c.products?.length ?? 0} productos</td>
                     <td>

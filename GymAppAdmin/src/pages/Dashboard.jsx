@@ -393,7 +393,7 @@ export default function Dashboard() {
                   <table className="subs-table">
                     <thead>
                       <tr>
-                        <th>Usuario</th>
+                        <th style={{ minWidth: 200 }}>Usuario</th>
                         <th>Plan</th>
                         <th>Estado</th>
                         <th>Fecha</th>
@@ -402,7 +402,7 @@ export default function Dashboard() {
                     <tbody>
                       {recentSubs.map(s => (
                         <tr key={s.id}>
-                          <td>{renderUserCell(s.user)}</td>
+                          <td style={{ minWidth: 200 }}>{renderUserCell(s.user)}</td>
                           <td style={{ fontWeight: 600 }}>{s.plan?.name || s.plan_id || '—'}</td>
                           <td>
                             <span className={`badge-status badge-status--${s.status === 'approved' ? 'active' : s.status}`}>

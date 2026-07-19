@@ -27,6 +27,7 @@
   overflow: hidden;
   margin-bottom: 24px;
   transition: border-color 0.2s ease;
+  min-height: 220px;
 }
 
 .products-table {
@@ -214,6 +215,24 @@
 
 :root.dark .actions-dropdown-menu {
   box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.5), 0 8px 16px -6px rgba(0, 0, 0, 0.3);
+}
+
+.actions-dropdown-menu.open-up {
+  top: auto;
+  bottom: 105%;
+  transform-origin: bottom right;
+  animation: dropdownSlideUp 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes dropdownSlideUp {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 
 @keyframes dropdownSlideIn {

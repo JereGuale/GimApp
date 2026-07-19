@@ -16,13 +16,15 @@ class Product extends Model
         'category_id',
         'stock',
         'is_featured',
-        'status'
+        'status',
+        'options'
     ];
 
     protected $casts = [
         'price' => 'decimal:2',
         'is_featured' => 'boolean',
-        'images' => 'array'
+        'images' => 'array',
+        'options' => 'array'
     ];
 
     protected static function booted()

@@ -29,8 +29,8 @@ import {
 import '../components/Layout.css';
 import './Subscriptions.css';
 
-const STATUS_LABELS = { active: 'Activa', pending: 'Pendiente', cancelled: 'Cancelada', expired: 'Expirada' };
-const STATUS_BADGE = { active: 'active', pending: 'pending', cancelled: 'cancelled', expired: 'expired' };
+const STATUS_LABELS = { active: 'Activa', pending: 'Pendiente', cancelled: 'Cancelada', expired: 'Expirada', rejected: 'Rechazado' };
+const STATUS_BADGE = { active: 'active', pending: 'pending', cancelled: 'cancelled', expired: 'expired', rejected: 'rejected' };
 
 export default function Subscriptions() {
   const [subs, setSubs] = useState([]);
@@ -51,6 +51,10 @@ export default function Subscriptions() {
 
   // Standard Confirmation Modal (approve/reject/renew)
   const [confirmModal, setConfirmModal] = useState(null);
+  
+  // Custom Rejection Reason Modal
+  const [rejectModal, setRejectModal] = useState(null);
+  const [rejectionReason, setRejectionReason] = useState('');
 
   // Multi-step Delete Modal
   const [deleteModal, setDeleteModal] = useState(null); // { sub, step: 1|2|3, typed: '' }
@@ -152,7 +156,11 @@ export default function Subscriptions() {
         {s.status === 'rejected' && s.rejection_reason && (
           <div className="status-rejection-info">
             <AlertCircle size={12} className="status-rejection-info-icon" />
-            <span>Motivo: {s.rejection_reason}</span>
+            <span className="rejection-text-truncated">Motivo: {s.rejection_reason}</span>
+            <div className="tooltip-bubble">
+              <div style={{ fontWeight: 700, color: 'var(--primary)', marginBottom: 4 }}>Motivo del Rechazo</div>
+              <div>{s.rejection_reason}</div>
+            </div>
           </div>
         )}
       </div>
@@ -225,19 +233,21 @@ export default function Subscriptions() {
   };
 
   const handleReject = (id) => {
-    setConfirmModal({
-      title: '¿Rechazar Suscripción?',
-      message: '¿Estás seguro de que deseas rechazar y eliminar esta solicitud de membresía? Esta acción es irreversible.',
-      type: 'danger',
-      onConfirm: () => executeReject(id)
-    });
+    setRejectionReason('');
+    setRejectModal(id);
   };
 
-  const executeReject = async (id) => {
+  const executeReject = async (e) => {
+    if (e) e.preventDefault();
+    const id = rejectModal;
+    setRejectModal(null);
     setActionLoading(id + '_reject');
     setError(''); setSuccess('');
     try {
-      await apiFetch(`/trainer/subscriptions/${id}/reject`, { method: 'POST' });
+      await apiFetch(`/trainer/subscriptions/${id}/reject`, { 
+        method: 'POST',
+        body: JSON.stringify({ reason: rejectionReason || 'Comprobante no válido' })
+      });
       setSuccess('Suscripción rechazada');
       fetchSubs();
     } catch (e) { setError(e.message); }
@@ -419,8 +429,7 @@ export default function Subscriptions() {
               <table className="subs-table">
                 <thead>
                   <tr>
-                    <th>#</th>
-                    <th>Usuario</th>
+                    <th style={{ minWidth: 200 }}>Usuario</th>
                     <th>Plan</th>
                     <th>Estado</th>
                     <th>Método</th>
@@ -433,8 +442,7 @@ export default function Subscriptions() {
                     const isLastRows = index >= paginatedItems.length - 2;
                     return (
                       <tr key={s.id}>
-                      <td style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{s.id}</td>
-                      <td>{renderUserCell(s.user)}</td>
+                      <td style={{ minWidth: 200 }}>{renderUserCell(s.user)}</td>
                       <td style={{ fontWeight: 600 }}>{s.plan?.name || s.plan_id || '—'}</td>
                       <td>
                         {renderStatusCell(s)}
@@ -995,6 +1003,78 @@ export default function Subscriptions() {
               </div>
             </div>
             
+          </div>
+        </div>
+      )}
+
+      {/* Custom Prompt Modal for Rejecting Subscriptions */}
+      {rejectModal && (
+        <div className="modal-overlay" onClick={() => setRejectModal(null)}>
+          <div className="modal" style={{ maxWidth: 420, padding: 28 }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--text)' }}>Rechazar Suscripción</h3>
+              <button className="btn btn--ghost" style={{ padding: 6, borderRadius: '50%' }} onClick={() => setRejectModal(null)}><X size={16} /></button>
+            </div>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 16px 0', lineHeight: 1.4 }}>
+              Ingresa el motivo del rechazo para notificar al usuario. Este se mostrará en su perfil de la aplicación móvil:
+            </p>
+            
+            <form onSubmit={executeReject}>
+              <div className="form-group" style={{ marginBottom: 12 }}>
+                <textarea 
+                  value={rejectionReason}
+                  onChange={e => {
+                    const val = e.target.value;
+                    const words = val.trim() === '' ? [] : val.trim().split(/\s+/);
+                    if (words.length <= 100 || val.length < rejectionReason.length) {
+                      setRejectionReason(val);
+                    }
+                  }}
+                  placeholder="Ej. Comprobante de pago ilegible, los datos no coinciden, etc."
+                  rows={3}
+                  className="rejection-textarea"
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border)',
+                    backgroundColor: 'var(--bg)',
+                    color: 'var(--text)',
+                    fontSize: '14px',
+                    fontFamily: 'inherit',
+                    resize: 'vertical'
+                  }}
+                  required
+                  autoFocus
+                />
+                <div style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  fontSize: '11px', 
+                  color: 'var(--text-secondary)',
+                  marginTop: '4px' 
+                }}>
+                  <span>Máximo 100 palabras</span>
+                  <span style={{ 
+                    fontWeight: 'bold',
+                    color: (rejectionReason.trim() === '' ? 0 : rejectionReason.trim().split(/\s+/).length) >= 100 ? '#ef4444' : 'var(--text-secondary)'
+                  }}>
+                    {rejectionReason.trim() === '' ? 0 : rejectionReason.trim().split(/\s+/).length} / 100
+                  </span>
+                </div>
+              </div>
+              <div className="modal-actions" style={{ display: 'flex', gap: 12 }}>
+                <button type="button" className="btn btn--ghost" style={{ flex: 1 }} onClick={() => setRejectModal(null)}>Cancelar</button>
+                <button 
+                  type="submit" 
+                  className="btn btn--danger" 
+                  style={{ flex: 1 }}
+                  disabled={rejectionReason.trim().length < 3 || (rejectionReason.trim() === '' ? 0 : rejectionReason.trim().split(/\s+/).length) > 100}
+                >
+                  Rechazar Suscripción
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

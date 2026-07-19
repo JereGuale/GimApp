@@ -95,49 +95,55 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // Create subscription plans
-        SubscriptionPlan::create([
-            'name' => 'Plan Básico',
-            'description' => 'Acceso básico al gimnasio',
-            'price' => 20.00,
-            'duration' => 'monthly',
-            'features' => json_encode(['Acceso al gimnasio', 'Horario limitado']),
-            'icon' => 'barbell-outline',
-            'color' => '#22D3EE',
-            'is_best_value' => false
-        ]);
+        SubscriptionPlan::updateOrCreate(
+            ['name' => 'Plan Básico'],
+            [
+                'description' => 'Acceso básico al gimnasio',
+                'price' => 20.00,
+                'duration' => 'monthly',
+                'features' => json_encode(['Acceso al gimnasio', 'Horario limitado']),
+                'icon' => 'barbell-outline',
+                'color' => '#22D3EE',
+                'is_best_value' => false
+            ]
+        );
 
-        SubscriptionPlan::create([
-            'name' => 'Plan Pro',
-            'description' => 'El plan más popular con todo incluido',
-            'price' => 35.00,
-            'duration' => 'monthly',
-            'features' => json_encode([
-                'Acceso ilimitado',
-                'Clases grupales',
-                'Entrenador personal (2 sesiones)',
-                'Descuento en productos',
-                'Oferta Carnaval incluida'
-            ]),
-            'icon' => 'fitness',
-            'color' => '#FB923C',
-            'is_best_value' => true
-        ]);
+        SubscriptionPlan::updateOrCreate(
+            ['name' => 'Plan Pro'],
+            [
+                'description' => 'El plan más popular con todo incluido',
+                'price' => 35.00,
+                'duration' => 'monthly',
+                'features' => json_encode([
+                    'Acceso ilimitado',
+                    'Clases grupales',
+                    'Entrenador personal (2 sesiones)',
+                    'Descuento en productos',
+                    'Oferta Carnaval incluida'
+                ]),
+                'icon' => 'fitness',
+                'color' => '#FB923C',
+                'is_best_value' => true
+            ]
+        );
 
-        SubscriptionPlan::create([
-            'name' => 'Plan Elite',
-            'description' => 'Experiencia premium completa',
-            'price' => 50.00,
-            'duration' => 'monthly',
-            'features' => json_encode([
-                'Todo del Plan Pro',
-                'Entrenador personal ilimitado',
-                'Nutricionista',
-                'Zona VIP'
-            ]),
-            'icon' => 'trophy',
-            'color' => '#A78BFA',
-            'is_best_value' => false
-        ]);
+        SubscriptionPlan::updateOrCreate(
+            ['name' => 'Plan Elite'],
+            [
+                'description' => 'Experiencia premium completa',
+                'price' => 50.00,
+                'duration' => 'monthly',
+                'features' => json_encode([
+                    'Todo del Plan Pro',
+                    'Entrenador personal ilimitado',
+                    'Nutricionista',
+                    'Zona VIP'
+                ]),
+                'icon' => 'trophy',
+                'color' => '#A78BFA',
+                'is_best_value' => false
+            ]
+        );
 
         Location::updateOrCreate(
         ['name' => 'Sede Manta Central'],

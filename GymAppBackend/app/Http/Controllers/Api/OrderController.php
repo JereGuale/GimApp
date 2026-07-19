@@ -23,6 +23,7 @@ class OrderController extends Controller
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|integer|exists:products,id',
             'items.*.quantity' => 'required|integer|min:1',
+            'items.*.selected_option' => 'nullable|string',
             'payment_method' => 'required|in:transfer,card',
             'notes' => 'nullable|string|max:500',
             'billing_name' => 'nullable|string|max:255',
@@ -65,6 +66,7 @@ class OrderController extends Controller
                 'price' => (float) $product->price,
                 'quantity' => $item['quantity'],
                 'image' => $product->image_url,
+                'selected_option' => $item['selected_option'] ?? null,
                 'line_total' => $lineTotal,
             ];
         }

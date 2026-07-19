@@ -75,7 +75,8 @@ class ProductController extends Controller
             'is_featured' => 'nullable|boolean',
             'status' => 'nullable|string|in:active,inactive',
             'images' => 'nullable|array',
-            'images.*' => 'nullable' // Allows both string and UploadedFile
+            'images.*' => 'nullable', // Allows both string and UploadedFile
+            'options' => 'nullable|array'
         ]);
 
         Log::info('Product store request received', [
@@ -155,6 +156,14 @@ class ProductController extends Controller
         $validated['images'] = !empty($imageUrls) ? $imageUrls : null;
         $validated['status'] = $validated['status'] ?? 'active';
 
+        if ($request->has('options')) {
+            $options = $request->input('options');
+            if (is_array($options)) {
+                $filteredOptions = array_values(array_filter($options, fn($val) => !empty($val) && trim($val) !== ''));
+                $validated['options'] = !empty($filteredOptions) ? $filteredOptions : null;
+            }
+        }
+
         $product = Product::create($validated);
         $product->image_url = $product->image_url;
         return response()->json($product->load('category'), 201);
@@ -180,7 +189,8 @@ class ProductController extends Controller
             'category_id' => 'sometimes|required|exists:categories,id',
             'stock' => 'nullable|integer|min:0',
             'is_featured' => 'nullable|boolean',
-            'status' => 'nullable|string|in:active,inactive'
+            'status' => 'nullable|string|in:active,inactive',
+            'options' => 'nullable|array'
         ]);
 
         Log::info('Product update request received', [
@@ -239,6 +249,14 @@ class ProductController extends Controller
             // If they explicitly sent an empty images list, clear them
             $validated['image'] = 'https://via.placeholder.com/400x400?text=No+Image';
             $validated['images'] = null;
+        }
+
+        if ($request->has('options')) {
+            $options = $request->input('options');
+            if (is_array($options)) {
+                $filteredOptions = array_values(array_filter($options, fn($val) => !empty($val) && trim($val) !== ''));
+                $validated['options'] = !empty($filteredOptions) ? $filteredOptions : null;
+            }
         }
 
         $product->update($validated);

@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import {
     Modal,
     View,
@@ -7,22 +7,20 @@ import {
     TouchableOpacity,
     Animated,
     Dimensions,
-    Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
+import { useTheme } from "../context/ThemeContext";
 
 const { width: SCREEN_W } = Dimensions.get("window");
+const CARD_W = Math.min(SCREEN_W - 32, 400);
 
 /**
  * OrderConfirmationModal
- * Ventana flotante de confirmacion de pedido / suscripcion.
- *
  * Props:
  *  visible      {boolean}
  *  type         {"order" | "subscription"}   default "order"
  *  onClose      {function}
- *  onGoToOrders {function}  optional — navega a Mis Compras
+ *  onGoToOrders {function}  optional
  */
 export default function OrderConfirmationModal({
     visible,
@@ -30,43 +28,52 @@ export default function OrderConfirmationModal({
     onClose,
     onGoToOrders,
 }) {
-    const scaleAnim = useRef(new Animated.Value(0.7)).current;
+    const { isDark } = useTheme();
+
+    const scaleAnim   = useRef(new Animated.Value(0.75)).current;
     const opacityAnim = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
         if (visible) {
             Animated.parallel([
                 Animated.spring(scaleAnim, {
-                    toValue: 1,
-                    useNativeDriver: true,
-                    tension: 80,
-                    friction: 7,
+                    toValue: 1, useNativeDriver: true, tension: 85, friction: 7,
                 }),
                 Animated.timing(opacityAnim, {
-                    toValue: 1,
-                    duration: 220,
-                    useNativeDriver: true,
+                    toValue: 1, duration: 200, useNativeDriver: true,
                 }),
             ]).start();
         } else {
-            scaleAnim.setValue(0.7);
+            scaleAnim.setValue(0.75);
             opacityAnim.setValue(0);
         }
     }, [visible]);
 
     const isSubscription = type === "subscription";
 
-    const title = isSubscription ? "¡Suscripción enviada!" : "¡Pedido recibido!";
-    const emoji = isSubscription ? "💳" : "🛍️";
+    const title   = isSubscription ? "¡Suscripción enviada!" : "¡Pedido recibido!";
     const mainMsg = isSubscription
         ? "Tu comprobante de pago fue enviado exitosamente."
         : "Tu pedido fue registrado y el comprobante enviado con éxito.";
     const subMsg =
         "Pronto te enviaremos más detalles a tu WhatsApp una vez que el administrador lo revise y apruebe. ¡Gracias por tu preferencia!";
-    const accentColor = isSubscription ? "#5B3DF5" : "#FF6A1A";
-    const gradColors = isSubscription
-        ? ["#1E1B4B", "#312E81"]
-        : ["#1C0A00", "#431407"];
+    const btnLabel = isSubscription ? "Ver mi suscripción" : "Ver mis compras";
+    const btnIcon  = isSubscription ? "card-outline" : "bag-handle-outline";
+
+    // ── Theme tokens ────────────────────────────────────────────────────────
+    const bg      = isDark ? "#0B0F14" : "#FFFFFF";
+    const surface = isDark ? "#141821" : "#F2F2F2";
+    const border  = isDark ? "#1F2937" : "#E5E5E5";
+    const textPri = isDark ? "#F1F5F9" : "#181818";
+    const textSec = isDark ? "#6B7280" : "#6B6B6B";
+    const accent  = isDark ? "#FB923C" : "#000000"; // orange in dark, black in light
+    const accentFg = isDark ? "#000000" : "#FFFFFF";
+
+    const STEPS = [
+        { icon: "document-text-outline", label: "Pedido\nregistrado",   done: true  },
+        { icon: "time-outline",           label: "En\nrevisión",        done: false },
+        { icon: "checkmark-circle-outline", label: "Aprobación\npendiente", done: false },
+    ];
 
     return (
         <Modal
@@ -88,98 +95,121 @@ export default function OrderConfirmationModal({
                 <Animated.View
                     style={[
                         styles.card,
-                        { transform: [{ scale: scaleAnim }], opacity: opacityAnim },
+                        {
+                            backgroundColor: bg,
+                            shadowColor: isDark ? "#000" : "#94A3B8",
+                            transform: [{ scale: scaleAnim }],
+                            opacity: opacityAnim,
+                        },
                     ]}
                 >
-                    <LinearGradient
-                        colors={gradColors}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={styles.cardInner}
-                    >
-                        {/* Close button */}
-                        <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
-                            <Ionicons name="close" size={20} color="rgba(255,255,255,0.6)" />
+                    {/* ── Top accent bar ── */}
+                    <View style={[styles.topBar, { backgroundColor: accent }]} />
+
+                    <View style={styles.cardInner}>
+
+                        {/* ── Close ── */}
+                        <TouchableOpacity
+                            style={[styles.closeBtn, { backgroundColor: surface }]}
+                            onPress={onClose}
+                        >
+                            <Ionicons name="close" size={18} color={textSec} />
                         </TouchableOpacity>
 
-                        {/* Icon circle */}
-                        <View style={[styles.iconCircle, { borderColor: accentColor + "44", backgroundColor: accentColor + "22" }]}>
-                            <Text style={styles.emoji}>{emoji}</Text>
+                        {/* ── Success icon ── */}
+                        <View style={[styles.iconCircle, { backgroundColor: surface, borderColor: border }]}>
+                            <Ionicons
+                                name={isSubscription ? "card-outline" : "bag-handle-outline"}
+                                size={36}
+                                color={accent}
+                            />
                         </View>
 
-                        {/* Checkmark badge */}
-                        <View style={[styles.checkBadge, { backgroundColor: "#22C55E" }]}>
-                            <Ionicons name="checkmark" size={18} color="#fff" />
+                        {/* ── Check badge ── */}
+                        <View style={[styles.checkBadge, { backgroundColor: "#22C55E", borderColor: bg }]}>
+                            <Ionicons name="checkmark" size={14} color="#FFF" />
                         </View>
 
-                        {/* Title */}
-                        <Text style={styles.title}>{title}</Text>
+                        {/* ── Title ── */}
+                        <Text style={[styles.title, { color: textPri }]}>{title}</Text>
+                        <Text style={[styles.mainMsg, { color: textSec }]}>{mainMsg}</Text>
 
-                        {/* Main message */}
-                        <Text style={styles.mainMsg}>{mainMsg}</Text>
-
-                        {/* WhatsApp notice */}
-                        <View style={[styles.waBox, { borderColor: accentColor + "55", backgroundColor: accentColor + "15" }]}>
+                        {/* ── WhatsApp notice ── */}
+                        <View style={[styles.waBox, { backgroundColor: surface, borderColor: border }]}>
                             <Ionicons name="logo-whatsapp" size={18} color="#25D366" />
-                            <Text style={styles.waText}>{subMsg}</Text>
+                            <Text style={[styles.waText, { color: textSec }]}>{subMsg}</Text>
                         </View>
 
-                        {/* Steps */}
-                        <View style={styles.stepsRow}>
-                            {[
-                                { icon: "document-text-outline", label: "Pedido\nregistrado" },
-                                { icon: "time-outline", label: "En\nrevisión" },
-                                { icon: "checkmark-circle-outline", label: "Aprobación\npendiente" },
-                            ].map((step, i, arr) => (
+                        {/* ── Steps ── */}
+                        <View style={[styles.stepsCard, { backgroundColor: surface, borderColor: border }]}>
+                            {STEPS.map((step, i, arr) => (
                                 <React.Fragment key={i}>
                                     <View style={styles.step}>
-                                        <View style={[styles.stepIcon, { backgroundColor: i === 0 ? "#22C55E22" : "rgba(255,255,255,0.08)", borderColor: i === 0 ? "#22C55E" : "rgba(255,255,255,0.15)" }]}>
-                                            <Ionicons name={step.icon} size={16} color={i === 0 ? "#22C55E" : "rgba(255,255,255,0.5)"} />
+                                        <View style={[
+                                            styles.stepIcon,
+                                            {
+                                                backgroundColor: step.done
+                                                    ? (isDark ? "rgba(251,146,60,0.12)" : "rgba(0,0,0,0.06)")
+                                                    : "transparent",
+                                                borderColor: step.done ? accent : border,
+                                            }
+                                        ]}>
+                                            <Ionicons
+                                                name={step.icon}
+                                                size={16}
+                                                color={step.done ? accent : (isDark ? "#374151" : "#CCCCCC")}
+                                            />
                                         </View>
-                                        <Text style={[styles.stepLabel, { color: i === 0 ? "#fff" : "rgba(255,255,255,0.45)" }]}>{step.label}</Text>
+                                        <Text style={[
+                                            styles.stepLabel,
+                                            { color: step.done ? textPri : textSec, fontWeight: step.done ? "800" : "500" }
+                                        ]}>
+                                            {step.label}
+                                        </Text>
                                     </View>
                                     {i < arr.length - 1 && (
-                                        <View style={styles.stepLine} />
+                                        <View style={[styles.stepLine, { backgroundColor: border }]} />
                                     )}
                                 </React.Fragment>
                             ))}
                         </View>
 
-                        {/* Buttons */}
+                        {/* ── Buttons ── */}
                         <View style={styles.btns}>
                             {onGoToOrders && (
                                 <TouchableOpacity
-                                    style={[styles.btn, { backgroundColor: accentColor }]}
+                                    style={[styles.btnPrimary, { backgroundColor: accent }]}
                                     onPress={onGoToOrders}
                                     activeOpacity={0.85}
                                 >
-                                    <Ionicons name="bag-handle-outline" size={16} color="#fff" />
-                                    <Text style={styles.btnText}>
-                                        {isSubscription ? "Ver mi suscripción" : "Ver mis compras"}
+                                    <Ionicons name={btnIcon} size={17} color={accentFg} />
+                                    <Text style={[styles.btnPrimaryText, { color: accentFg }]}>
+                                        {btnLabel}
                                     </Text>
                                 </TouchableOpacity>
                             )}
                             <TouchableOpacity
-                                style={styles.btnOutline}
+                                style={[styles.btnSecondary, { borderColor: border, backgroundColor: surface }]}
                                 onPress={onClose}
-                                activeOpacity={0.85}
+                                activeOpacity={0.8}
                             >
-                                <Text style={styles.btnOutlineText}>Seguir comprando</Text>
+                                <Text style={[styles.btnSecondaryText, { color: textSec }]}>
+                                    Seguir comprando
+                                </Text>
                             </TouchableOpacity>
                         </View>
-                    </LinearGradient>
+
+                    </View>
                 </Animated.View>
             </View>
         </Modal>
     );
 }
 
-const CARD_W = Math.min(SCREEN_W - 32, 400);
-
 const styles = StyleSheet.create({
     backdrop: {
         ...StyleSheet.absoluteFillObject,
-        backgroundColor: "rgba(0,0,0,0.75)",
+        backgroundColor: "rgba(0,0,0,0.78)",
     },
     centeredWrapper: {
         ...StyleSheet.absoluteFillObject,
@@ -191,61 +221,70 @@ const styles = StyleSheet.create({
         width: CARD_W,
         borderRadius: 28,
         overflow: "hidden",
-        shadowColor: "#000",
         shadowOffset: { width: 0, height: 20 },
-        shadowOpacity: 0.5,
+        shadowOpacity: 0.25,
         shadowRadius: 30,
         elevation: 20,
     },
+
+    // Accent bar at top
+    topBar: { height: 4 },
+
     cardInner: {
-        padding: 28,
+        padding: 24,
         alignItems: "center",
     },
+
+    // Close
     closeBtn: {
         alignSelf: "flex-end",
-        padding: 4,
-        marginBottom: 8,
-    },
-    iconCircle: {
-        width: 88,
-        height: 88,
-        borderRadius: 44,
-        borderWidth: 2,
+        width: 32,
+        height: 32,
+        borderRadius: 10,
         alignItems: "center",
         justifyContent: "center",
-        marginBottom: 12,
+        marginBottom: 16,
     },
-    emoji: {
-        fontSize: 40,
+
+    // Icon
+    iconCircle: {
+        width: 80,
+        height: 80,
+        borderRadius: 24,
+        borderWidth: 1.5,
+        alignItems: "center",
+        justifyContent: "center",
+        marginBottom: 10,
     },
     checkBadge: {
         position: "absolute",
-        top: 80,
-        right: CARD_W / 2 - 56,
-        width: 28,
-        height: 28,
-        borderRadius: 14,
+        top: 82,
+        right: CARD_W / 2 - 54,
+        width: 26,
+        height: 26,
+        borderRadius: 13,
         alignItems: "center",
         justifyContent: "center",
         borderWidth: 2.5,
-        borderColor: "#111",
     },
+
+    // Text
     title: {
-        fontSize: 22,
+        fontSize: 21,
         fontWeight: "900",
-        color: "#FFFFFF",
         textAlign: "center",
-        marginBottom: 8,
+        marginBottom: 6,
         letterSpacing: -0.3,
-        fontFamily: Platform.OS === "web" ? "Plus Jakarta Sans, sans-serif" : undefined,
     },
     mainMsg: {
         fontSize: 13,
-        color: "rgba(255,255,255,0.75)",
         textAlign: "center",
         lineHeight: 18,
         marginBottom: 16,
+        fontWeight: "500",
     },
+
+    // WhatsApp box
     waBox: {
         flexDirection: "row",
         alignItems: "flex-start",
@@ -253,75 +292,70 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderRadius: 14,
         padding: 12,
-        marginBottom: 20,
+        marginBottom: 16,
         width: "100%",
     },
     waText: {
         flex: 1,
         fontSize: 12,
-        color: "rgba(255,255,255,0.8)",
         lineHeight: 17,
+        fontWeight: "500",
     },
-    stepsRow: {
+
+    // Steps
+    stepsCard: {
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
-        marginBottom: 24,
-        gap: 0,
+        borderWidth: 1,
+        borderRadius: 16,
+        paddingVertical: 14,
+        paddingHorizontal: 10,
+        marginBottom: 20,
         width: "100%",
     },
-    step: {
-        alignItems: "center",
-        gap: 6,
-        flex: 1,
-    },
+    step: { alignItems: "center", gap: 6, flex: 1 },
     stepIcon: {
         width: 36,
         height: 36,
-        borderRadius: 18,
+        borderRadius: 11,
         borderWidth: 1.5,
         alignItems: "center",
         justifyContent: "center",
     },
     stepLabel: {
         fontSize: 9,
-        fontWeight: "700",
         textAlign: "center",
         lineHeight: 12,
     },
     stepLine: {
         height: 1.5,
-        width: 20,
-        backgroundColor: "rgba(255,255,255,0.15)",
+        width: 22,
         marginBottom: 18,
     },
-    btns: {
-        width: "100%",
-        gap: 10,
-    },
-    btn: {
+
+    // Buttons
+    btns: { width: "100%", gap: 10 },
+    btnPrimary: {
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
         gap: 8,
-        height: 50,
+        height: 52,
         borderRadius: 16,
     },
-    btnText: {
-        color: "#FFFFFF",
-        fontSize: 14,
+    btnPrimaryText: {
+        fontSize: 15,
         fontWeight: "800",
     },
-    btnOutline: {
-        height: 44,
+    btnSecondary: {
+        height: 46,
         borderRadius: 14,
         alignItems: "center",
         justifyContent: "center",
         borderWidth: 1.5,
-        borderColor: "rgba(255,255,255,0.2)",
     },
-    btnOutlineText: {
-        color: "rgba(255,255,255,0.6)",
+    btnSecondaryText: {
         fontSize: 13,
         fontWeight: "700",
     },

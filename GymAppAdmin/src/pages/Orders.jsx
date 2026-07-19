@@ -126,7 +126,11 @@ export default function Orders() {
         {o.status === 'rejected' && o.rejection_reason && (
           <div className="status-rejection-info">
             <AlertCircle size={12} className="status-rejection-info-icon" />
-            <span>Motivo: {o.rejection_reason}</span>
+            <span className="rejection-text-truncated">Motivo: {o.rejection_reason}</span>
+            <div className="tooltip-bubble">
+              <div style={{ fontWeight: 700, color: 'var(--primary)', marginBottom: 4 }}>Motivo del Rechazo</div>
+              <div>{o.rejection_reason}</div>
+            </div>
           </div>
         )}
       </div>
@@ -392,8 +396,7 @@ export default function Orders() {
               <table className="subs-table">
                 <thead>
                   <tr>
-                    <th># ID</th>
-                    <th>Usuario</th>
+                    <th style={{ minWidth: 200 }}>Usuario</th>
                     <th>Productos</th>
                     <th>Total</th>
                     <th>Estado</th>
@@ -407,8 +410,7 @@ export default function Orders() {
                     const isLastRows = index >= paginatedOrders.length - 2;
                     return (
                       <tr key={o.id}>
-                      <td style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>#{o.id}</td>
-                      <td>{renderUserCell(o.user)}</td>
+                      <td style={{ minWidth: 200 }}>{renderUserCell(o.user)}</td>
                       <td>
                         <div style={{ maxHeight: 110, overflowY: 'auto', fontSize: 13, display: 'flex', flexDirection: 'column', gap: 4 }}>
                           {Array.isArray(o.items) ? o.items.map((item, idx) => {
@@ -455,6 +457,7 @@ export default function Orders() {
                                   </span>
                                   <span style={{ opacity: 0.6, fontSize: 10, fontWeight: 500, color: 'var(--text-secondary)' }}>
                                     x{item.quantity} · ${Number(item.price).toFixed(2)}
+                                    {item.selected_option ? ` · ${['S', 'M', 'L', 'XL', 'XXL'].includes(item.selected_option) ? 'Talla' : 'Pres.'}: ${item.selected_option}` : ''}
                                   </span>
                                 </div>
                               </div>
@@ -669,7 +672,10 @@ export default function Orders() {
                     <div className="order-mobile-card-row">
                       <span className="order-mobile-card-label">Productos</span>
                       <span className="order-mobile-card-val" style={{ fontSize: '11px', textAlign: 'right', opacity: 0.8 }}>
-                        {Array.isArray(o.items) ? o.items.map(item => `${item.name} (x${item.quantity})`).join(', ') : '—'}
+                        {Array.isArray(o.items) ? o.items.map(item => {
+                          const optText = item.selected_option ? ` [${item.selected_option}]` : '';
+                          return `${item.name}${optText} (x${item.quantity})`;
+                        }).join(', ') : '—'}
                       </span>
                     </div>
 
@@ -935,19 +941,59 @@ export default function Orders() {
             </p>
             
             <form onSubmit={executeReject}>
-              <div className="form-group" style={{ marginBottom: 20 }}>
+              <div className="form-group" style={{ marginBottom: 12 }}>
                 <textarea 
                   value={rejectionReason}
-                  onChange={e => setRejectionReason(e.target.value)}
+                  onChange={e => {
+                    const val = e.target.value;
+                    const words = val.trim() === '' ? [] : val.trim().split(/\s+/);
+                    if (words.length <= 100 || val.length < rejectionReason.length) {
+                      setRejectionReason(val);
+                    }
+                  }}
                   placeholder="Ej. Comprobante de pago borroso o stock de producto no disponible."
                   rows={3}
+                  className="rejection-textarea"
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border)',
+                    backgroundColor: 'var(--bg)',
+                    color: 'var(--text)',
+                    fontSize: '14px',
+                    fontFamily: 'inherit',
+                    resize: 'vertical'
+                  }}
                   required
                   autoFocus
                 />
+                <div style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  fontSize: '11px', 
+                  color: 'var(--text-secondary)',
+                  marginTop: '4px' 
+                }}>
+                  <span>Máximo 100 palabras</span>
+                  <span style={{ 
+                    fontWeight: 'bold',
+                    color: (rejectionReason.trim() === '' ? 0 : rejectionReason.trim().split(/\s+/).length) >= 100 ? '#ef4444' : 'var(--text-secondary)'
+                  }}>
+                    {rejectionReason.trim() === '' ? 0 : rejectionReason.trim().split(/\s+/).length} / 100
+                  </span>
+                </div>
               </div>
-              <div className="modal-actions">
+              <div className="modal-actions" style={{ display: 'flex', gap: 12 }}>
                 <button type="button" className="btn btn--ghost" style={{ flex: 1 }} onClick={() => setRejectModal(null)}>Cancelar</button>
-                <button type="submit" className="btn btn--danger" style={{ flex: 1 }}>Rechazar Pedido</button>
+                <button 
+                  type="submit" 
+                  className="btn btn--danger" 
+                  style={{ flex: 1 }}
+                  disabled={rejectionReason.trim().length < 3 || (rejectionReason.trim() === '' ? 0 : rejectionReason.trim().split(/\s+/).length) > 100}
+                >
+                  Rechazar Pedido
+                </button>
               </div>
             </form>
           </div>

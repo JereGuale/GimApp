@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
   ScrollView, Dimensions, Alert
@@ -25,12 +25,53 @@ export default function ProductDetailScreen() {
   const [activeTab, setActiveTab] = useState('description');
 
   const categoryName = (product?.category_name || product?.category?.name || '').toLowerCase();
-  const isClothing = categoryName.includes('ropa') || categoryName.includes('vestimenta') || categoryName.includes('clothing') || categoryName.includes('wear');
+  const productNameLower = (product?.name || '').toLowerCase();
+  const isClothing = categoryName.includes('ropa') || 
+                     categoryName.includes('vestimenta') || 
+                     categoryName.includes('clothing') || 
+                     categoryName.includes('wear') ||
+                     productNameLower.includes('camisa') ||
+                     productNameLower.includes('camiseta') ||
+                     productNameLower.includes('pantalon') ||
+                     productNameLower.includes('short') ||
+                     productNameLower.includes('buzo') ||
+                     productNameLower.includes('sueter') ||
+                     productNameLower.includes('prenda');
+                     
   const isSupplement = categoryName.includes('suplemento') || categoryName.includes('supplement') || categoryName.includes('proteina') || categoryName.includes('whey');
 
-  const [selectedOption, setSelectedOption] = useState(
-    isClothing ? 'M' : (isSupplement ? '1kg' : null)
-  );
+  const getProductOptions = () => {
+    if (product?.options && Array.isArray(product.options) && product.options.length > 0) {
+      return product.options;
+    }
+    if (product?.options && typeof product.options === 'string') {
+      try {
+        const parsed = JSON.parse(product.options);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {
+        const split = product.options.split(',').map(s => s.trim()).filter(Boolean);
+        if (split.length > 0) return split;
+      }
+    }
+    if (isClothing) {
+      return ['S', 'M', 'L', 'XL', 'XXL'];
+    }
+    if (isSupplement) {
+      return ['500g', '1kg', '2kg'];
+    }
+    return [];
+  };
+
+  const optionsList = useMemo(() => getProductOptions(), [product, isClothing, isSupplement]);
+  const [selectedOption, setSelectedOption] = useState(null);
+
+  useEffect(() => {
+    if (optionsList.length > 0) {
+      setSelectedOption(optionsList[0]);
+    } else {
+      setSelectedOption(null);
+    }
+  }, [optionsList]);
 
   const images = useMemo(() => {
     if (!product) return [];
@@ -86,13 +127,9 @@ export default function ProductDetailScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      {/* Floating Header Buttons */}
       <View style={styles.floatingHeaderArea}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.floatingBackBtn, { backgroundColor: theme.isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }]}>
           <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.floatingBackBtn, { backgroundColor: theme.isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }]}>
-          <Ionicons name="share-outline" size={20} color={theme.colors.text} />
         </TouchableOpacity>
       </View>
 
@@ -119,9 +156,6 @@ export default function ProductDetailScreen() {
               transition={300}
               cachePolicy="memory-disk"
             />
-            <TouchableOpacity style={[styles.favBtn, { backgroundColor: theme.isDark ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.8)' }]}>
-              <Ionicons name="star-outline" size={22} color="#FBBF24" />
-            </TouchableOpacity>
           </View>
         </View>
 
@@ -129,6 +163,29 @@ export default function ProductDetailScreen() {
         <View style={[styles.infoSection, isWide && { flex: 1 }]}>
           <Text style={[styles.productName, { color: theme.colors.text }]}>{product.name}</Text>
           <Text style={styles.productPrice}>${Number(product.price).toFixed(2)}</Text>
+          {product.stock !== null && product.stock !== undefined && Number(product.stock) > 0 && Number(product.stock) < 5 && (
+            <View style={{ 
+              flexDirection: 'row', 
+              alignItems: 'center', 
+              backgroundColor: theme.isDark ? 'rgba(239, 68, 68, 0.12)' : '#FEF2F2', 
+              borderColor: '#EF4444', 
+              borderWidth: 1, 
+              borderRadius: 10, 
+              paddingHorizontal: 12, 
+              paddingVertical: 8, 
+              marginVertical: 10,
+              gap: 8
+            }}>
+              <Ionicons name="alert-circle-outline" size={18} color="#EF4444" />
+              <Text style={{ 
+                color: theme.isDark ? '#FCA5A5' : '#B91C1C', 
+                fontSize: 13, 
+                fontWeight: '700' 
+              }}>
+                ¡Quedan pocas unidades! Menos de 5 disponibles
+              </Text>
+            </View>
+          )}
           {/* Thumbnails horizontally below price */}
           {images.length > 1 && (
             <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 8 }}>
@@ -150,44 +207,39 @@ export default function ProductDetailScreen() {
             </View>
           )}
 
-          {/* Options selector (Sizes for clothing, Presentacion for supplements, none for others) */}
-          {isClothing && (
+          {optionsList.length > 0 && (
             <View style={styles.optionGroup}>
-              <Text style={[styles.optionLabel, { color: theme.colors.textSecondary }]}>Talla</Text>
-              <View style={styles.selectorRow}>
-                {['S', 'M', 'L', 'XL'].map((size) => (
-                  <TouchableOpacity
-                    key={size}
-                    style={[
-                      styles.optionSelectorItem,
-                      { borderColor: selectedOption === size ? '#FB923C' : (theme.isDark ? '#1E3A5F' : '#E2E8F0'),
-                        backgroundColor: selectedOption === size ? 'rgba(251, 146, 60, 0.1)' : 'transparent' }
-                    ]}
-                    onPress={() => setSelectedOption(size)}
-                  >
-                    <Text style={{ color: selectedOption === size ? '#FB923C' : theme.colors.text, fontWeight: 'bold' }}>{size}</Text>
-                  </TouchableOpacity>
-                ))}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <Text style={[styles.optionLabel, { color: theme.colors.text, margin: 0 }]}>
+                  {isClothing ? 'Selecciona Talla' : (isSupplement ? 'Presentación' : 'Selecciona Opción')}
+                </Text>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#FB923C' }}>
+                  Elegida: {selectedOption}
+                </Text>
               </View>
-            </View>
-          )}
-
-          {isSupplement && (
-            <View style={styles.optionGroup}>
-              <Text style={[styles.optionLabel, { color: theme.colors.textSecondary }]}>Presentación</Text>
               <View style={styles.selectorRow}>
-                {['500g', '1kg', '2kg'].map((weight) => (
+                {optionsList.map((opt) => (
                   <TouchableOpacity
-                    key={weight}
+                    key={opt}
                     style={[
                       styles.optionSelectorItem,
-                      { width: 'auto', paddingHorizontal: 12 },
-                      { borderColor: selectedOption === weight ? '#FB923C' : (theme.isDark ? '#1E3A5F' : '#E2E8F0'),
-                        backgroundColor: selectedOption === weight ? 'rgba(251, 146, 60, 0.1)' : 'transparent' }
+                      { 
+                        borderColor: selectedOption === opt ? '#FB923C' : (theme.isDark ? '#334155' : '#E2E8F0'),
+                        backgroundColor: selectedOption === opt ? 'rgba(251, 146, 60, 0.12)' : (theme.isDark ? 'rgba(255,255,255,0.03)' : '#F8FAFC'),
+                        width: 'auto',
+                        minWidth: 54,
+                        paddingHorizontal: 12,
+                        height: 44,
+                        borderRadius: 10
+                      }
                     ]}
-                    onPress={() => setSelectedOption(weight)}
+                    onPress={() => setSelectedOption(opt)}
                   >
-                    <Text style={{ color: selectedOption === weight ? '#FB923C' : theme.colors.text, fontWeight: 'bold' }}>{weight}</Text>
+                    <Text style={{ 
+                      color: selectedOption === opt ? '#FB923C' : theme.colors.text, 
+                      fontWeight: '800',
+                      fontSize: 14 
+                    }}>{opt}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -205,39 +257,13 @@ export default function ProductDetailScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Description / Reviews tabs */}
-          <View style={[styles.tabBar, { borderColor: theme.isDark ? '#1E3A5F' : '#E2E8F0' }]}>
-            <TouchableOpacity
-              style={[styles.tab, activeTab === 'description' && styles.tabActive]}
-              onPress={() => setActiveTab('description')}
-            >
-              <Text style={[styles.tabText, { color: activeTab === 'description' ? '#FB923C' : theme.colors.textSecondary }]}>
-                Descripción
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.tab, activeTab === 'reviews' && styles.tabActive]}
-              onPress={() => setActiveTab('reviews')}
-            >
-              <Text style={[styles.tabText, { color: activeTab === 'reviews' ? '#FB923C' : theme.colors.textSecondary }]}>
-                Reseñas
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.tabContent}>
-            {activeTab === 'description' ? (
-              <Text style={[styles.descText, { color: theme.colors.text }]}>
-                {product.description || 'Sin descripción disponible para este producto.'}
-              </Text>
-            ) : (
-              <View style={styles.reviewsEmpty}>
-                <Ionicons name="chatbubble-ellipses-outline" size={36} color={theme.colors.textSecondary} />
-                <Text style={[styles.reviewsEmptyText, { color: theme.colors.textSecondary }]}>
-                  Aún no hay reseñas
-                </Text>
-              </View>
-            )}
+          <View style={{ marginTop: 20, borderTopWidth: 1, borderColor: theme.isDark ? '#1E293B' : '#F1F5F9', paddingTop: 20 }}>
+            <Text style={{ fontSize: 16, fontWeight: '800', color: theme.colors.text, marginBottom: 8 }}>
+              Descripción del Producto
+            </Text>
+            <Text style={[styles.descText, { color: theme.colors.text, opacity: 0.8, lineHeight: 22 }]}>
+              {product.description || 'Sin descripción disponible para este producto.'}
+            </Text>
           </View>
         </View>
       </ScrollView>

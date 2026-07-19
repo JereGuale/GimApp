@@ -19,52 +19,59 @@ export default function PaymentMethodModal({ visible, onClose, onSelectMethod, p
             onRequestClose={onClose}
         >
             <View style={styles.modalContainer}>
-                <View style={[styles.modalContent, { backgroundColor: '#FFFFFF' }]}>
+                <View style={[styles.modalContent, { backgroundColor: theme.colors.card }]}>
                     <View style={styles.header}>
-                        <Text style={[styles.title, { color: '#111827' }]}>
+                        <Text style={[styles.title, { color: theme.colors.text }]}>
                             Pago por Transferencia
                         </Text>
                         <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-                            <Ionicons name="close" size={24} color="#6B7280" />
+                            <Ionicons name="close" size={24} color={theme.colors.textSecondary} />
                         </TouchableOpacity>
                     </View>
 
                     {plan && (
-                        <View style={styles.planInfoCard}>
+                        <View style={[styles.planInfoCard, { backgroundColor: theme.isDark ? 'rgba(255,255,255,0.05)' : '#F3F4F6' }]}>
                             <View>
-                                <Text style={[styles.planInfoLabel, { color: '#6B7280' }]}>
+                                <Text style={[styles.planInfoLabel, { color: theme.colors.textSecondary }]}>
                                     Suscripción
                                 </Text>
-                                <Text style={[styles.planInfoName, { color: '#111827' }]}>
+                                <Text style={[styles.planInfoName, { color: theme.colors.text }]}>
                                     {plan.name}
                                 </Text>
                             </View>
-                            <Text style={[styles.planInfoPrice, { color: '#111827' }]}>
+                            <Text style={[styles.planInfoPrice, { color: theme.colors.text }]}>
                                 ${plan.price.toFixed(2)}
                             </Text>
                         </View>
                     )}
 
-                    <Text style={[styles.subtitle, { color: '#111827' }]}>
+                    <Text style={[styles.subtitle, { color: theme.colors.text }]}>
                         Realiza tu pago y sube el comprobante
                     </Text>
 
                     {/* Bank Transfer Option - único método disponible */}
                     <TouchableOpacity
-                        style={[styles.methodCard, { backgroundColor: '#FFFFFF', borderColor: '#EA580C', borderWidth: 1.5 }]}
+                        style={[
+                          styles.methodCard, 
+                          { 
+                            backgroundColor: theme.colors.card, 
+                            borderColor: '#EA580C', 
+                            borderWidth: 1.5 
+                          }
+                        ]}
                         onPress={() => handleSelect('transfer')}
                     >
-                        <View style={[styles.methodIconContainer, { backgroundColor: '#FFEDD5' }]}>
+                        <View style={[styles.methodIconContainer, { backgroundColor: 'rgba(234, 88, 12, 0.15)' }]}>
                             <Ionicons name="business-outline" size={26} color="#EA580C" />
                         </View>
                         <View style={styles.methodInfo}>
-                            <Text style={[styles.methodTitle, { color: '#111827' }]}>
+                            <Text style={[styles.methodTitle, { color: theme.colors.text }]}>
                                 Transferencia Bancaria
                             </Text>
-                            <Text style={[styles.methodDescription, { color: '#9CA3AF' }]}>
+                            <Text style={[styles.methodDescription, { color: theme.colors.textSecondary }]}>
                                 Sube tu comprobante de pago
                             </Text>
-                            <View style={[styles.badge, { backgroundColor: '#FEF9C3' }]}>
+                            <View style={[styles.badge, { backgroundColor: theme.isDark ? 'rgba(202, 138, 4, 0.15)' : '#FEF9C3' }]}>
                                 <Ionicons name="time-outline" size={12} color="#CA8A04" />
                                 <Text style={[styles.badgeText, { color: '#CA8A04' }]}>Requiere aprobación</Text>
                             </View>
@@ -73,10 +80,10 @@ export default function PaymentMethodModal({ visible, onClose, onSelectMethod, p
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                        style={styles.cancelButton}
+                        style={[styles.cancelButton, { borderColor: theme.isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}
                         onPress={onClose}
                     >
-                        <Text style={[styles.cancelButtonText, { color: '#111827' }]}>Cancelar</Text>
+                        <Text style={[styles.cancelButtonText, { color: theme.colors.text }]}>Cancelar</Text>
                     </TouchableOpacity>
                 </View>
             </View>

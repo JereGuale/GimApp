@@ -90,11 +90,11 @@ export default function SubscriptionScreen() {
     // Validar si ya tiene suscripción activa o pendiente
     if (existingSub) {
       const statusLabel = existingSub.status === 'active' ? 'activa' : 'pendiente de aprobación';
-      Alert.alert(
-        'Suscripción existente',
-        `Ya tienes una suscripción ${statusLabel} (${existingSub.plan?.name || 'Plan actual'}). No puedes suscribirte a otro plan hasta que termine tu periodo.`,
-        [{ text: 'Entendido' }]
-      );
+      setCustomAlert({
+        visible: true,
+        title: 'Suscripción existente',
+        message: `Ya tienes una suscripción ${statusLabel} (${existingSub.plan?.name || 'Plan actual'}). No puedes suscribirte a otro plan hasta que termine tu periodo.`
+      });
       return;
     }
     // Abrir confirmación de facturación antes del comprobante

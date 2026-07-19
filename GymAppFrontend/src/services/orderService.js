@@ -34,6 +34,7 @@ export const OrderAPI = {
                 items: items.map(item => ({
                     product_id: item.product.id,
                     quantity: item.quantity,
+                    selected_option: item.product.selectedOption || null
                 })),
                 payment_method: paymentMethod,
                 notes,

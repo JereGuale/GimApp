@@ -63,20 +63,20 @@ export default function CardPaymentForm({ visible, onClose, onSubmit, plan }) {
             onRequestClose={handleClose}
         >
             <View style={styles.modalContainer}>
-                <View style={[styles.modalContent, { backgroundColor: '#FFFFFF' }]}>
+                <View style={[styles.modalContent, { backgroundColor: theme.colors.card }]}>
                     <View style={styles.header}>
-                        <Text style={[styles.title, { color: '#111827' }]}>
+                        <Text style={[styles.title, { color: theme.colors.text }]}>
                             Pago con Tarjeta
                         </Text>
                         <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
-                            <Ionicons name="close" size={24} color="#6B7280" />
+                            <Ionicons name="close" size={24} color={theme.colors.textSecondary} />
                         </TouchableOpacity>
                     </View>
 
                     {/* Plan Summary */}
                     {plan && (
-                        <View style={styles.planSummary}>
-                            <Text style={[styles.planName, { color: '#111827' }]}>
+                        <View style={[styles.planSummary, { backgroundColor: theme.isDark ? 'rgba(6, 182, 212, 0.12)' : '#ECFEFF' }]}>
+                            <Text style={[styles.planName, { color: theme.colors.text }]}>
                                 {plan.name}
                             </Text>
                             <Text style={styles.planPrice}>
@@ -88,13 +88,19 @@ export default function CardPaymentForm({ visible, onClose, onSubmit, plan }) {
                     {/* Card Form */}
                     <View style={styles.formContainer}>
                         <View style={styles.inputGroup}>
-                            <Text style={[styles.label, { color: '#4B5563' }]}>
+                            <Text style={[styles.label, { color: theme.colors.textSecondary }]}>
                                 Número de Tarjeta
                             </Text>
-                            <View style={styles.inputContainer}>
+                            <View style={[
+                              styles.inputContainer, 
+                              { 
+                                backgroundColor: theme.isDark ? 'rgba(255,255,255,0.03)' : '#FFFFFF', 
+                                borderColor: theme.isDark ? '#334155' : '#E5E7EB' 
+                              }
+                            ]}>
                                 <Ionicons name="card-outline" size={20} color="#9CA3AF" style={styles.inputIcon} />
                                 <TextInput
-                                    style={[styles.input, { color: '#111827' }]}
+                                    style={[styles.input, { color: theme.colors.text }]}
                                     placeholder="1234 5678 9012 3456"
                                     placeholderTextColor="#9CA3AF"
                                     value={cardNumber}
@@ -106,13 +112,19 @@ export default function CardPaymentForm({ visible, onClose, onSubmit, plan }) {
                         </View>
 
                         <View style={styles.inputGroup}>
-                            <Text style={[styles.label, { color: '#4B5563' }]}>
+                            <Text style={[styles.label, { color: theme.colors.textSecondary }]}>
                                 Nombre en la Tarjeta
                             </Text>
-                            <View style={styles.inputContainer}>
+                            <View style={[
+                              styles.inputContainer, 
+                              { 
+                                backgroundColor: theme.isDark ? 'rgba(255,255,255,0.03)' : '#FFFFFF', 
+                                borderColor: theme.isDark ? '#334155' : '#E5E7EB' 
+                              }
+                            ]}>
                                 <Ionicons name="person-outline" size={20} color="#9CA3AF" style={styles.inputIcon} />
                                 <TextInput
-                                    style={[styles.input, { color: '#111827' }]}
+                                    style={[styles.input, { color: theme.colors.text }]}
                                     placeholder="JUAN PEREZ"
                                     placeholderTextColor="#9CA3AF"
                                     value={cardName}
@@ -124,13 +136,19 @@ export default function CardPaymentForm({ visible, onClose, onSubmit, plan }) {
 
                         <View style={styles.row}>
                             <View style={[styles.inputGroup, { flex: 1 }]}>
-                                <Text style={[styles.label, { color: '#4B5563' }]}>
+                                <Text style={[styles.label, { color: theme.colors.textSecondary }]}>
                                     Vencimiento
                                 </Text>
-                                <View style={styles.inputContainer}>
+                                <View style={[
+                                  styles.inputContainer, 
+                                  { 
+                                    backgroundColor: theme.isDark ? 'rgba(255,255,255,0.03)' : '#FFFFFF', 
+                                    borderColor: theme.isDark ? '#334155' : '#E5E7EB' 
+                                  }
+                                ]}>
                                     <Ionicons name="calendar-outline" size={20} color="#9CA3AF" style={styles.inputIcon} />
                                     <TextInput
-                                        style={[styles.input, { color: '#111827' }]}
+                                        style={[styles.input, { color: theme.colors.text }]}
                                         placeholder="MM/YY"
                                         placeholderTextColor="#9CA3AF"
                                         value={cardExpiry}
@@ -142,13 +160,19 @@ export default function CardPaymentForm({ visible, onClose, onSubmit, plan }) {
                             </View>
 
                             <View style={[styles.inputGroup, { flex: 1 }]}>
-                                <Text style={[styles.label, { color: '#4B5563' }]}>
+                                <Text style={[styles.label, { color: theme.colors.textSecondary }]}>
                                     CVV
                                 </Text>
-                                <View style={styles.inputContainer}>
+                                <View style={[
+                                  styles.inputContainer, 
+                                  { 
+                                    backgroundColor: theme.isDark ? 'rgba(255,255,255,0.03)' : '#FFFFFF', 
+                                    borderColor: theme.isDark ? '#334155' : '#E5E7EB' 
+                                  }
+                                ]}>
                                     <Ionicons name="lock-closed-outline" size={20} color="#9CA3AF" style={styles.inputIcon} />
                                     <TextInput
-                                        style={[styles.input, { color: '#111827' }]}
+                                        style={[styles.input, { color: theme.colors.text }]}
                                         placeholder="123"
                                         placeholderTextColor="#9CA3AF"
                                         value={cardCvv}
@@ -165,7 +189,7 @@ export default function CardPaymentForm({ visible, onClose, onSubmit, plan }) {
                     {/* Security Note */}
                     <View style={styles.securityNote}>
                         <Ionicons name="shield-checkmark-outline" size={16} color="#10B981" />
-                        <Text style={[styles.securityText, { color: '#9CA3AF' }]}>
+                        <Text style={[styles.securityText, { color: theme.colors.textSecondary }]}>
                             Tus datos están protegidos y encriptados
                         </Text>
                     </View>
@@ -173,11 +197,11 @@ export default function CardPaymentForm({ visible, onClose, onSubmit, plan }) {
                     {/* Action Buttons */}
                     <View style={styles.buttonContainer}>
                         <TouchableOpacity
-                            style={styles.cancelButton}
+                            style={[styles.cancelButton, { borderColor: theme.isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}
                             onPress={handleClose}
                             disabled={loading}
                         >
-                            <Text style={[styles.cancelButtonText, { color: '#111827' }]}>Cancelar</Text>
+                            <Text style={[styles.cancelButtonText, { color: theme.colors.text }]}>Cancelar</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity

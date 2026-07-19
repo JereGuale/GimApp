@@ -39,6 +39,7 @@ export default function Products() {
   const [stock, setStock] = useState('');
   const [imageFiles, setImageFiles] = useState([]); // Support multiple files array
   const [existingImages, setExistingImages] = useState([]); // Support tracking existing images list
+  const [optionsStr, setOptionsStr] = useState('');
 
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -245,6 +246,7 @@ export default function Products() {
     setStock('');
     setImageFiles([]);
     setExistingImages([]);
+    setOptionsStr('');
     setError('');
     setSuccess('');
     setModalOpen(true);
@@ -294,6 +296,21 @@ export default function Products() {
         })
         .filter(img => img !== '');
       
+      // Parse available options / sizes
+      let parsedOptions = [];
+      if (p.options) {
+        if (Array.isArray(p.options)) {
+          parsedOptions = p.options;
+        } else if (typeof p.options === 'string') {
+          try {
+            parsedOptions = JSON.parse(p.options);
+          } catch (e) {
+            parsedOptions = p.options.split(',').map(s => s.trim()).filter(Boolean);
+          }
+        }
+      }
+      setOptionsStr(Array.isArray(parsedOptions) ? parsedOptions.join(', ') : '');
+
       setExistingImages(sanitizedImages);
       setModalOpen(true);
     } catch (err) {
@@ -330,6 +347,21 @@ export default function Products() {
     formData.append('condition', condition);
     if (stock !== '') {
       formData.append('stock', parseInt(stock) || 0);
+    }
+
+    // Parse optionsStr by commas and append as array
+    const parsedOptions = optionsStr
+      .split(',')
+      .map(o => o.trim())
+      .filter(o => o.length > 0);
+    
+    if (parsedOptions.length > 0) {
+      parsedOptions.forEach(opt => {
+        formData.append('options[]', opt);
+      });
+    } else {
+      // If empty options string, send an empty array value to clear it
+      formData.append('options[]', '');
     }
 
     // Append remaining existing images
@@ -484,8 +516,10 @@ export default function Products() {
                   </tr>
                 </thead>
                 <tbody>
-                  {paginatedProducts.map(p => (
-                    <tr key={p.id}>
+                  {paginatedProducts.map((p, index) => {
+                    const isLastRow = index >= paginatedProducts.length - 1 && index > 0;
+                    return (
+                      <tr key={p.id}>
                       <td>
                         {getProductImage(p) ? (
                           <img src={getProductImage(p)} alt={p.name} className="product-img-thumbnail" />
@@ -540,7 +574,7 @@ export default function Products() {
                             <MoreVertical size={18} />
                           </button>
                           {activeDropdown === p.id && (
-                            <div className="actions-dropdown-menu">
+                            <div className={`actions-dropdown-menu ${isLastRow ? 'open-up' : ''}`}>
                               <button 
                                 type="button"
                                 className="actions-dropdown-item"
@@ -582,8 +616,9 @@ export default function Products() {
                           )}
                         </div>
                       </td>
-                    </tr>
-                  ))}
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -822,6 +857,26 @@ export default function Products() {
                         <span style={{ fontSize: 12, lineHeight: 1.2 }}>Destacar producto</span>
                       </label>
                     </div>
+                  </div>
+                </div>
+
+                {/* Section 2.5: Opciones / Tallas */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 28 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, fontWeight: 700, color: 'var(--text)', borderBottom: '1px solid var(--border)', paddingBottom: 8 }}>
+                    <Tag size={16} style={{ color: 'var(--primary)' }} />
+                    <span>Variantes y Tallas</span>
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Tallas o Presentaciones disponibles</label>
+                    <input 
+                      type="text" 
+                      value={optionsStr} 
+                      onChange={e => setOptionsStr(e.target.value)} 
+                      placeholder="Ej: S, M, L, XL (separadas por comas)" 
+                    />
+                    <small style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4, display: 'block' }}>
+                      Define las tallas de ropa o variaciones de peso de suplementos separadas por comas. Si se deja vacío, no se mostrará selector en el móvil.
+                    </small>
                   </div>
                 </div>
 

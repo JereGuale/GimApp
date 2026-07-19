@@ -307,6 +307,8 @@
   margin-top: 16px;
   padding: 0 24px 24px 24px;
   flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 @media (max-width: 767px) {
@@ -314,6 +316,7 @@
     grid-template-columns: 1fr !important;
     gap: 16px;
     padding: 16px;
+    overflow: visible;
   }
 }
 
@@ -324,7 +327,6 @@
   border-radius: 12px;
   display: flex;
   flex-direction: column;
-  height: 460px;
   overflow: hidden;
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.01);
 }
@@ -401,8 +403,24 @@
 .modal-split-details {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  justify-content: space-between;
+  gap: 16px;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.modal-split-details::-webkit-scrollbar {
+  width: 5px;
+}
+
+.modal-split-details::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modal-split-details::-webkit-scrollbar-thumb {
+  background-color: var(--border);
+  border-radius: 4px;
 }
 
 .chat-bubble-alert {
@@ -1022,17 +1040,82 @@
   border-color: rgba(148, 163, 184, 0.25);
 }
 
+/* Rechazado — rojo */
+.status-pill--rejected {
+  background-color: rgba(239, 68, 68, 0.08);
+  color: #dc2626;
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+.status-pill--rejected:hover {
+  background-color: rgba(239, 68, 68, 0.14);
+}
+
+:root.dark .status-pill--rejected {
+  background-color: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.25);
+}
+
 /* Rejection reason visual hierarchy */
 .status-rejection-info {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   font-size: 11px;
   color: var(--text-secondary);
   opacity: 0.85;
   margin-top: 2px;
-  max-width: 180px;
-  line-height: 1.3;
+  position: relative;
+  cursor: help;
+}
+
+.rejection-text-truncated {
+  max-width: 140px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tooltip-bubble {
+  visibility: hidden;
+  opacity: 0;
+  position: absolute;
+  bottom: 130%;
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 10px 14px;
+  border-radius: 10px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.08);
+  z-index: 999;
+  width: 250px;
+  white-space: normal;
+  text-align: left;
+  line-height: 1.4;
+  font-size: 11px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+  font-weight: 500;
+}
+
+.tooltip-bubble::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: var(--border) transparent transparent transparent;
+}
+
+.status-rejection-info:hover .tooltip-bubble {
+  visibility: visible;
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
 }
 
 .status-rejection-info-icon {

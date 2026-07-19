@@ -34,7 +34,10 @@ export const ThemeProvider = ({ children }) => {
     }
   };
 
-  const theme = isDark ? DarkTheme : LightTheme;
+  const theme = {
+    ...(isDark ? DarkTheme : LightTheme),
+    isDark
+  };
 
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme, isDark }}>

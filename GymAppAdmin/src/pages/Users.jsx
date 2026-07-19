@@ -270,7 +270,6 @@ export default function Users() {
               <table className="users-table">
                 <thead>
                   <tr>
-                    <th style={{ width: 60 }}>ID</th>
                     <th>Usuario</th>
                     <th>Email</th>
                     <th>Rol</th>
@@ -286,7 +285,6 @@ export default function Users() {
                     const tempSusp = isUserTempSusp(u);
                     return (
                       <tr key={u.id}>
-                        <td style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>#{u.id}</td>
                         <td>
                           <div className="user-profile-cell">
                             <div className="user-avatar-wrapper"><Avatar user={u} size={40}/></div>

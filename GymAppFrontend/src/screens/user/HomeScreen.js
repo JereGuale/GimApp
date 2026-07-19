@@ -54,6 +54,12 @@ export default function HomeScreen() {
   // Products & Categories states
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]); // Saved category state
+  const [gymLocation, setGymLocation] = useState({
+    name: 'Fitness Club Gym',
+    address: 'Calle 15 y Av. 24, Barrio Córdoba, Manta, Ecuador',
+    description: 'Fácil acceso, estacionamiento cercano y una zona segura para que entrenar sea parte natural de tu rutina.',
+    maps_url: 'https://maps.google.com/?q=Calle+15+y+Av.+24,+Manta,+Ecuador'
+  });
   const [loading, setLoading] = useState(true);
   const [favorites, setFavorites] = useState([]);
   const [searchText, setSearchText] = useState('');
@@ -150,6 +156,30 @@ export default function HomeScreen() {
     const index = Math.round(offsetX / bannerWidth);
     setCurrentBannerIndex(index);
   }, [bannerWidth]);
+
+  // Fetch gym location settings
+  useEffect(() => {
+    let isMounted = true;
+    const loadGymLocation = async () => {
+      try {
+        const res = await fetch(`${API_URL}/settings/public`);
+        const data = await res.json();
+        const loc = data.find(s => s.key === 'gym_location');
+        if (loc && loc.value && isMounted) {
+          setGymLocation({
+            name: loc.value.name || 'Fitness Club Gym',
+            address: loc.value.address || 'Calle 15 y Av. 24, Barrio Córdoba, Manta, Ecuador',
+            description: loc.value.description || 'Fácil acceso, estacionamiento cercano y una zona segura para que entrenar sea parte natural de tu rutina.',
+            maps_url: loc.value.maps_url || 'https://maps.google.com/?q=Calle+15+y+Av.+24,+Manta,+Ecuador'
+          });
+        }
+      } catch (err) {
+        console.error('Error fetching gym location settings:', err);
+      }
+    };
+    loadGymLocation();
+    return () => { isMounted = false; };
+  }, []);
 
   // Fetch products and populate categories
   useEffect(() => {
@@ -302,6 +332,21 @@ export default function HomeScreen() {
                 ${Number(product.price).toFixed(2)}
               </Text>
             </View>
+            {/* Stock warning badge */}
+            {product.stock !== null && product.stock !== undefined && Number(product.stock) > 0 && Number(product.stock) < 5 ? (
+              <View style={{
+                position: 'absolute',
+                top: 12,
+                right: 12,
+                backgroundColor: '#EF4444',
+                paddingHorizontal: 8,
+                paddingVertical: 4,
+                borderRadius: 8,
+                zIndex: 10
+              }}>
+                <Text style={{ color: '#FFF', fontSize: 10, fontWeight: '800' }}>Menos de 5</Text>
+              </View>
+            ) : null}
             {/* Featured badge */}
             {product.is_featured ? (
               <View style={styles.featuredBadge}>
@@ -759,19 +804,19 @@ export default function HomeScreen() {
 
       {/* Ubicación */}
       <View style={[styles.locationContainer, { paddingHorizontal: contentPadding }]}>
-        <View style={styles.locationHeader}>
-          <Text style={[styles.locationSubtitle, { color: theme.colors.primary }]}>
-            UBICACIÓN
-          </Text>
-          <Text style={[styles.locationTitle, { color: theme.colors.text }]}>
-            Tu gimnasio en el punto clave de Manta
-          </Text>
-          <Text style={[styles.locationDescription, { color: theme.colors.textSecondary || '#9CA3AF' }]}>
-            Fácil acceso, estacionamiento cercano y una zona segura para que entrenar sea parte natural de tu rutina.
-          </Text>
-        </View>
-
         <View style={[styles.locationCard, { backgroundColor: theme.colors.surface }]}>
+          <View style={styles.locationHeader}>
+            <Text style={[styles.locationSubtitle, { color: theme.colors.primary }]}>
+              UBICACIÓN
+            </Text>
+            <Text style={[styles.locationTitle, { color: theme.colors.text }]}>
+              {gymLocation.name}
+            </Text>
+            <Text style={[styles.locationDescription, { color: theme.colors.textSecondary || '#9CA3AF' }]}>
+              {gymLocation.description}
+            </Text>
+          </View>
+
           <Image
             source={require('../../../assets/images/map_location_placeholder.png')}
             style={[styles.locationImage, { height: isDesktop ? 350 : winWidth * 0.6 }]}
@@ -785,11 +830,11 @@ export default function HomeScreen() {
             }
           ]}>
             <View style={styles.locationTextContent}>
-              <Text style={[styles.locationGymName, { color: theme.colors.text }]}>Fitness Club Gym</Text>
-              <Text style={[styles.locationAddress, { color: theme.colors.textSecondary || '#9CA3AF' }]}>Calle 15 y Av. 24, Barrio Córdoba, Manta, Ecuador</Text>
+              <Text style={[styles.locationGymName, { color: theme.colors.text }]}>{gymLocation.name}</Text>
+              <Text style={[styles.locationAddress, { color: theme.colors.textSecondary || '#9CA3AF' }]}>{gymLocation.address}</Text>
             </View>
             <TouchableOpacity
-              onPress={() => Linking.openURL('https://maps.google.com/?q=Calle+15+y+Av.+24,+Manta,+Ecuador')}
+              onPress={() => Linking.openURL(gymLocation.maps_url)}
               style={styles.locationButton}
               activeOpacity={0.8}
             >
@@ -807,7 +852,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 24,
+    paddingBottom: 110,
   },
 
   // ─── Search Bar ───

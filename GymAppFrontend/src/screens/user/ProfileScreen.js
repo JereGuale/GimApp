@@ -34,6 +34,9 @@ export default function ProfileScreen() {
   const [editName, setEditName] = useState(user?.name || '');
   const [editEmail, setEditEmail] = useState(user?.email || '');
   const [editPhone, setEditPhone] = useState(user?.phone || '');
+  const [billingName, setBillingName] = useState(user?.billing_name || user?.name || '');
+  const [billingEmail, setBillingEmail] = useState(user?.billing_email || user?.email || '');
+  const [billingPhone, setBillingPhone] = useState(user?.billing_phone || user?.phone || '');
   const [billingIdNumber, setBillingIdNumber] = useState(user?.billing_id_number || '');
   const [billingCity, setBillingCity] = useState(user?.billing_city || '');
   const [billingAddress, setBillingAddress] = useState(user?.billing_address || '');
@@ -45,13 +48,16 @@ export default function ProfileScreen() {
   const [subscription, setSubscription] = useState({ data: null, loading: true });
   const [rejectedOrders, setRejectedOrders] = useState([]);
 
-  // Escuchar el parámetro editProfile de la cabecera superior para abrir el modal de edición de perfil
+  // Escuchar el parámetro editProfile de la cabecera superior para abrir el modal de edición de perfil con un retraso suave
   React.useEffect(() => {
     if (route.params?.editProfile) {
       setEditName(user?.name || '');
       setEditEmail(user?.email || '');
       setEditPhone(user?.phone || '');
-      setEditModalVisible(true);
+      const timer = setTimeout(() => {
+        setEditModalVisible(true);
+      }, 500);
+      return () => clearTimeout(timer);
     }
   }, [route.params?.editProfile]);
 
@@ -160,6 +166,9 @@ export default function ProfileScreen() {
   const handleSaveBilling = async () => {
     setSaving(true);
     const result = await ProfileAPI.updateProfile({
+      billing_name: billingName,
+      billing_email: billingEmail,
+      billing_phone: billingPhone,
       billing_id_number: billingIdNumber,
       billing_city: billingCity,
       billing_address: billingAddress
@@ -169,6 +178,9 @@ export default function ProfileScreen() {
       if (updateUser) {
         updateUser({
           ...user,
+          billing_name: billingName,
+          billing_email: billingEmail,
+          billing_phone: billingPhone,
           billing_id_number: billingIdNumber,
           billing_city: billingCity,
           billing_address: billingAddress
@@ -220,6 +232,9 @@ export default function ProfileScreen() {
         <DrawerItem icon="cart-outline" label="Mis Compras" onPress={() => { closeDrawer(); navigation.navigate('Mis Compras'); }} />
         <DrawerItem icon="document-text-outline" label="Datos de facturación" onPress={() => {
           closeDrawer();
+          setBillingName(user?.billing_name || user?.name || '');
+          setBillingEmail(user?.billing_email || user?.email || '');
+          setBillingPhone(user?.billing_phone || user?.phone || '');
           setBillingIdNumber(user?.billing_id_number || '');
           setBillingCity(user?.billing_city || '');
           setBillingAddress(user?.billing_address || '');
@@ -668,23 +683,40 @@ export default function ProfileScreen() {
       {/* Edit Billing Modal */}
       <Modal visible={billingEditVisible} transparent animationType="slide" onRequestClose={() => setBillingEditVisible(false)}>
         <View style={styles.editModalOverlay}>
-          <View style={[styles.editModalContent, { backgroundColor: theme.colors.surface }]}>
+          <View style={[styles.editModalContent, { backgroundColor: theme.colors.surface, maxHeight: '90%' }]}>
             <Text style={[styles.editModalTitle, { color: theme.colors.text }]}>Datos de Facturación</Text>
             
-            <View style={styles.editField}>
-              <Text style={[styles.editLabel, { color: theme.colors.textSecondary }]}>Cédula o RUC</Text>
-              <TextInput style={[styles.editInput, { color: theme.colors.text, borderColor: theme.colors.border }]} value={billingIdNumber} onChangeText={setBillingIdNumber} placeholder="Ej: 1309876543" placeholderTextColor={theme.colors.textSecondary} keyboardType="numeric" />
-            </View>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 16 }}>
+              <View style={styles.editField}>
+                <Text style={[styles.editLabel, { color: theme.colors.textSecondary }]}>Nombre / Razón Social</Text>
+                <TextInput style={[styles.editInput, { color: theme.colors.text, borderColor: theme.colors.border }]} value={billingName} onChangeText={setBillingName} placeholder="Tu nombre completo o Razón Social" placeholderTextColor={theme.colors.textSecondary} />
+              </View>
 
-            <View style={styles.editField}>
-              <Text style={[styles.editLabel, { color: theme.colors.textSecondary }]}>Ciudad</Text>
-              <TextInput style={[styles.editInput, { color: theme.colors.text, borderColor: theme.colors.border }]} value={billingCity} onChangeText={setBillingCity} placeholder="Ej: Manta" placeholderTextColor={theme.colors.textSecondary} />
-            </View>
+              <View style={styles.editField}>
+                <Text style={[styles.editLabel, { color: theme.colors.textSecondary }]}>Correo Electrónico</Text>
+                <TextInput style={[styles.editInput, { color: theme.colors.text, borderColor: theme.colors.border }]} value={billingEmail} onChangeText={setBillingEmail} placeholder="ejemplo@correo.com" placeholderTextColor={theme.colors.textSecondary} keyboardType="email-address" autoCapitalize="none" />
+              </View>
 
-            <View style={styles.editField}>
-              <Text style={[styles.editLabel, { color: theme.colors.textSecondary }]}>Dirección de Domicilio</Text>
-              <TextInput style={[styles.editInput, { color: theme.colors.text, borderColor: theme.colors.border, height: 60, paddingTop: 8 }]} value={billingAddress} onChangeText={setBillingAddress} placeholder="Ej: Calle 15 y Av. 24" placeholderTextColor={theme.colors.textSecondary} multiline />
-            </View>
+              <View style={styles.editField}>
+                <Text style={[styles.editLabel, { color: theme.colors.textSecondary }]}>Teléfono</Text>
+                <TextInput style={[styles.editInput, { color: theme.colors.text, borderColor: theme.colors.border }]} value={billingPhone} onChangeText={setBillingPhone} placeholder="Ej: 0999999999" placeholderTextColor={theme.colors.textSecondary} keyboardType="phone-pad" />
+              </View>
+
+              <View style={styles.editField}>
+                <Text style={[styles.editLabel, { color: theme.colors.textSecondary }]}>Cédula o RUC</Text>
+                <TextInput style={[styles.editInput, { color: theme.colors.text, borderColor: theme.colors.border }]} value={billingIdNumber} onChangeText={setBillingIdNumber} placeholder="Ej: 1309876543" placeholderTextColor={theme.colors.textSecondary} keyboardType="numeric" />
+              </View>
+
+              <View style={styles.editField}>
+                <Text style={[styles.editLabel, { color: theme.colors.textSecondary }]}>Ciudad</Text>
+                <TextInput style={[styles.editInput, { color: theme.colors.text, borderColor: theme.colors.border }]} value={billingCity} onChangeText={setBillingCity} placeholder="Ej: Manta" placeholderTextColor={theme.colors.textSecondary} />
+              </View>
+
+              <View style={styles.editField}>
+                <Text style={[styles.editLabel, { color: theme.colors.textSecondary }]}>Dirección de Domicilio</Text>
+                <TextInput style={[styles.editInput, { color: theme.colors.text, borderColor: theme.colors.border, height: 60, paddingTop: 8 }]} value={billingAddress} onChangeText={setBillingAddress} placeholder="Ej: Calle 15 y Av. 24" placeholderTextColor={theme.colors.textSecondary} multiline />
+              </View>
+            </ScrollView>
 
             <View style={styles.editModalBtns}>
               <TouchableOpacity style={[styles.editModalBtn, { borderColor: theme.colors.border, borderWidth: 1.5 }]} onPress={() => setBillingEditVisible(false)}>
