@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { apiFetch } from '../api/client';
+import { apiFetch, API_BASE_URL } from '../api/client';
 import { 
   AlertTriangle, 
   CheckCircle2, 
@@ -12,12 +12,127 @@ import {
   Trash2,
   X,
   Check,
-  Calendar
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
+  Layers,
+  Clock,
+  MoreVertical
 } from 'lucide-react';
 import '../components/Layout.css';
+import './Subscriptions.css';
 
 export default function Reports() {
   const [activeTab, setActiveTab] = useState('suscripciones');
+
+  const getUserAvatarUrl = (user) => {
+    if (!user) return null;
+    const photo = user.profile_photo_url || user.profile_photo;
+    if (!photo) return null;
+    if (photo.startsWith('http')) return photo;
+    return `${API_BASE_URL.replace('/api', '')}/storage/${photo}`;
+  };
+
+  const getUserInitials = (name) => {
+    if (!name) return '?';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return parts[0][0].toUpperCase();
+  };
+
+  const getAvatarBgColor = (name) => {
+    if (!name) return '#64748b';
+    const colors = [
+      '#ef4444', '#f97316', '#f59e0b', '#10b981', 
+      '#06b6d4', '#3b82f6', '#6366f1', '#8b5cf6', '#d946ef', '#ec4899'
+    ];
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const index = Math.abs(hash) % colors.length;
+    return colors[index];
+  };
+
+  const renderUserCell = (user) => {
+    if (!user) return <span style={{ color: 'var(--text-secondary)' }}>—</span>;
+    const avatarUrl = getUserAvatarUrl(user);
+    const initials = getUserInitials(user.name);
+    const bgColor = getAvatarBgColor(user.name);
+    
+    return (
+      <div className="user-profile-cell-wrapper">
+        <div className="avatar-circle" style={!avatarUrl ? { backgroundColor: bgColor } : {}}>
+          {avatarUrl ? (
+            <img src={avatarUrl} alt={user.name} className="avatar-img" />
+          ) : (
+            <span>{initials}</span>
+          )}
+        </div>
+        <div className="user-text-details">
+          <span className="user-name">{user.name}</span>
+          <span className="user-email">{user.email || 'Sin correo'}</span>
+        </div>
+      </div>
+    );
+  };
+
+  const renderClientNameCell = (clientName) => {
+    if (!clientName) return <span style={{ color: 'var(--text-secondary)' }}>—</span>;
+    const initials = getUserInitials(clientName);
+    const bgColor = getAvatarBgColor(clientName);
+    
+    return (
+      <div className="user-profile-cell-wrapper">
+        <div className="avatar-circle" style={{ backgroundColor: bgColor }}>
+          <span>{initials}</span>
+        </div>
+        <div className="user-text-details">
+          <span className="user-name">{clientName}</span>
+          <span className="user-email">Cliente Externo</span>
+        </div>
+      </div>
+    );
+  };
+
+  const getMembershipStatus = (sub) => {
+    if (sub.status === 'pending') return { label: 'Pendiente', type: 'pending', color: '#f59e0b' };
+    if (sub.status === 'cancelled') return { label: 'Cancelada', type: 'cancelled', color: '#64748b' };
+    if (sub.status === 'rejected') return { label: 'Rechazada', type: 'rejected', color: '#ef4444' };
+    if (sub.status === 'expired') return { label: 'Vencida', type: 'expired', color: '#ef4444' };
+    
+    if (sub.ends_at) {
+      const endsAt = new Date(sub.ends_at);
+      const today = new Date();
+      endsAt.setHours(0,0,0,0);
+      today.setHours(0,0,0,0);
+      const diffTime = endsAt - today;
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays < 0) {
+        return { label: 'Vencida', type: 'expired', color: '#ef4444' };
+      }
+      if (diffDays <= 5) {
+        return { label: 'Próxima a vencer', type: 'expiring', color: '#f97316' };
+      }
+    }
+    
+    return { label: 'Activa', type: 'active', color: '#10b981' };
+  };
+
+  const getPlanBadgeStyles = (planName) => {
+    const name = String(planName || '').toLowerCase();
+    if (name.includes('vip')) {
+      return { bg: 'rgba(139, 92, 246, 0.1)', color: '#8b5cf6', label: planName || 'VIP' };
+    }
+    if (name.includes('premium') || name.includes('oro') || name.includes('gold')) {
+      return { bg: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b', label: planName || 'Premium' };
+    }
+    return { bg: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', label: planName || 'Básico' };
+  };
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -36,7 +151,7 @@ export default function Reports() {
 
   // Pagination State for monthly memberships
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 8;
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // General Metrics State (Trends)
   const [metrics, setMetrics] = useState(null);
@@ -433,7 +548,7 @@ export default function Reports() {
                 ) : (
                   <>
                     <div className="table-wrap">
-                      <table>
+                      <table className="reports-premium-table">
                         <thead>
                           <tr>
                             <th>Usuario</th>
@@ -447,22 +562,15 @@ export default function Reports() {
                         <tbody>
                           {paginatedSubs.map((sub) => (
                             <tr key={sub.id}>
-                              <td style={{ fontWeight: 600, color: 'var(--text)' }}>{sub.user?.name || sub.user_id}</td>
-                              <td>{sub.plan?.name || sub.plan_id}</td>
+                              <td>{renderUserCell(sub.user)}</td>
+                              <td style={{ fontWeight: 600 }}>{sub.plan?.name || sub.plan_id}</td>
                               <td style={{ fontWeight: 700, color: 'var(--success)' }}>${Number(sub.price || 0).toFixed(2)}</td>
                               <td style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{sub.starts_at ? new Date(sub.starts_at).toLocaleDateString('es-MX') : '—'}</td>
                               <td style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{sub.ends_at ? new Date(sub.ends_at).toLocaleDateString('es-MX') : '—'}</td>
                               <td>
-                                <span
-                                  className={`badge badge--${
-                                    sub.status === 'active'
-                                      ? 'green'
-                                      : sub.status === 'pending'
-                                      ? 'yellow'
-                                      : 'gray'
-                                  }`}
-                                >
-                                  {sub.status}
+                                <span className={`badge-status badge-status--${sub.status}`}>
+                                  <span className={`badge-status-dot badge-status-dot--${sub.status}`} />
+                                  <span>{sub.status === 'active' ? 'Activa' : sub.status === 'pending' ? 'Pendiente' : sub.status}</span>
                                 </span>
                               </td>
                             </tr>
@@ -539,7 +647,7 @@ export default function Reports() {
                     </div>
                   ) : (
                     <div className="table-wrap">
-                      <table>
+                      <table className="reports-premium-table">
                         <thead>
                           <tr>
                             <th>Cliente</th>
@@ -551,8 +659,8 @@ export default function Reports() {
                         <tbody>
                           {dailyIncomes.map((item) => (
                             <tr key={item.id}>
-                              <td style={{ fontWeight: 600, color: 'var(--text)' }}>
-                                {item.client_name || 'Invitado anónimo'}
+                              <td>
+                                {renderClientNameCell(item.client_name || 'Invitado anónimo')}
                               </td>
                               <td style={{ fontWeight: 700, color: item.amount > 0 ? 'var(--success)' : 'var(--text)' }}>
                                 ${Number(item.amount).toFixed(2)}

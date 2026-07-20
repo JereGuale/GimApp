@@ -47,6 +47,7 @@ export const OrderAPI = {
                 bodyData.billing_id_number = billingData.billing_id_number;
                 bodyData.billing_city = billingData.billing_city;
                 bodyData.billing_address = billingData.billing_address;
+                bodyData.shipping_method = billingData.shipping_method;
             }
 
             const response = await fetch(`${API_URL}/orders`, {

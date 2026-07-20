@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { apiFetch, API_BASE_URL } from '../api/client';
-import { 
-  Check, 
-  Trash2, 
-  Eye, 
-  ExternalLink, 
-  Loader2, 
-  AlertTriangle, 
+import {
+  Check,
+  Trash2,
+  Eye,
+  ExternalLink,
+  Loader2,
+  AlertTriangle,
   CheckCircle2,
   CreditCard,
   Building,
@@ -24,7 +24,8 @@ import {
   RefreshCw,
   MoreVertical,
   XCircle,
-  AlertCircle
+  AlertCircle,
+  ShieldAlert
 } from 'lucide-react';
 import '../components/Layout.css';
 import './Subscriptions.css';
@@ -51,7 +52,7 @@ export default function Subscriptions() {
 
   // Standard Confirmation Modal (approve/reject/renew)
   const [confirmModal, setConfirmModal] = useState(null);
-  
+
   // Custom Rejection Reason Modal
   const [rejectModal, setRejectModal] = useState(null);
   const [rejectionReason, setRejectionReason] = useState('');
@@ -74,7 +75,7 @@ export default function Subscriptions() {
     today.setHours(0, 0, 0, 0);
     const diffTime = endsAt - today;
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays < 0) return 'Expirado';
     if (diffDays === 0) return 'Vence hoy';
     if (diffDays === 1) return 'Queda 1 día';
@@ -121,9 +122,9 @@ export default function Subscriptions() {
     const avatarUrl = getUserAvatarUrl(user);
     const initials = getUserInitials(user.name);
     const bgColor = getAvatarBgColor(user.name);
-    
+
     return (
-      <div className="user-avatar-wrapper">
+      <div className="user-profile-cell-wrapper">
         <div className="avatar-circle" style={!avatarUrl ? { backgroundColor: bgColor } : {}}>
           {avatarUrl ? (
             <img src={avatarUrl} alt={user.name} className="avatar-img" />
@@ -244,7 +245,7 @@ export default function Subscriptions() {
     setActionLoading(id + '_reject');
     setError(''); setSuccess('');
     try {
-      await apiFetch(`/trainer/subscriptions/${id}/reject`, { 
+      await apiFetch(`/trainer/subscriptions/${id}/reject`, {
         method: 'POST',
         body: JSON.stringify({ reason: rejectionReason || 'Comprobante no válido' })
       });
@@ -268,10 +269,10 @@ export default function Subscriptions() {
       setSuccess('Suscripción eliminada exitosamente');
       setDeleteModal(null);
       fetchSubs();
-    } catch (e) { 
-      setError(e.message || 'Error al eliminar la suscripción'); 
-    } finally { 
-      setActionLoading(null); 
+    } catch (e) {
+      setError(e.message || 'Error al eliminar la suscripción');
+    } finally {
+      setActionLoading(null);
     }
   };
 
@@ -291,10 +292,10 @@ export default function Subscriptions() {
       await apiFetch(`/trainer/subscriptions/${id}/renew`, { method: 'POST' });
       setSuccess('Suscripción renovada exitosamente');
       fetchSubs();
-    } catch (e) { 
-      setError(e.message || 'Error al renovar la suscripción'); 
-    } finally { 
-      setActionLoading(null); 
+    } catch (e) {
+      setError(e.message || 'Error al renovar la suscripción');
+    } finally {
+      setActionLoading(null);
     }
   };
 
@@ -329,7 +330,7 @@ export default function Subscriptions() {
             <span className="sub-stat-value">{subs.length}</span>
           </div>
         </div>
-        
+
         <div className="sub-stat-card">
           <div className="sub-stat-icon-wrapper pending">
             <Clock size={20} />
@@ -365,16 +366,16 @@ export default function Subscriptions() {
       <div className="subscriptions-toolbar">
         <div className="search-wrapper">
           <Search size={16} className="search-icon" />
-          <input 
-            className="search-input-premium" 
-            placeholder="Buscar por cliente o email..." 
-            value={search} 
-            onChange={e => setSearch(e.target.value)} 
+          <input
+            className="search-input-premium"
+            placeholder="Buscar por cliente o email..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
           />
         </div>
-        
+
         <div className="filter-tabs">
-          <button 
+          <button
             type="button"
             className={`filter-tab ${filter === 'all' ? 'active' : ''}`}
             onClick={() => setFilter('all')}
@@ -382,7 +383,7 @@ export default function Subscriptions() {
             <span>Todos</span>
             <span className="tab-count">{subs.length}</span>
           </button>
-          <button 
+          <button
             type="button"
             className={`filter-tab ${filter === 'pending' ? 'active' : ''}`}
             onClick={() => setFilter('pending')}
@@ -390,7 +391,7 @@ export default function Subscriptions() {
             <span>Pendientes</span>
             <span className="tab-count pending">{subs.filter(s => s.status === 'pending').length}</span>
           </button>
-          <button 
+          <button
             type="button"
             className={`filter-tab ${filter === 'active' ? 'active' : ''}`}
             onClick={() => setFilter('active')}
@@ -398,7 +399,7 @@ export default function Subscriptions() {
             <span>Activas</span>
             <span className="tab-count active">{subs.filter(s => s.status === 'active').length}</span>
           </button>
-          <button 
+          <button
             type="button"
             className={`filter-tab ${filter === 'cancelled' ? 'active' : ''}`}
             onClick={() => setFilter('cancelled')}
@@ -406,7 +407,7 @@ export default function Subscriptions() {
             <span>Canceladas</span>
             <span className="tab-count cancelled">{subs.filter(s => s.status === 'cancelled').length}</span>
           </button>
-          <button 
+          <button
             type="button"
             className={`filter-tab ${filter === 'expired' ? 'active' : ''}`}
             onClick={() => setFilter('expired')}
@@ -442,128 +443,128 @@ export default function Subscriptions() {
                     const isLastRows = index >= paginatedItems.length - 2;
                     return (
                       <tr key={s.id}>
-                      <td style={{ minWidth: 200 }}>{renderUserCell(s.user)}</td>
-                      <td style={{ fontWeight: 600 }}>{s.plan?.name || s.plan_id || '—'}</td>
-                      <td>
-                        {renderStatusCell(s)}
-                      </td>
-                      <td>
-                        <span className="badge badge--blue" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, margin: 0 }}>
-                          {s.payment_method === 'transfer' ? (
-                            <>
-                              <Building size={12} />
-                              <span>Transferencia</span>
-                            </>
-                          ) : s.payment_method || '—'}
-                        </span>
-                      </td>
-                      <td style={{ fontSize: 13 }}>
-                        {s.starts_at && s.ends_at ? (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                            <span style={{ color: 'var(--text-secondary)', fontSize: '11px' }}>Inicio: {new Date(s.starts_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}</span>
-                            <span style={{ fontWeight: 600 }}>Vence: {new Date(s.ends_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-                            {s.status === 'active' && (
-                              <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--primary)', marginTop: 2 }}>
-                                {getRemainingDaysText(s.ends_at)}
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                            <span style={{ color: 'var(--text-secondary)', fontSize: '11px' }}>Creada: {s.created_at ? new Date(s.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }) : '—'}</span>
-                            <span style={{ color: 'var(--text-secondary)', fontSize: '11px' }}>Sin vigencia activa</span>
-                          </div>
-                        )}
-                      </td>
-                      <td style={{ textAlign: 'right' }}>
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end', width: '100%' }}>
-                          {/* Eye icon slot */}
-                          <div style={{ width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            {getReceiptUrl(s) && (
-                              <button
-                                type="button"
-                                className="btn-eye-action"
-                                onClick={() => handleOpenReceiptModal(s)}
-                                title="Ver comprobante"
-                              >
-                                <Eye size={16} />
-                              </button>
-                            )}
-                          </div>
-
-                          {/* Actions dropdown slot */}
-                          <div style={{ width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <div className="actions-dropdown-wrapper">
-                              <button 
-                                type="button"
-                                className={`actions-dropdown-trigger ${activeDropdown === s.id ? 'active' : ''}`}
-                                onClick={() => setActiveDropdown(activeDropdown === s.id ? null : s.id)}
-                                title="Acciones"
-                                disabled={actionLoading === s.id + '_approve' || actionLoading === s.id + '_reject' || actionLoading === s.id + '_renew' || actionLoading === s.id + '_delete'}
-                              >
-                                {actionLoading === s.id + '_approve' || actionLoading === s.id + '_reject' || actionLoading === s.id + '_renew' || actionLoading === s.id + '_delete' ? (
-                                  <Loader2 className="spin" size={16} />
-                                ) : (
-                                  <MoreVertical size={18} />
-                                )}
-                              </button>
-                              {activeDropdown === s.id && (
-                                <div className={`actions-dropdown-menu ${isLastRows ? 'open-up' : ''}`}>
-                                  {s.status === 'pending' ? (
-                                    <>
-                                      <button 
-                                        type="button"
-                                        className="actions-dropdown-item"
-                                        onClick={() => {
-                                          handleApprove(s.id);
-                                          setActiveDropdown(null);
-                                        }}
-                                      >
-                                        <Check size={14} style={{ color: '#16a34a' }} />
-                                        <span style={{ color: '#16a34a', fontWeight: 600 }}>Aprobar pago</span>
-                                      </button>
-                                      <button 
-                                        type="button"
-                                        className="actions-dropdown-item actions-dropdown-item--danger"
-                                        onClick={() => {
-                                          handleReject(s.id);
-                                          setActiveDropdown(null);
-                                        }}
-                                      >
-                                        <X size={14} style={{ color: '#dc2626' }} />
-                                        <span style={{ color: '#dc2626', fontWeight: 600 }}>Rechazar pago</span>
-                                      </button>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <button 
-                                        type="button"
-                                        className="actions-dropdown-item"
-                                        onClick={() => {
-                                          handleRenew(s.id);
-                                          setActiveDropdown(null);
-                                        }}
-                                      >
-                                        <RefreshCw size={14} style={{ color: '#16a34a' }} />
-                                        <span style={{ color: '#16a34a', fontWeight: 600 }}>Renovar suscripción</span>
-                                      </button>
-                                      <button 
-                                        type="button"
-                                        className="actions-dropdown-item actions-dropdown-item--danger"
-                                        onClick={() => handleDelete(s)}
-                                      >
-                                        <Trash2 size={14} />
-                                        <span>Eliminar suscripción</span>
-                                      </button>
-                                    </>
-                                  )}
-                                </div>
+                        <td style={{ minWidth: 200 }}>{renderUserCell(s.user)}</td>
+                        <td style={{ fontWeight: 600 }}>{s.plan?.name || s.plan_id || '—'}</td>
+                        <td>
+                          {renderStatusCell(s)}
+                        </td>
+                        <td>
+                          <span className="badge badge--blue" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, margin: 0 }}>
+                            {s.payment_method === 'transfer' ? (
+                              <>
+                                <Building size={12} />
+                                <span>Transferencia</span>
+                              </>
+                            ) : s.payment_method || '—'}
+                          </span>
+                        </td>
+                        <td style={{ fontSize: 13 }}>
+                          {s.starts_at && s.ends_at ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                              <span style={{ color: 'var(--text-secondary)', fontSize: '11px' }}>Inicio: {new Date(s.starts_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}</span>
+                              <span style={{ fontWeight: 600 }}>Vence: {new Date(s.ends_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                              {s.status === 'active' && (
+                                <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--primary)', marginTop: 2 }}>
+                                  {getRemainingDaysText(s.ends_at)}
+                                </span>
                               )}
                             </div>
+                          ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                              <span style={{ color: 'var(--text-secondary)', fontSize: '11px' }}>Creada: {s.created_at ? new Date(s.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }) : '—'}</span>
+                              <span style={{ color: 'var(--text-secondary)', fontSize: '11px' }}>Sin vigencia activa</span>
+                            </div>
+                          )}
+                        </td>
+                        <td style={{ textAlign: 'right' }}>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end', width: '100%' }}>
+                            {/* Eye icon slot */}
+                            <div style={{ width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              {getReceiptUrl(s) && (
+                                <button
+                                  type="button"
+                                  className="btn-eye-action"
+                                  onClick={() => handleOpenReceiptModal(s)}
+                                  title="Ver comprobante"
+                                >
+                                  <Eye size={16} />
+                                </button>
+                              )}
+                            </div>
+
+                            {/* Actions dropdown slot */}
+                            <div style={{ width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <div className="actions-dropdown-wrapper">
+                                <button
+                                  type="button"
+                                  className={`actions-dropdown-trigger ${activeDropdown === s.id ? 'active' : ''}`}
+                                  onClick={() => setActiveDropdown(activeDropdown === s.id ? null : s.id)}
+                                  title="Acciones"
+                                  disabled={actionLoading === s.id + '_approve' || actionLoading === s.id + '_reject' || actionLoading === s.id + '_renew' || actionLoading === s.id + '_delete'}
+                                >
+                                  {actionLoading === s.id + '_approve' || actionLoading === s.id + '_reject' || actionLoading === s.id + '_renew' || actionLoading === s.id + '_delete' ? (
+                                    <Loader2 className="spin" size={16} />
+                                  ) : (
+                                    <MoreVertical size={18} />
+                                  )}
+                                </button>
+                                {activeDropdown === s.id && (
+                                  <div className={`actions-dropdown-menu ${isLastRows ? 'open-up' : ''}`}>
+                                    {s.status === 'pending' ? (
+                                      <>
+                                        <button
+                                          type="button"
+                                          className="actions-dropdown-item"
+                                          onClick={() => {
+                                            handleApprove(s.id);
+                                            setActiveDropdown(null);
+                                          }}
+                                        >
+                                          <Check size={14} style={{ color: '#16a34a' }} />
+                                          <span style={{ color: '#16a34a', fontWeight: 600 }}>Aprobar pago</span>
+                                        </button>
+                                        <button
+                                          type="button"
+                                          className="actions-dropdown-item actions-dropdown-item--danger"
+                                          onClick={() => {
+                                            handleReject(s.id);
+                                            setActiveDropdown(null);
+                                          }}
+                                        >
+                                          <X size={14} style={{ color: '#dc2626' }} />
+                                          <span style={{ color: '#dc2626', fontWeight: 600 }}>Rechazar pago</span>
+                                        </button>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <button
+                                          type="button"
+                                          className="actions-dropdown-item"
+                                          onClick={() => {
+                                            handleRenew(s.id);
+                                            setActiveDropdown(null);
+                                          }}
+                                        >
+                                          <RefreshCw size={14} style={{ color: '#16a34a' }} />
+                                          <span style={{ color: '#16a34a', fontWeight: 600 }}>Renovar suscripción</span>
+                                        </button>
+                                        <button
+                                          type="button"
+                                          className="actions-dropdown-item actions-dropdown-item--danger"
+                                          onClick={() => handleDelete(s)}
+                                        >
+                                          <Trash2 size={14} />
+                                          <span>Eliminar suscripción</span>
+                                        </button>
+                                      </>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      </td>
-                    </tr>
+                        </td>
+                      </tr>
                     );
                   })}
                 </tbody>
@@ -579,10 +580,10 @@ export default function Subscriptions() {
                   {/* Card Header with User Profile */}
                   <div style={{ borderBottom: '1px solid var(--border)', paddingBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     {renderUserCell(s.user)}
-                    
+
                     {/* Compact actions button on mobile cards */}
                     <div className="actions-dropdown-wrapper">
-                      <button 
+                      <button
                         type="button"
                         className={`actions-dropdown-trigger ${activeDropdown === s.id ? 'active' : ''}`}
                         onClick={() => setActiveDropdown(activeDropdown === s.id ? null : s.id)}
@@ -594,7 +595,7 @@ export default function Subscriptions() {
                         <div className="actions-dropdown-menu">
                           {s.status === 'pending' ? (
                             <>
-                              <button 
+                              <button
                                 type="button"
                                 className="actions-dropdown-item"
                                 onClick={() => {
@@ -605,8 +606,8 @@ export default function Subscriptions() {
                                 <Check size={14} style={{ color: '#16a34a' }} />
                                 <span style={{ color: '#16a34a', fontWeight: 600 }}>Aprobar pago</span>
                               </button>
-                              
-                              <button 
+
+                              <button
                                 type="button"
                                 className="actions-dropdown-item actions-dropdown-item--danger"
                                 onClick={() => {
@@ -620,7 +621,7 @@ export default function Subscriptions() {
                             </>
                           ) : (
                             <>
-                              <button 
+                              <button
                                 type="button"
                                 className="actions-dropdown-item"
                                 onClick={() => {
@@ -631,7 +632,7 @@ export default function Subscriptions() {
                                 <RefreshCw size={14} style={{ color: '#16a34a' }} />
                                 <span style={{ color: '#16a34a', fontWeight: 600 }}>Renovar suscripción</span>
                               </button>
-                              <button 
+                              <button
                                 type="button"
                                 className="actions-dropdown-item actions-dropdown-item--danger"
                                 onClick={() => handleDelete(s)}
@@ -717,9 +718,9 @@ export default function Subscriptions() {
                   {/* Receipt & Validation actions */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                     {getReceiptUrl(s) && (
-                      <button 
+                      <button
                         type="button"
-                        className="btn btn--secondary" 
+                        className="btn btn--secondary"
                         style={{ width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 38 }}
                         onClick={() => handleOpenReceiptModal(s)}
                       >
@@ -738,18 +739,18 @@ export default function Subscriptions() {
           {/* Pagination Controls */}
           {filtered.length > 0 && (
             <div className="pagination">
-              <button 
+              <button
                 type="button"
-                className="btn btn--secondary" 
+                className="btn btn--secondary"
                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                 disabled={currentPage === 1}
               >
                 Anterior
               </button>
               <span className="pagination-info">Página {currentPage} de {totalPages || 1}</span>
-              <button 
+              <button
                 type="button"
-                className="btn btn--secondary" 
+                className="btn btn--secondary"
                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                 disabled={currentPage === totalPages || totalPages === 0}
               >
@@ -764,7 +765,7 @@ export default function Subscriptions() {
       {receiptModal && (
         <div className="modal-overlay" onClick={() => setReceiptModal(null)}>
           <div className="premium-receipt-modal" onClick={e => e.stopPropagation()}>
-            
+
             <div className="premium-modal-header">
               <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                 <div className="modal-header-icon">
@@ -777,38 +778,38 @@ export default function Subscriptions() {
               </div>
               <button className="btn btn--ghost" style={{ padding: 6, borderRadius: '50%' }} onClick={() => setReceiptModal(null)}><X size={16} /></button>
             </div>
-            
+
             <div className="modal-split-container">
               {/* Left Pane: Preview */}
               <div className="modal-split-preview">
                 <div className="modal-preview-header">
                   <span className="modal-preview-title">Visualización del Comprobante</span>
                   <div className="modal-zoom-controls">
-                    <button 
-                      type="button" 
-                      onClick={() => setZoom(prev => Math.max(prev - 0.2, 0.5))} 
+                    <button
+                      type="button"
+                      onClick={() => setZoom(prev => Math.max(prev - 0.2, 0.5))}
                       title="Zoom Out"
                     >
                       <ZoomOut size={15} />
                     </button>
-                    <button 
-                      type="button" 
-                      onClick={() => { setZoom(1); setRotation(0); }} 
+                    <button
+                      type="button"
+                      onClick={() => { setZoom(1); setRotation(0); }}
                       title="Restablecer"
                       className="zoom-reset-btn"
                     >
                       100%
                     </button>
-                    <button 
-                      type="button" 
-                      onClick={() => setZoom(prev => Math.min(prev + 0.2, 3))} 
+                    <button
+                      type="button"
+                      onClick={() => setZoom(prev => Math.min(prev + 0.2, 3))}
                       title="Zoom In"
                     >
                       <ZoomIn size={15} />
                     </button>
-                    <button 
-                      type="button" 
-                      onClick={() => setRotation(prev => prev + 90)} 
+                    <button
+                      type="button"
+                      onClick={() => setRotation(prev => prev + 90)}
                       title="Rotar 90°"
                     >
                       <RotateCw size={15} />
@@ -889,14 +890,18 @@ export default function Subscriptions() {
                         }}
                       >
                         <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
-                          <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.37 9.863-9.73.001-2.597-1.006-5.038-2.836-6.87C16.634 2.16 14.204.975 11.623.975c-5.442 0-9.866 4.372-9.87 9.737-.002 1.84.482 3.636 1.4 5.2l-.37 1.353 1.385-.363zm10.963-7.53c-.313-.157-1.854-.915-2.14-1.018-.287-.105-.497-.157-.707.157-.21.314-.813 1.018-.996 1.228-.183.21-.366.236-.679.079-.313-.157-1.32-.486-2.515-1.553-.93-.83-1.558-1.855-1.74-2.17-.183-.313-.02-.482.137-.638.14-.14.313-.367.47-.55.157-.185.21-.315.314-.525.105-.21.053-.394-.026-.55-.08-.158-.708-1.703-.97-2.336-.255-.618-.516-.534-.707-.544-.183-.01-.393-.01-.602-.01-.21 0-.55.08-.838.393-.288.315-1.1 1.077-1.1 2.628 0 1.552 1.127 3.042 1.284 3.253.158.21 2.217 3.385 5.372 4.747.75.324 1.336.518 1.794.662.753.24 1.438.207 1.98.127.604-.09 1.853-.758 2.115-1.454.26-.697.26-1.295.183-1.42-.077-.125-.287-.203-.6-.36z"/>
+                          <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.37 9.863-9.73.001-2.597-1.006-5.038-2.836-6.87C16.634 2.16 14.204.975 11.623.975c-5.442 0-9.866 4.372-9.87 9.737-.002 1.84.482 3.636 1.4 5.2l-.37 1.353 1.385-.363zm10.963-7.53c-.313-.157-1.854-.915-2.14-1.018-.287-.105-.497-.157-.707.157-.21.314-.813 1.018-.996 1.228-.183.21-.366.236-.679.079-.313-.157-1.32-.486-2.515-1.553-.93-.83-1.558-1.855-1.74-2.17-.183-.313-.02-.482.137-.638.14-.14.313-.367.47-.55.157-.185.21-.315.314-.525.105-.21.053-.394-.026-.55-.08-.158-.708-1.703-.97-2.336-.255-.618-.516-.534-.707-.544-.183-.01-.393-.01-.602-.01-.21 0-.55.08-.838.393-.288.315-1.1 1.077-1.1 2.628 0 1.552 1.127 3.042 1.284 3.253.158.21 2.217 3.385 5.372 4.747.75.324 1.336.518 1.794.662.753.24 1.438.207 1.98.127.604-.09 1.853-.758 2.115-1.454.26-.697.26-1.295.183-1.42-.077-.125-.287-.203-.6-.36z" />
                         </svg>
                         <span>WhatsApp</span>
                       </button>
                     </div>
                     <div className="info-row">
-                      <span className="info-label">Nombre</span>
-                      <span className="info-value">{receiptModal.billing_name || receiptModal.user?.name || '—'}</span>
+                      <span className="info-label">Cliente (Cuenta)</span>
+                      <span className="info-value">{receiptModal.user?.name || '—'}</span>
+                    </div>
+                    <div className="info-row">
+                      <span className="info-label">Nombre Facturación</span>
+                      <span className="info-value">{receiptModal.billing_name || '—'}</span>
                     </div>
                     <div className="info-row">
                       <span className="info-label">Cédula</span>
@@ -973,7 +978,7 @@ export default function Subscriptions() {
                         {actionLoading === receiptModal.id + '_approve' ? <Loader2 className="spin" size={16} /> : <Check size={16} />}
                         <span>Aprobar Pago</span>
                       </button>
-                      
+
                       <button
                         className="btn btn--danger"
                         style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, height: 40 }}
@@ -1002,7 +1007,7 @@ export default function Subscriptions() {
                 </div>
               </div>
             </div>
-            
+
           </div>
         </div>
       )}
@@ -1018,10 +1023,10 @@ export default function Subscriptions() {
             <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 16px 0', lineHeight: 1.4 }}>
               Ingresa el motivo del rechazo para notificar al usuario. Este se mostrará en su perfil de la aplicación móvil:
             </p>
-            
+
             <form onSubmit={executeReject}>
               <div className="form-group" style={{ marginBottom: 12 }}>
-                <textarea 
+                <textarea
                   value={rejectionReason}
                   onChange={e => {
                     const val = e.target.value;
@@ -1047,15 +1052,15 @@ export default function Subscriptions() {
                   required
                   autoFocus
                 />
-                <div style={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
-                  fontSize: '11px', 
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  fontSize: '11px',
                   color: 'var(--text-secondary)',
-                  marginTop: '4px' 
+                  marginTop: '4px'
                 }}>
                   <span>Máximo 100 palabras</span>
-                  <span style={{ 
+                  <span style={{
                     fontWeight: 'bold',
                     color: (rejectionReason.trim() === '' ? 0 : rejectionReason.trim().split(/\s+/).length) >= 100 ? '#ef4444' : 'var(--text-secondary)'
                   }}>
@@ -1065,9 +1070,9 @@ export default function Subscriptions() {
               </div>
               <div className="modal-actions" style={{ display: 'flex', gap: 12 }}>
                 <button type="button" className="btn btn--ghost" style={{ flex: 1 }} onClick={() => setRejectModal(null)}>Cancelar</button>
-                <button 
-                  type="submit" 
-                  className="btn btn--danger" 
+                <button
+                  type="submit"
+                  className="btn btn--danger"
                   style={{ flex: 1 }}
                   disabled={rejectionReason.trim().length < 3 || (rejectionReason.trim() === '' ? 0 : rejectionReason.trim().split(/\s+/).length) > 100}
                 >
@@ -1112,7 +1117,7 @@ export default function Subscriptions() {
             {/* ── Step indicator ── */}
             <div className="delete-modal-steps">
               {[1, 2, 3].map(n => (
-                <div key={n} className={`delete-step-dot ${deleteModal.step >= n ? 'active' : ''} ${deleteModal.step > n ? 'done' : ''}`}/>
+                <div key={n} className={`delete-step-dot ${deleteModal.step >= n ? 'active' : ''} ${deleteModal.step > n ? 'done' : ''}`} />
               ))}
             </div>
 
@@ -1120,7 +1125,7 @@ export default function Subscriptions() {
             {deleteModal.step === 1 && (
               <>
                 <div className="delete-modal-icon">
-                  <Trash2 size={32}/>
+                  <Trash2 size={32} />
                 </div>
                 <h3 className="delete-modal-title">Eliminar Suscripción</h3>
                 <p className="delete-modal-subtitle">Estás a punto de eliminar permanentemente la siguiente suscripción:</p>
@@ -1151,7 +1156,7 @@ export default function Subscriptions() {
 
                 {/* Warning 1 */}
                 <div className="delete-warning-box delete-warning-box--red">
-                  <AlertTriangle size={16}/>
+                  <AlertTriangle size={16} />
                   <span>Esta acción <strong>eliminará permanentemente</strong> el registro de la base de datos. No se puede deshacer.</span>
                 </div>
 
@@ -1168,14 +1173,14 @@ export default function Subscriptions() {
             {deleteModal.step === 2 && (
               <>
                 <div className="delete-modal-icon delete-modal-icon--orange">
-                  <AlertTriangle size={32}/>
+                  <AlertTriangle size={32} />
                 </div>
                 <h3 className="delete-modal-title">¿Estás completamente seguro?</h3>
                 <p className="delete-modal-subtitle">Esta operación <strong>no tiene vuelta atrás</strong>. El historial de esta suscripción desaparecerá del sistema.</p>
 
                 {/* Warning 2 */}
                 <div className="delete-warning-box delete-warning-box--orange">
-                  <AlertCircle size={16}/>
+                  <AlertCircle size={16} />
                   <span>Si el usuario tenía acceso activo, <strong>perderá su membresía</strong> de inmediato y no recibirá reembolso automático.</span>
                 </div>
 
@@ -1211,14 +1216,14 @@ export default function Subscriptions() {
             {deleteModal.step === 3 && (
               <>
                 <div className="delete-modal-icon delete-modal-icon--final">
-                  <ShieldAlert size={32}/>
+                  <ShieldAlert size={32} />
                 </div>
                 <h3 className="delete-modal-title" style={{ color: '#dc2626' }}>Última oportunidad</h3>
                 <p className="delete-modal-subtitle">Al presionar <strong>"Sí, eliminar ahora"</strong> el registro será borrado de forma permanente e irreversible del servidor.</p>
 
                 {/* Final warning */}
                 <div className="delete-warning-box delete-warning-box--red" style={{ marginBottom: 20 }}>
-                  <AlertTriangle size={16}/>
+                  <AlertTriangle size={16} />
                   <span>Suscripción de <strong>{deleteModal.sub.user?.name}</strong> · Plan <strong>{deleteModal.sub.plan?.name || '—'}</strong> · ID #{deleteModal.sub.id}</span>
                 </div>
 
@@ -1230,8 +1235,8 @@ export default function Subscriptions() {
                     onClick={() => executeDelete(deleteModal.sub.id)}
                   >
                     {actionLoading === deleteModal.sub.id + '_delete'
-                      ? <><Loader2 size={14} className="spin"/> Eliminando...</>
-                      : <><Trash2 size={14}/> Sí, eliminar ahora</>
+                      ? <><Loader2 size={14} className="spin" /> Eliminando...</>
+                      : <><Trash2 size={14} /> Sí, eliminar ahora</>
                     }
                   </button>
                 </div>

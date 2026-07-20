@@ -16,6 +16,8 @@ const CARD_W = Math.min(SCREEN_W - 32, 400);
 
 /**
  * OrderConfirmationModal
+ * Ventana flotante de confirmación de pedido / suscripción.
+ *
  * Props:
  *  visible      {boolean}
  *  type         {"order" | "subscription"}   default "order"
@@ -70,7 +72,7 @@ export default function OrderConfirmationModal({
     const accentFg = isDark ? "#000000" : "#FFFFFF";
 
     const STEPS = [
-        { icon: "document-text-outline", label: "Pedido\nregistrado",   done: true  },
+        { icon: "document-text-outline", label: isSubscription ? "Suscripción\nenviada" : "Pedido\nregistrado", done: true  },
         { icon: "time-outline",           label: "En\nrevisión",        done: false },
         { icon: "checkmark-circle-outline", label: "Aprobación\npendiente", done: false },
     ];
@@ -186,6 +188,7 @@ export default function OrderConfirmationModal({
                                     <Text style={[styles.btnPrimaryText, { color: accentFg }]}>
                                         {btnLabel}
                                     </Text>
+                                    <Ionicons name="chevron-forward" size={14} color={accentFg} style={{ marginLeft: 2 }} />
                                 </TouchableOpacity>
                             )}
                             <TouchableOpacity
@@ -198,7 +201,6 @@ export default function OrderConfirmationModal({
                                 </Text>
                             </TouchableOpacity>
                         </View>
-
                     </View>
                 </Animated.View>
             </View>
@@ -313,6 +315,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 10,
         marginBottom: 20,
         width: "100%",
+        paddingHorizontal: 8,
     },
     step: { alignItems: "center", gap: 6, flex: 1 },
     stepIcon: {
@@ -322,11 +325,25 @@ const styles = StyleSheet.create({
         borderWidth: 1.5,
         alignItems: "center",
         justifyContent: "center",
+        position: "relative",
+    },
+    stepCheckBadge: {
+        position: "absolute",
+        bottom: -2,
+        right: -2,
+        width: 14,
+        height: 14,
+        borderRadius: 7,
+        backgroundColor: "#E11D48",
+        alignItems: "center",
+        justifyContent: "center",
+        borderWidth: 1,
+        borderColor: "#FFFFFF",
     },
     stepLabel: {
         fontSize: 9,
         textAlign: "center",
-        lineHeight: 12,
+        lineHeight: 13,
     },
     stepLine: {
         height: 1.5,

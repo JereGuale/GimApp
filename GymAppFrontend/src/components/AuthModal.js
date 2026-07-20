@@ -16,8 +16,71 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { authLogin, authRegister } from '../services/api';
 
+// ─── Premium Icon-prefixed Input Field ────────────────────────────────────────
+function InputField({ label, icon, value, onChangeText, placeholder, keyboardType, autoCapitalize, secureTextEntry, maxLength, autoCorrect, isDark }) {
+  const [focused, setFocused] = useState(false);
+
+  const borderColor = focused
+    ? (isDark ? '#FFFFFF' : '#000000')
+    : (isDark ? '#1F2937' : '#E5E5E5');
+
+  const bgColor = isDark
+    ? (focused ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.03)')
+    : (focused ? 'rgba(0,0,0,0.04)' : '#F8F8F8');
+
+  const iconColor = focused
+    ? (isDark ? '#FB923C' : '#000000')
+    : (isDark ? '#6B7280' : '#ADADAD');
+
+  return (
+    <View style={styles.inputContainer}>
+      <Text style={[styles.inputLabel, { color: isDark ? '#9CA3AF' : '#4B5563' }]}>{label}</Text>
+      <View style={[
+        styles.inputRow,
+        {
+          borderColor,
+          backgroundColor: bgColor,
+          height: 48,
+          alignItems: 'center',
+          flexDirection: 'row',
+          borderWidth: 1.5,
+          borderRadius: 12,
+          paddingHorizontal: 12,
+        }
+      ]}>
+        <Ionicons
+          name={icon}
+          size={18}
+          color={iconColor}
+          style={{ marginRight: 8 }}
+        />
+        <TextInput
+          style={{
+            flex: 1,
+            color: isDark ? '#F1F5F9' : '#181818',
+            fontSize: 14,
+            fontWeight: '500',
+            height: '100%',
+          }}
+          value={value}
+          onChangeText={onChangeText}
+          placeholder={placeholder}
+          placeholderTextColor={isDark ? '#4B5563' : '#CCCCCC'}
+          keyboardType={keyboardType}
+          autoCapitalize={autoCapitalize || 'sentences'}
+          secureTextEntry={secureTextEntry}
+          maxLength={maxLength}
+          autoCorrect={autoCorrect}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+        />
+      </View>
+    </View>
+  );
+}
+
 export default function AuthModal({ visible, onClose, onSuccess }) {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   const { login } = useAuth();
   
   const [activeTab, setActiveTab] = useState('login'); // 'login' | 'register'
@@ -50,14 +113,11 @@ export default function AuthModal({ visible, onClose, onSuccess }) {
   const handleLoginSubmit = async () => {
     const inputVal = email.trim();
     if (!inputVal || !password.trim()) {
-      setErrorMsg('Ingresa tu nombre de usuario y contraseña');
+      setErrorMsg('Ingresa tu usuario o correo y contraseña');
       return;
     }
-    if (inputVal.includes('@')) {
-      setErrorMsg('Por favor ingresa tu nombre de usuario, no tu correo');
-      return;
-    }
-    if (inputVal.length > 10) {
+    // Allow email logins. If it is NOT an email (no '@'), validate 10-char limit for username.
+    if (!inputVal.includes('@') && inputVal.length > 10) {
       setErrorMsg('El nombre de usuario no debe superar los 10 caracteres');
       return;
     }
@@ -72,7 +132,7 @@ export default function AuthModal({ visible, onClose, onSuccess }) {
       console.error('[AuthModal] Login error:', error);
       const msg = error.message || '';
       if (msg.includes('401') || msg.includes('Invalid') || msg.includes('credentials')) {
-        setErrorMsg('Nombre de usuario o contraseña incorrectos');
+        setErrorMsg('Usuario/correo o contraseña incorrectos');
       } else if (msg.includes('Network') || msg.includes('fetch')) {
         setErrorMsg('Sin conexión al servidor');
       } else {
@@ -217,31 +277,26 @@ export default function AuthModal({ visible, onClose, onSuccess }) {
               {activeTab === 'login' ? (
                 /* LOGIN FORM */
                 <View style={styles.form}>
-                  <View style={styles.inputContainer}>
-                    <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>Nombre de usuario</Text>
-                    <TextInput
-                      style={[styles.input, { color: theme.colors.text, borderColor: theme.colors.border, backgroundColor: theme.colors.background }]}
-                      placeholder="Tu Nombre de usuario"
-                      placeholderTextColor="#6B7280"
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      maxLength={10}
-                      value={email}
-                      onChangeText={setEmail}
-                    />
-                  </View>
+                  <InputField
+                    label="Nombre de usuario o correo electrónico"
+                    icon="person-outline"
+                    placeholder="Tu usuario o correo"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    value={email}
+                    onChangeText={setEmail}
+                    isDark={isDark}
+                  />
 
-                  <View style={styles.inputContainer}>
-                    <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>Contraseña</Text>
-                    <TextInput
-                      style={[styles.input, { color: theme.colors.text, borderColor: theme.colors.border, backgroundColor: theme.colors.background }]}
-                      placeholder="••••••••"
-                      placeholderTextColor="#6B7280"
-                      secureTextEntry
-                      value={password}
-                      onChangeText={setPassword}
-                    />
-                  </View>
+                  <InputField
+                    label="Contraseña"
+                    icon="lock-closed-outline"
+                    placeholder="••••••••"
+                    secureTextEntry
+                    value={password}
+                    onChangeText={setPassword}
+                    isDark={isDark}
+                  />
 
                   <TouchableOpacity
                     style={[styles.submitBtn, { backgroundColor: theme.colors.primary }, loading && { opacity: 0.6 }]}
@@ -258,81 +313,69 @@ export default function AuthModal({ visible, onClose, onSuccess }) {
               ) : (
                 /* REGISTER FORM */
                 <View style={styles.form}>
-                  <View style={styles.inputContainer}>
-                    <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>Nombre Completo</Text>
-                    <TextInput
-                      style={[styles.input, { color: theme.colors.text, borderColor: theme.colors.border, backgroundColor: theme.colors.background }]}
-                      placeholder="Nombre completo"
-                      placeholderTextColor="#6B7280"
-                      autoCapitalize="words"
-                      maxLength={40}
-                      value={name}
-                      onChangeText={setName}
-                    />
-                  </View>
+                  <InputField
+                    label="Nombre Completo"
+                    icon="person-outline"
+                    placeholder="Nombre completo"
+                    autoCapitalize="words"
+                    maxLength={40}
+                    value={name}
+                    onChangeText={setName}
+                    isDark={isDark}
+                  />
 
-                  <View style={styles.inputContainer}>
-                    <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>Nombre de usuario único</Text>
-                    <TextInput
-                      style={[styles.input, { color: theme.colors.text, borderColor: theme.colors.border, backgroundColor: theme.colors.background }]}
-                      placeholder="mi_usuario (sin espacios)"
-                      placeholderTextColor="#6B7280"
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      maxLength={10}
-                      value={username}
-                      onChangeText={(t) => setUsername(t.replace(/\s/g, ''))}
-                    />
-                  </View>
+                  <InputField
+                    label="Nombre de usuario único"
+                    icon="at-outline"
+                    placeholder="mi_usuario (sin espacios)"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    maxLength={10}
+                    value={username}
+                    onChangeText={(t) => setUsername(t.replace(/\s/g, ''))}
+                    isDark={isDark}
+                  />
 
-                  <View style={styles.inputContainer}>
-                    <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>Correo Electrónico</Text>
-                    <TextInput
-                      style={[styles.input, { color: theme.colors.text, borderColor: theme.colors.border, backgroundColor: theme.colors.background }]}
-                      placeholder="ejemplo@correo.com"
-                      placeholderTextColor="#6B7280"
-                      keyboardType="email-address"
-                      autoCapitalize="none"
-                      value={email}
-                      onChangeText={setEmail}
-                    />
-                  </View>
+                  <InputField
+                    label="Correo Electrónico"
+                    icon="mail-outline"
+                    placeholder="ejemplo@correo.com"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    value={email}
+                    onChangeText={setEmail}
+                    isDark={isDark}
+                  />
 
-                  <View style={styles.inputContainer}>
-                    <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>Teléfono (WhatsApp)</Text>
-                    <TextInput
-                      style={[styles.input, { color: theme.colors.text, borderColor: theme.colors.border, backgroundColor: theme.colors.background }]}
-                      placeholder="+593 99 999 9999"
-                      placeholderTextColor="#6B7280"
-                      keyboardType="phone-pad"
-                      value={phone}
-                      onChangeText={setPhone}
-                    />
-                  </View>
+                  <InputField
+                    label="Teléfono (WhatsApp)"
+                    icon="call-outline"
+                    placeholder="+593 99 999 9999"
+                    keyboardType="phone-pad"
+                    value={phone}
+                    onChangeText={setPhone}
+                    isDark={isDark}
+                  />
 
-                  <View style={styles.inputContainer}>
-                    <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>Contraseña</Text>
-                    <TextInput
-                      style={[styles.input, { color: theme.colors.text, borderColor: theme.colors.border, backgroundColor: theme.colors.background }]}
-                      placeholder="Mínimo 8 caracteres"
-                      placeholderTextColor="#6B7280"
-                      secureTextEntry
-                      value={password}
-                      onChangeText={setPassword}
-                    />
-                  </View>
+                  <InputField
+                    label="Contraseña"
+                    icon="lock-closed-outline"
+                    placeholder="Mínimo 8 caracteres"
+                    secureTextEntry
+                    value={password}
+                    onChangeText={setPassword}
+                    isDark={isDark}
+                  />
 
-                  <View style={styles.inputContainer}>
-                    <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>Confirmar Contraseña</Text>
-                    <TextInput
-                      style={[styles.input, { color: theme.colors.text, borderColor: theme.colors.border, backgroundColor: theme.colors.background }]}
-                      placeholder="Mínimo 8 caracteres"
-                      placeholderTextColor="#6B7280"
-                      secureTextEntry
-                      value={confirmPassword}
-                      onChangeText={setConfirmPassword}
-                    />
-                  </View>
+                  <InputField
+                    label="Confirmar Contraseña"
+                    icon="lock-closed-outline"
+                    placeholder="Mínimo 8 caracteres"
+                    secureTextEntry
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    isDark={isDark}
+                  />
 
                   <TouchableOpacity
                     style={[styles.submitBtn, { backgroundColor: theme.colors.primary }, loading && { opacity: 0.6 }]}
@@ -416,6 +459,7 @@ const styles = StyleSheet.create({
   inputContainer: {
     marginBottom: 15,
   },
+  inputRow: {},
   inputLabel: {
     fontSize: 13,
     fontWeight: '500',

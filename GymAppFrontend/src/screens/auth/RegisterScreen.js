@@ -160,62 +160,80 @@ export default function RegisterScreen({ navigation }) {
             <Text style={styles.title}>Crear cuenta</Text>
 
             <View style={styles.formRow}>
-              <TextInput
-                placeholder="Nombre completo"
-                placeholderTextColor="#9CA3AF"
-                style={[styles.input, inputHalfStyle]}
-                autoCapitalize="words"
-                value={fullName}
-                onChangeText={setFullName}
-              />
-              <TextInput
-                placeholder="Correo electrónico"
-                placeholderTextColor="#9CA3AF"
-                style={[styles.input, inputHalfStyle]}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                value={email}
-                onChangeText={setEmail}
-              />
+              <View style={[styles.inputWrapper, inputHalfStyle]}>
+                <Ionicons name="person-outline" size={18} color="#9CA3AF" style={styles.inputIcon} />
+                <TextInput
+                  placeholder="Nombre completo"
+                  placeholderTextColor="#9CA3AF"
+                  style={styles.inputWithIcon}
+                  autoCapitalize="words"
+                  value={fullName}
+                  onChangeText={setFullName}
+                />
+              </View>
+              <View style={[styles.inputWrapper, inputHalfStyle]}>
+                <Ionicons name="mail-outline" size={18} color="#9CA3AF" style={styles.inputIcon} />
+                <TextInput
+                  placeholder="Correo electrónico"
+                  placeholderTextColor="#9CA3AF"
+                  style={styles.inputWithIcon}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  value={email}
+                  onChangeText={setEmail}
+                />
+              </View>
             </View>
 
             <View style={styles.formRow}>
-              <TextInput
-                placeholder="Nombre de usuario"
-                placeholderTextColor="#9CA3AF"
-                style={[styles.input, inputHalfStyle]}
-                autoCapitalize="none"
-                autoCorrect={false}
-                value={username}
-                onChangeText={(t) => setUsername(t.replace(/\s/g, ''))}
-              />
-              <TextInput
-                placeholder="Teléfono (opcional)"
-                placeholderTextColor="#9CA3AF"
-                style={[styles.input, inputHalfStyle]}
-                keyboardType="phone-pad"
-                value={phone}
-                onChangeText={setPhone}
-              />
+              <View style={[styles.inputWrapper, inputHalfStyle]}>
+                <Ionicons name="at-outline" size={18} color="#9CA3AF" style={styles.inputIcon} />
+                <TextInput
+                  placeholder="Usuario"
+                  placeholderTextColor="#9CA3AF"
+                  style={styles.inputWithIcon}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  value={username}
+                  onChangeText={(t) => setUsername(t.replace(/\s/g, ''))}
+                />
+              </View>
+              <View style={[styles.inputWrapper, inputHalfStyle]}>
+                <Ionicons name="call-outline" size={18} color="#9CA3AF" style={styles.inputIcon} />
+                <TextInput
+                  placeholder="Teléfono (opcional)"
+                  placeholderTextColor="#9CA3AF"
+                  style={styles.inputWithIcon}
+                  keyboardType="phone-pad"
+                  value={phone}
+                  onChangeText={setPhone}
+                />
+              </View>
             </View>
 
             <View style={styles.formRow}>
-              <TextInput
-                placeholder="Contraseña"
-                placeholderTextColor="#9CA3AF"
-                style={[styles.input, inputHalfStyle]}
-                secureTextEntry
-                value={password}
-                onChangeText={setPassword}
-              />
-              <TextInput
-                placeholder="Confirmar contraseña"
-                placeholderTextColor="#9CA3AF"
-                style={[styles.input, inputHalfStyle]}
-                secureTextEntry
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-              />
+              <View style={[styles.inputWrapper, inputHalfStyle]}>
+                <Ionicons name="lock-closed-outline" size={18} color="#9CA3AF" style={styles.inputIcon} />
+                <TextInput
+                  placeholder="Contraseña"
+                  placeholderTextColor="#9CA3AF"
+                  style={styles.inputWithIcon}
+                  secureTextEntry
+                  value={password}
+                  onChangeText={setPassword}
+                />
+              </View>
+              <View style={[styles.inputWrapper, inputHalfStyle]}>
+                <Ionicons name="lock-closed-outline" size={18} color="#9CA3AF" style={styles.inputIcon} />
+                <TextInput
+                  placeholder="Confirmar contraseña"
+                  placeholderTextColor="#9CA3AF"
+                  style={styles.inputWithIcon}
+                  secureTextEntry
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                />
+              </View>
             </View>
 
             <TouchableOpacity style={styles.checkRow} onPress={() => setAccepted(!accepted)}>
@@ -295,18 +313,25 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 16
   },
-  input: {
-    height: 52,
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
-    color: '#FFFFFF',
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.08)',
-    fontSize: 15
+    borderRadius: 16,
+    height: 50,
+    paddingHorizontal: 14,
+  },
+  inputIcon: { marginRight: 8, opacity: 0.7 },
+  inputWithIcon: {
+    flex: 1,
+    height: '100%',
+    color: '#FFFFFF',
+    fontSize: 14.5
   },
   inputHalf: { width: '48%' },
-  inputFull: { width: '100%', marginBottom: 10 },
+  inputFull: { width: '100%', marginBottom: 12 },
   checkRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
   checkbox: {
     width: 16,

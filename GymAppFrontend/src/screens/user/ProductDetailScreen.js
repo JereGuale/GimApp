@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  ScrollView, Dimensions, Alert
+  ScrollView, Dimensions, Alert, Platform
 } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -126,18 +126,17 @@ export default function ProductDetailScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <ScrollView
+      style={{ flex: 1, backgroundColor: theme.colors.background }}
+      contentContainerStyle={[styles.scrollContent, isWide && styles.scrollContentWide]}
+      showsVerticalScrollIndicator={true}
+      scrollEnabled={true}
+    >
       <View style={styles.floatingHeaderArea}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.floatingBackBtn, { backgroundColor: theme.isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }]}>
           <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
         </TouchableOpacity>
       </View>
-
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={[styles.scrollContent, isWide && styles.scrollContentWide]}
-        showsVerticalScrollIndicator={false}
-      >
         {/* Left: Image gallery */}
         <View style={[styles.gallerySection, isWide && { flex: 1 }]}>
           {/* Main image */}
@@ -146,7 +145,7 @@ export default function ProductDetailScreen() {
             {
               backgroundColor: theme.isDark ? '#0F172A' : '#F1F5F9',
               borderColor: theme.isDark ? '#1E3A5F' : '#E2E8F0',
-              height: isWide ? Math.min(screenHeight * 0.75, 650) : screenWidth * 1.0,
+              height: isWide ? Math.min(screenHeight * 0.75, 650) : screenWidth * 0.75,
             }
           ]}>
             <Image
@@ -266,18 +265,20 @@ export default function ProductDetailScreen() {
             </Text>
           </View>
         </View>
-      </ScrollView>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, position: 'relative' },
+  container: {
+    flex: 1,
+    position: 'relative',
+  },
 
   /* Floating Header */
   floatingHeaderArea: {
     position: 'absolute',
-    top: 50,
+    top: 20,
     left: 16,
     right: 16,
     flexDirection: 'row',
@@ -287,11 +288,10 @@ const styles = StyleSheet.create({
   floatingBackBtn: {
     width: 44, height: 44, borderRadius: 22,
     alignItems: 'center', justifyContent: 'center',
-    backdropFilter: 'blur(10px)',
   },
 
   /* Content */
-  scrollContent: { padding: 16, paddingTop: 16, paddingBottom: 160, flexGrow: 1 },
+  scrollContent: { padding: 16, paddingTop: 80, paddingBottom: 120 },
   scrollContentWide: { flexDirection: 'row', gap: 24, paddingTop: 80 },
 
   /* Gallery */

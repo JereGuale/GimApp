@@ -116,59 +116,44 @@ export default function CartScreen() {
       setAuthModalVisible(true);
       return;
     }
-    const hasBilling = user?.billing_id_number && user?.billing_city && user?.billing_address;
-    if (hasBilling) {
-      setConfirmedBilling({
-        billing_name: user.name,
-        billing_email: user.email,
-        billing_phone: user.phone,
-        billing_id_number: user.billing_id_number,
-        billing_city: user.billing_city,
-        billing_address: user.billing_address
-      });
-      setReceiptModalVisible(true);
-    } else {
-      setBillingModalVisible(true);
-    }
+    setBillingModalVisible(true);
   };
 
   const handleAuthSuccess = () => {
     setAuthModalVisible(false);
     setTimeout(() => {
-      const hasBilling = user?.billing_id_number && user?.billing_city && user?.billing_address;
-      if (hasBilling) {
-        setConfirmedBilling({
-          billing_name: user.name,
-          billing_email: user.email,
-          billing_phone: user.phone,
-          billing_id_number: user.billing_id_number,
-          billing_city: user.billing_city,
-          billing_address: user.billing_address
-        });
-        setReceiptModalVisible(true);
-      } else {
-        setBillingModalVisible(true);
-      }
+      setBillingModalVisible(true);
     }, 450);
   };
 
   const handleConfirmBilling = async (billingData) => {
     setConfirmedBilling(billingData);
     setBillingModalVisible(false);
-    
-    // Guardar en el perfil del usuario para no volver a pedírselo en el futuro
+
+    // Guardar todos los datos de facturación en el perfil para no pedirlos de nuevo
     try {
-      const result = await ProfileAPI.updateProfile({
+      // 1) Persistir en el backend los campos que soporta (cédula, ciudad, dirección)
+      await ProfileAPI.updateProfile({
         billing_id_number: billingData.billing_id_number,
         billing_city: billingData.billing_city,
-        billing_address: billingData.billing_address
+        billing_address: billingData.billing_address,
       });
-      if (result.success && updateUser) {
+
+      // 2) Actualizar el contexto local con TODOS los campos (nombre, email, phone, método envío, etc.)
+      //    para que la próxima vez el modal aparezca pre-llenado sin pedir datos de nuevo.
+      if (updateUser) {
         updateUser({
           ...user,
+          // Campos personales que podrían haber sido editados
+          name: billingData.billing_name || user?.name,
+          email: billingData.billing_email || user?.email,
+          phone: billingData.billing_phone || user?.phone,
+          // Campos de facturación
           billing_id_number: billingData.billing_id_number,
           billing_city: billingData.billing_city,
-          billing_address: billingData.billing_address
+          billing_address: billingData.billing_address,
+          // Método de entrega preferido
+          shipping_method: billingData.shipping_method,
         });
       }
     } catch (e) {

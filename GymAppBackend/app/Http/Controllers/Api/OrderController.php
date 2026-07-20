@@ -26,6 +26,7 @@ class OrderController extends Controller
             'items.*.selected_option' => 'nullable|string',
             'payment_method' => 'required|in:transfer,card',
             'notes' => 'nullable|string|max:500',
+            'shipping_method' => 'nullable|string|in:local,delivery',
             'billing_name' => 'nullable|string|max:255',
             'billing_email' => 'nullable|email',
             'billing_phone' => 'nullable|string|max:20',
@@ -85,6 +86,7 @@ class OrderController extends Controller
             'billing_id_number' => $request->input('billing_id_number') ?: $user->billing_id_number,
             'billing_city' => $request->input('billing_city') ?: $user->billing_city,
             'billing_address' => $request->input('billing_address') ?: $user->billing_address,
+            'shipping_method' => $request->input('shipping_method') ?: 'local',
         ]);
 
         $order->load('user');
@@ -313,6 +315,52 @@ class OrderController extends Controller
 
         return response()->json([
             'message' => 'Pedido eliminado correctamente'
+        ]);
+    }
+
+    /**
+     * Update order status (admin)
+     */
+    public function updateStatus(Request $request, $id)
+    {
+        $request->validate([
+            'status' => 'required|string|in:pending,approved,processing,shipped,completed,rejected'
+        ]);
+
+        $order = Order::findOrFail($id);
+        $order->status = $request->status;
+        $order->save();
+
+        // Notify user about status change
+        try {
+            $statusLabels = [
+                'pending' => 'Pago Pendiente de Verificación',
+                'approved' => 'Pago Aprobado',
+                'processing' => 'Compra en Proceso',
+                'shipped' => 'Compra Despachada a Destino',
+                'completed' => 'Compra Entregada',
+                'rejected' => 'Compra Rechazada'
+            ];
+            $statusLabel = $statusLabels[$request->status] ?? $request->status;
+
+            \App\Models\Notification::create([
+                'user_id' => $order->user_id,
+                'type' => 'order_status_updated',
+                'title' => 'Estado de tu compra actualizado',
+                'message' => "El estado de tu compra #$order->id ahora es: $statusLabel.",
+                'data' => [
+                    'order_id' => $order->id,
+                    'status' => $request->status,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            \Log::warning('Could not notify user about order status change: ' . $e->getMessage());
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Estado del pedido actualizado exitosamente',
+            'order' => $order->load(['user', 'approvedBy']),
         ]);
     }
 }

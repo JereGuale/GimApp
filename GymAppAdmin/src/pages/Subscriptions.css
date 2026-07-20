@@ -13,6 +13,7 @@
   .subs-desktop-view {
     display: none !important;
   }
+
   .subs-mobile-view {
     display: block !important;
   }
@@ -66,7 +67,7 @@
 }
 
 /* User Profile Cell & Avatar circles */
-.user-avatar-wrapper {
+.user-profile-cell-wrapper {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -141,13 +142,16 @@
   background-color: rgba(34, 197, 94, 0.1);
   color: #16a34a;
 }
+
 :root.dark .badge-status--active {
   background-color: rgba(34, 197, 94, 0.15);
   color: #4ade80;
 }
+
 .badge-status-dot--active {
   background-color: #16a34a;
 }
+
 :root.dark .badge-status-dot--active {
   background-color: #4ade80;
 }
@@ -156,13 +160,16 @@
   background-color: rgba(245, 158, 11, 0.1);
   color: #d97706;
 }
+
 :root.dark .badge-status--pending {
   background-color: rgba(245, 158, 11, 0.15);
   color: #fbbf24;
 }
+
 .badge-status-dot--pending {
   background-color: #d97706;
 }
+
 :root.dark .badge-status-dot--pending {
   background-color: #fbbf24;
 }
@@ -171,13 +178,16 @@
   background-color: rgba(239, 68, 68, 0.1);
   color: #dc2626;
 }
+
 :root.dark .badge-status--cancelled {
   background-color: rgba(239, 68, 68, 0.15);
   color: #fca5a5;
 }
+
 .badge-status-dot--cancelled {
   background-color: #dc2626;
 }
+
 :root.dark .badge-status-dot--cancelled {
   background-color: #fca5a5;
 }
@@ -186,13 +196,16 @@
   background-color: rgba(100, 116, 139, 0.1);
   color: #475569;
 }
+
 :root.dark .badge-status--expired {
   background-color: rgba(148, 163, 184, 0.15);
   color: #cbd5e1;
 }
+
 .badge-status-dot--expired {
   background-color: #475569;
 }
+
 :root.dark .badge-status-dot--expired {
   background-color: #cbd5e1;
 }
@@ -284,6 +297,7 @@
   color: #16a34a;
   border: 1px solid rgba(34, 197, 94, 0.18);
 }
+
 .btn-sub-mobile--approve:hover {
   background-color: var(--success-light);
   border-color: rgba(34, 197, 94, 0.3);
@@ -294,6 +308,7 @@
   color: #dc2626;
   border: 1px solid rgba(239, 68, 68, 0.18);
 }
+
 .btn-sub-mobile--reject:hover {
   background-color: var(--danger-light);
   border-color: rgba(239, 68, 68, 0.3);
@@ -484,13 +499,13 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .sub-stat-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 .sub-stat-icon-wrapper {
@@ -722,6 +737,7 @@
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -775,7 +791,8 @@
   border-color: rgba(37, 99, 235, 0.1);
 }
 
-.actions-dropdown-menu {
+.actions-dropdown-menu,
+.actions-dropdown-menu-premium {
   position: absolute;
   right: 0;
   top: 105%;
@@ -790,7 +807,15 @@
   transform-origin: top right;
 }
 
-:root.dark .actions-dropdown-menu {
+.actions-dropdown-menu-premium.open-up,
+.actions-dropdown-menu.open-up {
+  top: auto;
+  bottom: 105%;
+  transform-origin: bottom right;
+}
+
+:root.dark .actions-dropdown-menu,
+:root.dark .actions-dropdown-menu-premium {
   box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.5), 0 8px 16px -6px rgba(0, 0, 0, 0.3);
 }
 
@@ -799,6 +824,7 @@
     opacity: 0;
     transform: scale(0.95) translateY(-4px);
   }
+
   to {
     opacity: 1;
     transform: scale(1) translateY(0);
@@ -844,43 +870,44 @@
 }
 
 @media (max-width: 767px) {
+
   /* Stat Cards Layout in Mobile (2 Columns) */
   .stat-grid {
     grid-template-columns: repeat(2, 1fr) !important;
     gap: 12px !important;
     margin-bottom: 20px !important;
   }
-  
+
   .stat-card {
     padding: 14px !important;
     gap: 4px !important;
     border-radius: 12px !important;
   }
-  
+
   .stat-label {
     font-size: 11px !important;
     line-height: 1.3 !important;
   }
-  
+
   .stat-value {
     font-size: 18px !important;
   }
-  
+
   .stat-icon-wrapper {
     width: 32px !important;
     height: 32px !important;
   }
-  
+
   .stat-icon-wrapper svg {
     width: 16px !important;
     height: 16px !important;
   }
-  
+
   .stat-growth {
     font-size: 9px !important;
     padding: 1px 4px !important;
   }
-  
+
   .stat-sub {
     font-size: 10px !important;
     margin-top: 2px !important;
@@ -893,17 +920,17 @@
   .dashboard-subs-desktop-view {
     display: none !important;
   }
-  
+
   .dashboard-subs-mobile-view {
     display: block !important;
   }
-  
+
   .dashboard-recent-subs-list {
     display: flex;
     flex-direction: column;
     gap: 12px;
   }
-  
+
   .dashboard-recent-sub-item {
     background: var(--bg);
     border: 1px solid var(--border);
@@ -915,12 +942,12 @@
     gap: 12px;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.01);
   }
-  
+
   .dashboard-recent-sub-left {
     flex: 1;
     min-width: 0;
   }
-  
+
   .dashboard-recent-sub-right {
     display: flex;
     flex-direction: column;
@@ -928,7 +955,7 @@
     gap: 4px;
     flex-shrink: 0;
   }
-  
+
   .recent-sub-plan {
     font-size: 12px;
     font-weight: 700;
@@ -946,8 +973,15 @@
 }
 
 @keyframes statusFadeIn {
-  from { opacity: 0; transform: translateY(2px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .status-pill {
@@ -981,6 +1015,7 @@
   color: #d97706;
   border-color: rgba(245, 158, 11, 0.15);
 }
+
 .status-pill--pending:hover {
   background-color: rgba(245, 158, 11, 0.12);
   border-color: rgba(245, 158, 11, 0.25);
@@ -997,6 +1032,7 @@
   color: #15803d;
   border-color: rgba(34, 197, 94, 0.15);
 }
+
 .status-pill--active:hover {
   background-color: rgba(34, 197, 94, 0.12);
   border-color: rgba(34, 197, 94, 0.25);
@@ -1013,6 +1049,7 @@
   color: #b91c1c;
   border-color: rgba(239, 68, 68, 0.15);
 }
+
 .status-pill--cancelled:hover {
   background-color: rgba(239, 68, 68, 0.12);
   border-color: rgba(239, 68, 68, 0.25);
@@ -1029,6 +1066,7 @@
   color: #475569;
   border-color: rgba(100, 116, 139, 0.15);
 }
+
 .status-pill--expired:hover {
   background-color: rgba(100, 116, 139, 0.12);
   border-color: rgba(100, 116, 139, 0.25);
@@ -1162,6 +1200,7 @@
     opacity: 0;
     transform: scale(0.95) translateY(4px);
   }
+
   to {
     opacity: 1;
     transform: scale(1) translateY(0);
@@ -1185,8 +1224,15 @@
   gap: 6px;
   transition: all 0.2s;
 }
-.btn--danger:hover:not(:disabled) { background: #dc2626; }
-.btn--danger:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn--danger:hover:not(:disabled) {
+  background: #dc2626;
+}
+
+.btn--danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 
 .btn--success {
   background: #16a34a;
@@ -1202,8 +1248,15 @@
   gap: 6px;
   transition: all 0.2s;
 }
-.btn--success:hover:not(:disabled) { background: #15803d; }
-.btn--success:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn--success:hover:not(:disabled) {
+  background: #15803d;
+}
+
+.btn--success:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 
 /* ══════════════════════════════════════════════════════════════
    MULTI-STEP DELETE MODAL
@@ -1332,6 +1385,7 @@
   border: 1px solid rgba(239, 68, 68, 0.25);
   color: #b91c1c;
 }
+
 :root.dark .delete-warning-box--red {
   background: rgba(239, 68, 68, 0.12);
   color: #fca5a5;
@@ -1342,6 +1396,7 @@
   border: 1px solid rgba(249, 115, 22, 0.25);
   color: #c2410c;
 }
+
 :root.dark .delete-warning-box--orange {
   background: rgba(249, 115, 22, 0.12);
   color: #fdba74;
@@ -1381,7 +1436,9 @@
   text-transform: uppercase;
 }
 
-.delete-type-input:focus { outline: none; }
+.delete-type-input:focus {
+  outline: none;
+}
 
 .delete-type-input.valid {
   border-color: #16a34a;
@@ -1405,11 +1462,103 @@
   .delete-modal {
     padding: 20px 16px 18px !important;
   }
+
   .delete-modal-actions {
     flex-direction: column;
   }
+
   .delete-modal-actions .btn {
     width: 100%;
     justify-content: center;
   }
+}
+
+/* Premium SaaS Table Design for Reports Panel */
+.reports-premium-table {
+  width: 100%;
+  border-collapse: separate !important;
+  border-spacing: 0 10px !important; /* separation between row cards */
+  margin-top: 8px;
+  background: transparent !important;
+}
+
+.reports-premium-table thead {
+  background: transparent !important;
+}
+
+.reports-premium-table th {
+  padding: 10px 20px !important;
+  font-size: 11.5px !important;
+  font-weight: 700 !important;
+  color: var(--text-secondary) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  border-bottom: none !important;
+  background: transparent !important;
+}
+
+.reports-premium-table tbody tr {
+  background: var(--card) !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -2px rgba(0, 0, 0, 0.02) !important;
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.reports-premium-table tbody tr:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 10px 20px -8px rgba(0, 0, 0, 0.06), 0 4px 6px -2px rgba(0, 0, 0, 0.02) !important;
+  background-color: var(--card) !important;
+}
+
+:root.dark .reports-premium-table tbody tr:hover {
+  box-shadow: 0 10px 24px -8px rgba(0, 0, 0, 0.4), 0 4px 8px -2px rgba(0, 0, 0, 0.2) !important;
+}
+
+.reports-premium-table td {
+  padding: 16px 20px !important;
+  border-top: 1px solid var(--border) !important;
+  border-bottom: 1px solid var(--border) !important;
+  vertical-align: middle !important;
+  background: var(--card) !important;
+  color: var(--text) !important;
+}
+
+/* Rounded corners for the row items */
+.reports-premium-table td:first-child {
+  border-left: 1px solid var(--border) !important;
+  border-top-left-radius: 16px !important;
+  border-bottom-left-radius: 16px !important;
+}
+
+.reports-premium-table td:last-child {
+  border-right: 1px solid var(--border) !important;
+  border-top-right-radius: 16px !important;
+  border-bottom-right-radius: 16px !important;
+}
+
+/* User avatar within reports table */
+.reports-premium-table .avatar-circle {
+  width: 48px !important;
+  height: 48px !important;
+  border-radius: 50% !important;
+  border: 1.5px solid var(--border) !important;
+}
+
+.reports-premium-table .user-name {
+  font-size: 14.5px !important;
+  font-weight: 700 !important;
+  color: var(--text) !important;
+}
+
+.reports-premium-table .user-email {
+  font-size: 12px !important;
+  color: var(--text-secondary) !important;
+  opacity: 0.85 !important;
+}
+
+/* Hide default table wrap border and background since table rows act as cards */
+.table-wrap {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  overflow-x: auto;
 }

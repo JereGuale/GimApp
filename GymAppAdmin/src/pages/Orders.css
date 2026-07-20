@@ -796,6 +796,36 @@
   border-color: rgba(34, 197, 94, 0.25);
 }
 
+.status-pill--processing {
+  background-color: rgba(139, 92, 246, 0.08);
+  color: #7c3aed;
+  border-color: rgba(139, 92, 246, 0.15);
+}
+.status-pill--processing:hover {
+  background-color: rgba(139, 92, 246, 0.12);
+  border-color: rgba(139, 92, 246, 0.25);
+}
+:root.dark .status-pill--processing {
+  background-color: rgba(139, 92, 246, 0.15);
+  color: #a78bfa;
+  border-color: rgba(139, 92, 246, 0.25);
+}
+
+.status-pill--shipped {
+  background-color: rgba(59, 130, 246, 0.08);
+  color: #2563eb;
+  border-color: rgba(59, 130, 246, 0.15);
+}
+.status-pill--shipped:hover {
+  background-color: rgba(59, 130, 246, 0.12);
+  border-color: rgba(59, 130, 246, 0.25);
+}
+:root.dark .status-pill--shipped {
+  background-color: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+  border-color: rgba(59, 130, 246, 0.25);
+}
+
 .status-pill--rejected {
   background-color: rgba(239, 68, 68, 0.08);
   color: #b91c1c;

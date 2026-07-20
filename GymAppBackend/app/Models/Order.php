@@ -23,6 +23,7 @@ class Order extends Model
         'billing_id_number',
         'billing_city',
         'billing_address',
+        'shipping_method',
     ];
 
     protected $casts = [

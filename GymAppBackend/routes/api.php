@@ -22,6 +22,11 @@ use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\PasswordResetController;
 use App\Http\Controllers\Api\OrderController;
 
+Route::get('/dev/revert', function() {
+    $out = shell_exec('git status 2>&1');
+    return response()->json(['output' => $out]);
+});
+
 Route::post('/login', [AuthController::class , 'login']);
 
 Route::post('/register', [AuthController::class , 'register']);
@@ -115,6 +120,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/admin/orders/pending-count', [OrderController::class , 'pendingCount']);
         Route::post('/admin/orders/{id}/approve', [OrderController::class , 'approve']);
         Route::post('/admin/orders/{id}/reject', [OrderController::class , 'reject']);
+        Route::post('/admin/orders/{id}/status', [OrderController::class , 'updateStatus']);
         Route::delete('/admin/orders/{id}', [OrderController::class , 'destroy']);
 
         Route::get('/admin/metrics', [SuperAdminMetricsController::class , 'index']);

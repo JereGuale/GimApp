@@ -21,23 +21,29 @@ import { API_URL } from "../../services/api";
 const BASE_URL = API_URL.replace("/api", "");
 
 const STATUS_LABELS = {
-    pending: "En proceso",
-    approved: "Aprobada",
-    completed: "Completada",
+    pending: "Pago Pendiente",
+    approved: "Pago Aprobado",
+    processing: "Compra en Proceso",
+    shipped: "Despachada a Destino",
+    completed: "Compra Entregada",
     rejected: "Rechazada",
 };
 
 const STATUS_COLORS = {
     pending: "#F59E0B",
-    approved: "#22C55E",
-    completed: "#3B82F6",
+    approved: "#10B981",
+    processing: "#8B5CF6",
+    shipped: "#3B82F6",
+    completed: "#10B981",
     rejected: "#EF4444",
 };
 
 const STATUS_ICONS = {
     pending: "time-outline",
     approved: "checkmark-circle-outline",
-    completed: "bag-check-outline",
+    processing: "cube-outline",
+    shipped: "bicycle-outline",
+    completed: "checkmark-done-circle-outline",
     rejected: "close-circle-outline",
 };
 
@@ -94,7 +100,7 @@ export default function MyPurchasesScreen() {
         if (activeFilter === "pending") {
             result = result.filter((order) => order.status === "pending");
         } else if (activeFilter === "approved") {
-            result = result.filter((order) => order.status === "approved" || order.status === "completed");
+            result = result.filter((order) => order.status === "approved" || order.status === "processing" || order.status === "shipped" || order.status === "completed");
         } else if (activeFilter === "rejected") {
             result = result.filter((order) => order.status === "rejected");
         }
@@ -255,7 +261,7 @@ export default function MyPurchasesScreen() {
     }
 
     const totalCount = orders.length;
-    const approvedCount = orders.filter((o) => o.status === "approved" || o.status === "completed").length;
+    const approvedCount = orders.filter((o) => o.status === "approved" || o.status === "processing" || o.status === "shipped" || o.status === "completed").length;
     const rejectedCount = orders.filter((o) => o.status === "rejected").length;
 
     return (

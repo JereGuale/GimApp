@@ -21,13 +21,28 @@ import {
   ZoomOut,
   RotateCw,
   XCircle,
-  AlertCircle
+  AlertCircle,
+  Truck
 } from 'lucide-react';
 import '../components/Layout.css';
 import './Orders.css';
 
-const STATUS_LABELS = { pending: 'Pendiente', approved: 'Aprobado', rejected: 'Rechazado', completed: 'Completado' };
-const STATUS_BADGE = { pending: 'pending', approved: 'approved', rejected: 'rejected', completed: 'completed' };
+const STATUS_LABELS = { 
+  pending: 'Pago Pendiente', 
+  approved: 'Pago Aprobado (Preparando)', 
+  processing: 'Compra en Proceso', 
+  shipped: 'Despachada a Destino', 
+  completed: 'Compra Entregada', 
+  rejected: 'Rechazado' 
+};
+const STATUS_BADGE = { 
+  pending: 'pending', 
+  approved: 'approved', 
+  processing: 'processing', 
+  shipped: 'shipped', 
+  completed: 'completed', 
+  rejected: 'rejected' 
+};
 
 export default function Orders() {
   const [orders, setOrders] = useState([]);
@@ -93,7 +108,7 @@ export default function Orders() {
     const bgColor = getAvatarBgColor(user.name);
     
     return (
-      <div className="user-avatar-wrapper">
+      <div className="user-profile-cell-wrapper">
         <div className="avatar-circle" style={!avatarUrl ? { backgroundColor: bgColor } : {}}>
           {avatarUrl ? (
             <img src={avatarUrl} alt={user.name} className="avatar-img" />
@@ -111,18 +126,26 @@ export default function Orders() {
 
   const renderStatusCell = (o) => {
     let IconComponent = Clock;
-    if (o.status === 'approved' || o.status === 'completed') {
+    if (o.status === 'approved') {
+      IconComponent = CheckCircle2;
+    } else if (o.status === 'processing') {
+      IconComponent = Package;
+    } else if (o.status === 'shipped') {
+      IconComponent = Truck;
+    } else if (o.status === 'completed') {
       IconComponent = CheckCircle2;
     } else if (o.status === 'rejected') {
       IconComponent = XCircle;
     }
 
     return (
-      <div className="status-pill-container">
-        <span className={`status-pill status-pill--${STATUS_BADGE[o.status] || 'expired'}`}>
-          <IconComponent size={14} className="status-pill-icon" />
-          <span>{STATUS_LABELS[o.status] || o.status}</span>
-        </span>
+      <div style={{ display: 'inline-flex', flexDirection: 'column' }}>
+        <div className="status-pill-container">
+          <span className={`status-pill status-pill--${STATUS_BADGE[o.status] || 'expired'}`}>
+            <IconComponent size={14} className="status-pill-icon" />
+            <span>{STATUS_LABELS[o.status] || o.status}</span>
+          </span>
+        </div>
         {o.status === 'rejected' && o.rejection_reason && (
           <div className="status-rejection-info">
             <AlertCircle size={12} className="status-rejection-info-icon" />
@@ -192,6 +215,36 @@ export default function Orders() {
     finally { setActionLoading(null); }
   };
 
+  const handleUpdateStatus = (id, newStatus) => {
+    const statusLabels = {
+      processing: 'Compra en Proceso',
+      shipped: 'Despachada a Destino',
+      completed: 'Compra Entregada'
+    };
+    const label = statusLabels[newStatus] || newStatus;
+    setConfirmModal({
+      title: `¿Cambiar estado a: ${label}?`,
+      message: `¿Estás seguro de que deseas actualizar el estado de este pedido a "${label}"?`,
+      type: 'info',
+      onConfirm: () => executeUpdateStatus(id, newStatus)
+    });
+  };
+
+  const executeUpdateStatus = async (id, newStatus) => {
+    setActionLoading(id + '_status');
+    setError(''); setSuccess('');
+    try {
+      await apiFetch(`/admin/orders/${id}/status`, { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+      setSuccess('Estado del pedido actualizado exitosamente');
+      fetchOrders();
+    } catch (e) { setError(e.message); }
+    finally { setActionLoading(null); }
+  };
+
   const handleRejectClick = (id) => {
     setRejectionReason('');
     setRejectModal(id);
@@ -250,7 +303,10 @@ export default function Orders() {
 
   // Filter and search computation
   const filtered = orders.filter(o => {
-    const matchFilter = filter === 'all' || o.status === filter;
+    const matchFilter = filter === 'all' || 
+      (filter === 'approved' 
+        ? (o.status === 'approved' || o.status === 'processing' || o.status === 'shipped') 
+        : o.status === filter);
     const matchSearch = !search ||
       o.user?.name?.toLowerCase().includes(search.toLowerCase()) ||
       o.user?.email?.toLowerCase().includes(search.toLowerCase()) ||
@@ -268,9 +324,9 @@ export default function Orders() {
   // Dynamic metrics calculation
   const totalOrdersCount = orders.length;
   const pendingOrdersCount = orders.filter(o => o.status === 'pending').length;
-  const approvedOrdersCount = orders.filter(o => o.status === 'approved' || o.status === 'completed').length;
+  const approvedOrdersCount = orders.filter(o => o.status === 'approved' || o.status === 'processing' || o.status === 'shipped' || o.status === 'completed').length;
   const totalShopEarnings = orders
-    .filter(o => o.status === 'approved' || o.status === 'completed')
+    .filter(o => o.status === 'approved' || o.status === 'processing' || o.status === 'shipped' || o.status === 'completed')
     .reduce((sum, o) => sum + Number(o.total || 0), 0);
 
   return (
@@ -360,7 +416,7 @@ export default function Orders() {
             onClick={() => setFilter('approved')}
           >
             <span>Aprobados</span>
-            <span className="orders-tab-count approved">{orders.filter(o => o.status === 'approved').length}</span>
+            <span className="orders-tab-count approved">{orders.filter(o => o.status === 'approved' || o.status === 'processing' || o.status === 'shipped').length}</span>
           </button>
           <button 
             type="button"
@@ -513,16 +569,16 @@ export default function Orders() {
                           
                           {/* Actions dropdown slot */}
                           <div style={{ width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            {(o.status === 'pending' || o.status === 'rejected') && (
+                            {o.status !== 'completed' && (
                               <div className="actions-dropdown-wrapper">
                                 <button 
                                   type="button"
                                   className={`actions-dropdown-trigger ${activeDropdown === o.id ? 'active' : ''}`}
                                   onClick={() => setActiveDropdown(activeDropdown === o.id ? null : o.id)}
                                   title="Acciones"
-                                  disabled={actionLoading === o.id + '_approve' || actionLoading === o.id + '_reject' || actionLoading === o.id + '_delete'}
+                                  disabled={actionLoading === o.id + '_approve' || actionLoading === o.id + '_reject' || actionLoading === o.id + '_delete' || actionLoading === o.id + '_status'}
                                 >
-                                  {actionLoading === o.id + '_approve' || actionLoading === o.id + '_reject' || actionLoading === o.id + '_delete' ? (
+                                  {actionLoading === o.id + '_approve' || actionLoading === o.id + '_reject' || actionLoading === o.id + '_delete' || actionLoading === o.id + '_status' ? (
                                     <Loader2 className="spin" size={16} />
                                   ) : (
                                     <MoreVertical size={18} />
@@ -555,6 +611,45 @@ export default function Orders() {
                                           <span style={{ color: '#dc2626', fontWeight: 600 }}>Rechazar pedido</span>
                                         </button>
                                       </>
+                                    )}
+                                    {o.status === 'approved' && (
+                                      <button 
+                                        type="button"
+                                        className="actions-dropdown-item"
+                                        onClick={() => {
+                                          handleUpdateStatus(o.id, 'processing');
+                                          setActiveDropdown(null);
+                                        }}
+                                      >
+                                        <Package size={14} style={{ color: '#7c3aed' }} />
+                                        <span style={{ color: '#7c3aed', fontWeight: 600 }}>Poner en Proceso</span>
+                                      </button>
+                                    )}
+                                    {o.status === 'processing' && (
+                                      <button 
+                                        type="button"
+                                        className="actions-dropdown-item"
+                                        onClick={() => {
+                                          handleUpdateStatus(o.id, 'shipped');
+                                          setActiveDropdown(null);
+                                        }}
+                                      >
+                                        <Truck size={14} style={{ color: '#2563eb' }} />
+                                        <span style={{ color: '#2563eb', fontWeight: 600 }}>Despachar a Destino</span>
+                                      </button>
+                                    )}
+                                    {o.status === 'shipped' && (
+                                      <button 
+                                        type="button"
+                                        className="actions-dropdown-item"
+                                        onClick={() => {
+                                          handleUpdateStatus(o.id, 'completed');
+                                          setActiveDropdown(null);
+                                        }}
+                                      >
+                                        <CheckCircle2 size={14} style={{ color: '#16a34a' }} />
+                                        <span style={{ color: '#16a34a', fontWeight: 600 }}>Marcar como Entregado</span>
+                                      </button>
                                     )}
                                     {o.status === 'rejected' && (
                                       <button 
@@ -630,6 +725,45 @@ export default function Orders() {
                               </button>
                             </>
                           )}
+                          {o.status === 'approved' && (
+                            <button 
+                              type="button"
+                              className="actions-dropdown-item"
+                              onClick={() => {
+                                handleUpdateStatus(o.id, 'processing');
+                                setActiveDropdown(null);
+                              }}
+                            >
+                              <Package size={14} style={{ color: '#7c3aed' }} />
+                              <span style={{ color: '#7c3aed', fontWeight: 600 }}>Poner en Proceso</span>
+                            </button>
+                          )}
+                          {o.status === 'processing' && (
+                            <button 
+                              type="button"
+                              className="actions-dropdown-item"
+                              onClick={() => {
+                                handleUpdateStatus(o.id, 'shipped');
+                                setActiveDropdown(null);
+                              }}
+                            >
+                              <Truck size={14} style={{ color: '#2563eb' }} />
+                              <span style={{ color: '#2563eb', fontWeight: 600 }}>Despachar a Destino</span>
+                            </button>
+                          )}
+                          {o.status === 'shipped' && (
+                            <button 
+                              type="button"
+                              className="actions-dropdown-item"
+                              onClick={() => {
+                                handleUpdateStatus(o.id, 'completed');
+                                setActiveDropdown(null);
+                              }}
+                            >
+                              <CheckCircle2 size={14} style={{ color: '#16a34a' }} />
+                              <span style={{ color: '#16a34a', fontWeight: 600 }}>Marcar como Entregado</span>
+                            </button>
+                          )}
                           {getReceiptUrl(o) && (
                             <button 
                               type="button"
@@ -649,9 +783,9 @@ export default function Orders() {
                               type="button"
                               className="actions-dropdown-item actions-dropdown-item--danger"
                               onClick={() => {
-                                handleDeleteClick(o.id);
-                                setActiveDropdown(null);
-                              }}
+                                  handleDeleteClick(o.id);
+                                  setActiveDropdown(null);
+                                }}
                             >
                               <Trash2 size={14} />
                               <span>Eliminar registro</span>
@@ -848,10 +982,12 @@ export default function Orders() {
                     </button>
                   </div>
                   <div style={{ padding: 12, backgroundColor: 'rgba(16, 185, 129, 0.03)', border: '1px solid var(--border)', borderRadius: 8, display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12, marginBottom: 12 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-secondary)' }}>Nombre:</span><span style={{ fontWeight: 600 }}>{receiptModal.billing_name || receiptModal.user?.name || '—'}</span></div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-secondary)' }}>Cliente (Cuenta):</span><span style={{ fontWeight: 600 }}>{receiptModal.user?.name || '—'}</span></div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-secondary)' }}>Nombre Facturación:</span><span style={{ fontWeight: 600 }}>{receiptModal.billing_name || '—'}</span></div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-secondary)' }}>Cédula:</span><span style={{ fontWeight: 600 }}>{receiptModal.billing_id_number || receiptModal.user?.billing_id_number || '—'}</span></div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-secondary)' }}>Email:</span><span style={{ fontWeight: 600 }}>{receiptModal.billing_email || receiptModal.user?.email || '—'}</span></div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-secondary)' }}>Teléfono:</span><span style={{ fontWeight: 600 }}>{receiptModal.billing_phone || receiptModal.user?.phone || '—'}</span></div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-secondary)' }}>Método de Entrega:</span><span style={{ fontWeight: 700, color: receiptModal.shipping_method === 'delivery' ? 'var(--primary)' : 'var(--success-text)' }}>{receiptModal.shipping_method === 'delivery' ? 'Envío a Domicilio' : 'Retiro en Local'}</span></div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-secondary)' }}>Ciudad:</span><span style={{ fontWeight: 600 }}>{receiptModal.billing_city || receiptModal.user?.billing_city || '—'}</span></div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}><span style={{ color: 'var(--text-secondary)' }}>Dirección:</span><span style={{ fontWeight: 600, wordBreak: 'break-all', marginTop: 4 }}>{receiptModal.billing_address || receiptModal.user?.billing_address || '—'}</span></div>
                   </div>

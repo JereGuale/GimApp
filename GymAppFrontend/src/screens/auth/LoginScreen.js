@@ -77,26 +77,38 @@ export default function LoginScreen({ navigation }) {
         style={styles.content}
       >
         <View style={styles.card}>
-          <Text style={styles.logo}>APP FITNESS</Text>
+          <View style={styles.logoHeader}>
+            <View style={styles.logoIconWrapper}>
+              <Ionicons name="barbell" size={32} color="#2E8BFF" />
+            </View>
+            <Text style={styles.logo}>APP FITNESS</Text>
+            <Text style={styles.subtitle}>Tu gimnasio en tu mano</Text>
+          </View>
 
           <View style={styles.inputGroup}>
-            <TextInput
-              placeholder="Correo electrónico o usuario"
-              placeholderTextColor="#9CA3AF"
-              style={styles.input}
-              autoCapitalize="none"
-              autoCorrect={false}
-              value={username}
-              onChangeText={setUsername}
-            />
-            <TextInput
-              placeholder="Contraseña"
-              placeholderTextColor="#9CA3AF"
-              style={styles.input}
-              secureTextEntry
-              value={password}
-              onChangeText={setPassword}
-            />
+            <View style={styles.inputWrapper}>
+              <Ionicons name="person-outline" size={20} color="#9CA3AF" style={styles.inputIcon} />
+              <TextInput
+                placeholder="Correo electrónico o usuario"
+                placeholderTextColor="#9CA3AF"
+                style={styles.inputWithIcon}
+                autoCapitalize="none"
+                autoCorrect={false}
+                value={username}
+                onChangeText={setUsername}
+              />
+            </View>
+            <View style={styles.inputWrapper}>
+              <Ionicons name="lock-closed-outline" size={20} color="#9CA3AF" style={styles.inputIcon} />
+              <TextInput
+                placeholder="Contraseña"
+                placeholderTextColor="#9CA3AF"
+                style={styles.inputWithIcon}
+                secureTextEntry
+                value={password}
+                onChangeText={setPassword}
+              />
+            </View>
           </View>
 
           <TouchableOpacity
@@ -113,7 +125,7 @@ export default function LoginScreen({ navigation }) {
           <TouchableOpacity style={[styles.btn, loading && { opacity: 0.6 }]} onPress={handleLogin} disabled={loading}>
             {loading
               ? <ActivityIndicator color="#FFFFFF" />
-              : <Text style={styles.btnText}>INICIAR SESION</Text>
+              : <Text style={styles.btnText}>INICIAR SESIÓN</Text>
             }
           </TouchableOpacity>
 
@@ -131,7 +143,7 @@ export default function LoginScreen({ navigation }) {
               style={[styles.roleButton, { flex: 1 }]}
               onPress={() => navigation.navigate('AdminLogin')}
             >
-              <Ionicons name="shield-checkmark" size={20} color="#22D3EE" />
+              <Ionicons name="shield-checkmark" size={18} color="#22D3EE" />
               <Text style={styles.roleButtonText}>Soy Administrador</Text>
             </TouchableOpacity>
           </View>
@@ -190,17 +202,36 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     alignItems: 'center'
   },
-  logo: { color: '#FFFFFF', fontSize: 26, fontWeight: '800', letterSpacing: 1, marginBottom: 18 },
+  logoHeader: { alignItems: 'center', marginBottom: 20 },
+  logoIconWrapper: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(46, 139, 255, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8
+  },
+  logo: { color: '#FFFFFF', fontSize: 24, fontWeight: '800', letterSpacing: 0.8 },
+  subtitle: { color: '#9CA3AF', fontSize: 13, marginTop: 4, fontWeight: '500' },
   inputGroup: { width: '100%', gap: 12, marginBottom: 18 },
-  input: {
-    width: '100%',
-    height: 48,
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
-    color: '#FFFFFF',
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)'
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 16,
+    height: 50,
+    paddingHorizontal: 14,
+    width: '100%'
+  },
+  inputIcon: { marginRight: 8, opacity: 0.7 },
+  inputWithIcon: {
+    flex: 1,
+    height: '100%',
+    color: '#FFFFFF',
+    fontSize: 14.5
   },
   checkboxContainer: {
     flexDirection: 'row',
