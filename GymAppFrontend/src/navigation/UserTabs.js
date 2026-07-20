@@ -47,7 +47,7 @@ export default function UserTabs() {
   return (
     <RoleGuard requiredRole="user">
       <Tab.Navigator
-        screenOptions={({ navigation }) => ({
+        screenOptions={({ navigation, route }) => ({
           headerShown: true,
           headerStyle: {
             backgroundColor: theme.colors.surface,
@@ -85,7 +85,13 @@ export default function UserTabs() {
                 )}
               </TouchableOpacity>
               <TouchableOpacity
-                onPress={() => navigation.navigate('Perfil', { editProfile: Date.now() })}
+                onPress={() => {
+                  if (route.name === 'Perfil') {
+                    navigation.setParams({ editProfile: Date.now() });
+                  } else {
+                    navigation.navigate('Perfil');
+                  }
+                }}
                 style={{
                   width: 48, height: 48,
                   borderRadius: 24,

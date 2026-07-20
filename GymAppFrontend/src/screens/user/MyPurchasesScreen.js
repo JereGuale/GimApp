@@ -407,7 +407,7 @@ export default function MyPurchasesScreen() {
 const styles = StyleSheet.create({
     rootContainer: { flex: 1 },
     container: { flex: 1 },
-    content: { padding: 16, paddingBottom: 100, gap: 14 },
+    content: { padding: 16, paddingBottom: 140, gap: 14 },
     centered: { flex: 1, alignItems: "center", justifyContent: "center" },
     loadingText: { marginTop: 10, fontSize: 14, fontWeight: "600" },
 

@@ -12,7 +12,9 @@ import * as ImagePicker from 'expo-image-picker';
 import React, { useState, useRef, useCallback } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import AuthModal from '../../components/AuthModal';
+import CustomAlertModal from '../../components/CustomAlertModal';
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL } from '../../services/api';
 const BASE_URL = API_URL.replace('/api', '');
 
@@ -47,6 +49,41 @@ export default function ProfileScreen() {
 
   const [subscription, setSubscription] = useState({ data: null, loading: true });
   const [rejectedOrders, setRejectedOrders] = useState([]);
+  const [recentOrders, setRecentOrders] = useState([]);
+  const [dismissedRejections, setDismissedRejections] = useState([]);
+  const [confirmModalState, setConfirmModalState] = useState({
+    visible: false,
+    title: '',
+    message: '',
+    isDestructive: false,
+    type: 'warning',
+    onConfirm: () => {}
+  });
+
+  // Cargar avisos descartados previamente desde AsyncStorage
+  React.useEffect(() => {
+    const loadDismissed = async () => {
+      try {
+        const saved = await AsyncStorage.getItem('@dismissed_rejections');
+        if (saved) {
+          setDismissedRejections(JSON.parse(saved));
+        }
+      } catch (e) {
+        console.log('Error al cargar rejections descartados:', e);
+      }
+    };
+    loadDismissed();
+  }, []);
+
+  const saveDismissedRejection = async (key) => {
+    try {
+      const updated = [...dismissedRejections, key];
+      setDismissedRejections(updated);
+      await AsyncStorage.setItem('@dismissed_rejections', JSON.stringify(updated));
+    } catch (e) {
+      console.log('Error al guardar rejection descartado:', e);
+    }
+  };
 
   // Escuchar el parámetro editProfile de la cabecera superior para abrir el modal de edición de perfil con un retraso suave
   React.useEffect(() => {
@@ -54,10 +91,8 @@ export default function ProfileScreen() {
       setEditName(user?.name || '');
       setEditEmail(user?.email || '');
       setEditPhone(user?.phone || '');
-      const timer = setTimeout(() => {
-        setEditModalVisible(true);
-      }, 500);
-      return () => clearTimeout(timer);
+      setEditModalVisible(true);
+      navigation.setParams({ editProfile: undefined });
     }
   }, [route.params?.editProfile]);
 
@@ -77,10 +112,14 @@ export default function ProfileScreen() {
           });
 
           if (ordersResult.success) {
-            const allRejected = (ordersResult.data || []).filter(order => order.status === 'rejected');
+            const allOrders = ordersResult.data || [];
+            const allRejected = allOrders.filter(order => order.status === 'rejected');
+            const validRecent = allOrders.filter(order => order.status !== 'rejected').slice(0, 5);
             setRejectedOrders(allRejected);
+            setRecentOrders(validRecent);
           } else {
             setRejectedOrders([]);
+            setRecentOrders([]);
           }
         }
       };
@@ -317,9 +356,73 @@ export default function ProfileScreen() {
     return Math.max(0, diff);
   };
 
+  const getPlanFeatures = (plan) => {
+    if (!plan) {
+      return [
+        'Acceso total ilimitado a todas las áreas del gimnasio',
+        'Rutinas de entrenamiento personalizadas',
+        'Asesoría nutricional y seguimiento básico',
+        'Descuentos exclusivos en la tienda oficial'
+      ];
+    }
+
+    let features = plan.features;
+    if (typeof features === 'string') {
+      try {
+        features = JSON.parse(features);
+      } catch (e) {
+        features = [features];
+      }
+    }
+
+    if (Array.isArray(features) && features.length > 0) {
+      return features;
+    }
+
+    if (plan.description) {
+      return [plan.description];
+    }
+
+    return [
+      `Acceso completo incluido con tu plan ${plan.name}`,
+      'Acceso libre a máquinas, peso libre y cardio',
+      'Asesoría y rutinas inteligentes por IA',
+      'Descuentos especiales en compras de productos'
+    ];
+  };
+
   const isStacked = isSmallScreen;
-  const hasRejectedSubscription = subscription.data?.status === 'rejected';
-  const hasRejectedOrder = rejectedOrders.length > 0;
+  const activeRejectedOrders = rejectedOrders.filter(o => !dismissedRejections.includes(`order_${o.id}`));
+  const hasRejectedSubscription = subscription.data?.status === 'rejected' && !dismissedRejections.includes('sub');
+  const hasRejectedOrder = activeRejectedOrders.length > 0;
+
+  const handleConfirmDismissSub = () => {
+    setConfirmModalState({
+      visible: true,
+      title: 'Descartar aviso',
+      message: '¿Estás seguro de que deseas descartar este aviso de revisión de suscripción?',
+      isDestructive: true,
+      type: 'warning',
+      onConfirm: () => {
+        saveDismissedRejection('sub');
+        setConfirmModalState(prev => ({ ...prev, visible: false }));
+      }
+    });
+  };
+
+  const handleConfirmDismissOrder = (orderId) => {
+    setConfirmModalState({
+      visible: true,
+      title: 'Descartar aviso',
+      message: '¿Estás seguro de que deseas descartar este aviso de compra rechazada?',
+      isDestructive: true,
+      type: 'warning',
+      onConfirm: () => {
+        saveDismissedRejection(`order_${orderId}`);
+        setConfirmModalState(prev => ({ ...prev, visible: false }));
+      }
+    });
+  };
   const subscriptionBadgeColor = hasRejectedSubscription
     ? '#EF4444'
     : subscription.data?.status === 'active'
@@ -351,6 +454,28 @@ export default function ProfileScreen() {
 
         {/* Hero Header (Apple Fitness style) */}
         <View style={styles.heroHeader}>
+          <TouchableOpacity
+            style={styles.headerAvatarWrapper}
+            onPress={() => {
+              setEditName(user?.name || '');
+              setEditEmail(user?.email || '');
+              setEditPhone(user?.phone || '');
+              setEditModalVisible(true);
+            }}
+            activeOpacity={0.8}
+          >
+            {profilePhotoUri ? (
+              <Image source={{ uri: profilePhotoUri }} style={styles.headerAvatar} contentFit="cover" transition={200} cachePolicy="memory-disk" />
+            ) : (
+              <View style={[styles.headerAvatarPlaceholder, { backgroundColor: theme.isDark ? '#374151' : '#F3F4F6' }]}>
+                <Ionicons name="person" size={28} color={theme.colors.textSecondary || '#9CA3AF'} />
+              </View>
+            )}
+            <View style={styles.avatarEditBadge}>
+              <Ionicons name="pencil" size={10} color="#FFF" />
+            </View>
+          </TouchableOpacity>
+
           <View style={styles.heroTextContainer}>
             <Text style={[styles.heroGreeting, { color: textMain }]}>
               Hola, {user?.name ? user.name.split(' ')[0] : 'Usuario'} 👋
@@ -516,11 +641,19 @@ export default function ProfileScreen() {
 
             {hasRejectedSubscription && (
               <View style={[styles.rejectionCard, { borderColor: '#FCA5A5', backgroundColor: theme.isDark ? 'rgba(127, 29, 29, 0.2)' : '#FEF2F2' }]}>
-                <View style={styles.rejectionHeader}>
-                  <Ionicons name="alert-circle" size={18} color="#EF4444" />
-                  <Text style={[styles.rejectionTitle, { color: '#B91C1C' }]}>Suscripción rechazada</Text>
+                <View style={[styles.rejectionHeader, { justifyContent: 'space-between' }]}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Ionicons name="alert-circle" size={18} color="#EF4444" />
+                    <Text style={[styles.rejectionTitle, { color: '#B91C1C' }]}>Suscripción rechazada</Text>
+                  </View>
+                  <TouchableOpacity onPress={handleConfirmDismissSub} style={{ padding: 6, cursor: 'pointer', zIndex: 10 }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} activeOpacity={0.7}>
+                    <Ionicons name="close-circle-outline" size={20} color="#B91C1C" />
+                  </TouchableOpacity>
                 </View>
-                <Text style={[styles.rejectionText, { color: textMain }]}>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: textMain, marginTop: 4, marginBottom: 2 }}>
+                  Solicitud: {subscription.data?.plan?.name || 'Membresía Gym'} ${subscription.data?.price ? Number(subscription.data.price).toFixed(2) : ''}
+                </Text>
+                <Text style={[styles.rejectionText, { color: textMuted }]}>
                   Motivo: {subscription.data?.rejection_reason || 'Comprobante no válido'}
                 </Text>
                 <View style={styles.rejectionActionsRow}>
@@ -532,23 +665,38 @@ export default function ProfileScreen() {
               </View>
             )}
 
-            {hasRejectedOrder && rejectedOrders.map((rejOrder) => (
-              <View key={rejOrder.id} style={[styles.rejectionCard, { borderColor: '#FCA5A5', backgroundColor: theme.isDark ? 'rgba(127, 29, 29, 0.2)' : '#FEF2F2' }]}>
-                <View style={styles.rejectionHeader}>
-                  <Ionicons name="alert-circle" size={18} color="#EF4444" />
-                  <Text style={[styles.rejectionTitle, { color: '#B91C1C' }]}>Compra rechazada #{rejOrder.id}</Text>
+            {hasRejectedOrder && activeRejectedOrders.map((rejOrder) => {
+              const firstItem = rejOrder.items && rejOrder.items[0];
+              const itemName = firstItem
+                ? (rejOrder.items.length > 1 ? `${firstItem.name} +${rejOrder.items.length - 1} más` : firstItem.name)
+                : 'Compra de productos';
+
+              return (
+                <View key={rejOrder.id} style={[styles.rejectionCard, { borderColor: '#FCA5A5', backgroundColor: theme.isDark ? 'rgba(127, 29, 29, 0.2)' : '#FEF2F2' }]}>
+                  <View style={[styles.rejectionHeader, { justifyContent: 'space-between' }]}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Ionicons name="alert-circle" size={18} color="#EF4444" />
+                      <Text style={[styles.rejectionTitle, { color: '#B91C1C' }]}>Compra rechazada</Text>
+                    </View>
+                    <TouchableOpacity onPress={() => handleConfirmDismissOrder(rejOrder.id)} style={{ padding: 6, cursor: 'pointer', zIndex: 10 }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} activeOpacity={0.7}>
+                      <Ionicons name="close-circle-outline" size={20} color="#B91C1C" />
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: textMain, marginTop: 4, marginBottom: 2 }}>
+                    Producto: {itemName} (${Number(rejOrder.total).toFixed(2)})
+                  </Text>
+                  <Text style={[styles.rejectionText, { color: textMuted }]}>
+                    Motivo: {rejOrder.rejection_reason || 'Comprobante no válido'}
+                  </Text>
+                  <View style={styles.rejectionActionsRow}>
+                    <TouchableOpacity style={styles.rejectionActionBtn} onPress={() => navigation.navigate('Mis Compras')}>
+                      <Ionicons name="bag-handle-outline" size={14} color="#FFFFFF" />
+                      <Text style={styles.rejectionActionText}>Ver mis compras</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
-                <Text style={[styles.rejectionText, { color: textMain }]}>
-                  Motivo: {rejOrder.rejection_reason || 'Comprobante no válido'}
-                </Text>
-                <View style={styles.rejectionActionsRow}>
-                  <TouchableOpacity style={styles.rejectionActionBtn} onPress={() => navigation.navigate('Mis Compras')}>
-                    <Ionicons name="bag-handle-outline" size={14} color="#FFFFFF" />
-                    <Text style={styles.rejectionActionText}>Ver mis compras</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ))}
+              );
+            })}
           </View>
         )}
 
@@ -558,25 +706,71 @@ export default function ProfileScreen() {
           <View style={isStacked ? styles.bottomColMobile : styles.bottomColLeft}>
             <Text style={[styles.sectionTitle, { color: textMain }]}>Beneficios Incluidos</Text>
             <View style={[styles.benefitsContainer, { borderColor: cardBorder, backgroundColor: cardBg }]}>
-              <Text style={[styles.benefitsHeaderTitle, { color: textMuted }]}>Elite Access Perks</Text>
-              <View style={styles.benefitsGrid}>
-                <View style={styles.benefitRow}>
-                  <Ionicons name="checkmark-circle-sharp" size={18} color="#22C55E" />
-                  <Text style={[styles.benefitText, { color: textMain }]}>Acceso total ilimitado 24/7 a todas las sedes</Text>
+              {/* Header with plan name & renewal badge */}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, borderBottomWidth: 1, borderBottomColor: cardBorder, paddingBottom: 12 }}>
+                <View style={{ flex: 1, marginRight: 8 }}>
+                  <Text style={[styles.benefitsHeaderTitle, { color: textMuted, marginBottom: 2 }]}>
+                    {subscription.data?.plan ? `Plan: ${subscription.data.plan.name}` : 'Beneficios del Club'}
+                  </Text>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: subscription.data?.status === 'active' ? '#22C55E' : subscription.data?.status === 'pending' ? '#EAB308' : textMuted }}>
+                    {subscription.data?.status === 'active'
+                      ? `${getDaysRemaining()} días restantes`
+                      : subscription.data?.status === 'pending'
+                        ? 'Validación pendiente'
+                        : 'Sin plan activo'}
+                  </Text>
                 </View>
-                <View style={styles.benefitRow}>
-                  <Ionicons name="checkmark-circle-sharp" size={18} color="#22C55E" />
-                  <Text style={[styles.benefitText, { color: textMain }]}>Rutinas inteligentes personalizadas por IA</Text>
-                </View>
-                <View style={styles.benefitRow}>
-                  <Ionicons name="checkmark-circle-sharp" size={18} color="#22C55E" />
-                  <Text style={[styles.benefitText, { color: textMain }]}>Asesoría nutricional y seguimiento mensual</Text>
-                </View>
-                <View style={styles.benefitRow}>
-                  <Ionicons name="checkmark-circle-sharp" size={18} color="#22C55E" />
-                  <Text style={[styles.benefitText, { color: textMain }]}>Descuentos exclusivos en suplementos y productos</Text>
-                </View>
+
+                {subscription.data?.status === 'active' && subscription.data.ends_at && (
+                  <View style={{ alignItems: 'flex-end', backgroundColor: theme.isDark ? 'rgba(34, 197, 94, 0.1)' : 'rgba(34, 197, 94, 0.08)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>
+                    <Text style={{ fontSize: 10, color: textMuted, fontWeight: '600' }}>Vence el</Text>
+                    <Text style={{ fontSize: 12, color: subscription.data?.status === 'active' ? '#22C55E' : textMain, fontWeight: '700' }}>
+                      {new Date(subscription.data.ends_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}
+                    </Text>
+                  </View>
+                )}
               </View>
+
+              {/* Dynamic Benefits List */}
+              <View style={styles.benefitsGrid}>
+                {getPlanFeatures(subscription.data?.plan).map((feature, fIdx) => (
+                  <View key={fIdx} style={styles.benefitRow}>
+                    <Ionicons name="checkmark-circle-sharp" size={18} color="#22C55E" />
+                    <Text style={[styles.benefitText, { color: textMain }]}>{feature}</Text>
+                  </View>
+                ))}
+              </View>
+
+              {/* Quick Renewal Action Button */}
+              <TouchableOpacity
+                style={{
+                  marginTop: 18,
+                  backgroundColor: '#5B3DF5',
+                  borderRadius: 14,
+                  paddingVertical: 12,
+                  paddingHorizontal: 16,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  shadowColor: '#5B3DF5',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.2,
+                  shadowRadius: 4,
+                  elevation: 3
+                }}
+                onPress={() => navigation.navigate('Suscripción')}
+                activeOpacity={0.8}
+              >
+                <Ionicons
+                  name={subscription.data?.status === 'active' ? "sync-sharp" : "card-outline"}
+                  size={18}
+                  color="#FFFFFF"
+                />
+                <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 13 }}>
+                  {subscription.data?.status === 'active' ? 'Renovar o Cambiar Plan' : 'Suscribirme a un Plan'}
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
 
@@ -584,41 +778,45 @@ export default function ProfileScreen() {
           <View style={isStacked ? styles.bottomColMobile : styles.bottomColRight}>
             <Text style={[styles.sectionTitle, { color: textMain }]}>Compras Recientes</Text>
             <View style={[styles.purchaseContainer, { borderColor: cardBorder, backgroundColor: cardBg }]}>
-              <View style={[styles.purchaseItem, { borderBottomColor: cardBorder }]}>
-                <Image
-                  source={{ uri: 'https://images.unsplash.com/photo-1593095948071-474c5cc2989d?q=80&w=800&auto=format&fit=crop' }}
-                  style={styles.purchaseImg}
-                  contentFit="cover"
-                />
-                <View style={styles.purchaseInfo}>
-                  <Text style={[styles.purchaseName, { color: textMain }]}>Creatina Monohidratada</Text>
-                  <Text style={[styles.purchaseDate, { color: textMuted }]}>15 Jul 2026</Text>
+              {recentOrders.length === 0 ? (
+                <View style={{ padding: 24, alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                  <Ionicons name="bag-handle-outline" size={32} color={textMuted} />
+                  <Text style={{ color: textMuted, fontSize: 13, textAlign: 'center', fontWeight: '500' }}>Sin compras recientes</Text>
                 </View>
-                <View style={styles.purchaseRight}>
-                  <Text style={[styles.purchasePrice, { color: textMain }]}>$30.00</Text>
-                  <View style={[styles.purchaseBadge, { backgroundColor: theme.isDark ? '#1E293B' : '#F3F4F6' }]}>
-                    <Text style={[styles.purchaseBadgeText, { color: textMuted }]}>Entregado</Text>
-                  </View>
-                </View>
-              </View>
+              ) : (
+                recentOrders.map((ord, idx) => {
+                  const firstItem = ord.items && ord.items[0];
+                  const rawImg = firstItem?.image;
+                  const itemImage = rawImg
+                    ? (rawImg.startsWith('http') ? rawImg : `${BASE_URL}/storage/${rawImg}`)
+                    : 'https://images.unsplash.com/photo-1593095948071-474c5cc2989d?q=80&w=800&auto=format&fit=crop';
+                  const itemName = firstItem
+                    ? (ord.items.length > 1 ? `${firstItem.name} +${ord.items.length - 1} más` : firstItem.name)
+                    : `Compra #${ord.id}`;
+                  const orderDate = ord.created_at ? new Date(ord.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }) : '—';
+                  const statusLabel = ord.status === 'completed' ? 'Entregado' : ord.status === 'pending' ? 'Pendiente' : ord.status === 'shipped' ? 'Enviado' : ord.status;
 
-              <View style={styles.purchaseItem}>
-                <Image
-                  source={{ uri: 'https://images.unsplash.com/photo-1602143407151-7111542de6e8?q=80&w=800&auto=format&fit=crop' }}
-                  style={styles.purchaseImg}
-                  contentFit="cover"
-                />
-                <View style={styles.purchaseInfo}>
-                  <Text style={[styles.purchaseName, { color: textMain }]}>Botella Térmica Elite</Text>
-                  <Text style={[styles.purchaseDate, { color: textMuted }]}>10 Jun 2026</Text>
-                </View>
-                <View style={styles.purchaseRight}>
-                  <Text style={[styles.purchasePrice, { color: textMain }]}>$15.00</Text>
-                  <View style={[styles.purchaseBadge, { backgroundColor: theme.isDark ? '#1E293B' : '#F3F4F6' }]}>
-                    <Text style={[styles.purchaseBadgeText, { color: textMuted }]}>Entregado</Text>
-                  </View>
-                </View>
-              </View>
+                  return (
+                    <View key={ord.id} style={[styles.purchaseItem, idx < recentOrders.length - 1 && { borderBottomColor: cardBorder }]}>
+                      <Image
+                        source={{ uri: itemImage }}
+                        style={styles.purchaseImg}
+                        contentFit="cover"
+                      />
+                      <View style={styles.purchaseInfo}>
+                        <Text style={[styles.purchaseName, { color: textMain }]} numberOfLines={1}>{itemName}</Text>
+                        <Text style={[styles.purchaseDate, { color: textMuted }]}>{orderDate}</Text>
+                      </View>
+                      <View style={styles.purchaseRight}>
+                        <Text style={[styles.purchasePrice, { color: textMain }]}>${Number(ord.total).toFixed(2)}</Text>
+                        <View style={[styles.purchaseBadge, { backgroundColor: theme.isDark ? '#1E293B' : '#F3F4F6' }]}>
+                          <Text style={[styles.purchaseBadgeText, { color: ord.status === 'completed' ? '#16A34A' : ord.status === 'pending' ? '#EAB308' : textMuted }]}>{statusLabel}</Text>
+                        </View>
+                      </View>
+                    </View>
+                  );
+                })
+              )}
             </View>
           </View>
         </View>
@@ -685,7 +883,7 @@ export default function ProfileScreen() {
         <View style={styles.editModalOverlay}>
           <View style={[styles.editModalContent, { backgroundColor: theme.colors.surface, maxHeight: '90%' }]}>
             <Text style={[styles.editModalTitle, { color: theme.colors.text }]}>Datos de Facturación</Text>
-            
+
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 16 }}>
               <View style={styles.editField}>
                 <Text style={[styles.editLabel, { color: theme.colors.textSecondary }]}>Nombre / Razón Social</Text>
@@ -729,13 +927,26 @@ export default function ProfileScreen() {
           </View>
         </View>
       </Modal>
+
+      <CustomAlertModal
+        visible={confirmModalState.visible}
+        title={confirmModalState.title}
+        message={confirmModalState.message}
+        showCancel={true}
+        cancelText="Cancelar"
+        confirmText="Descartar"
+        isDestructive={confirmModalState.isDestructive}
+        type={confirmModalState.type}
+        onClose={() => setConfirmModalState(prev => ({ ...prev, visible: false }))}
+        onConfirm={confirmModalState.onConfirm}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  mainContent: { padding: 24, paddingBottom: 80, alignSelf: 'center', width: '100%', maxWidth: 1400 },
+  mainContent: { padding: 24, paddingBottom: 140, alignSelf: 'center', width: '100%', maxWidth: 1400 },
 
   drawerOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 40 },
   drawerContainer: { position: 'absolute', top: 0, bottom: 0, left: 0, zIndex: 50, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 20, elevation: 10 },
@@ -762,10 +973,10 @@ const styles = StyleSheet.create({
   headerXpBarFill: { height: '100%', borderRadius: 3 },
   headerXpValue: { fontSize: 12, fontWeight: '700' },
 
-  headerAvatarWrapper: { width: 44, height: 44, borderRadius: 22, position: 'relative' },
-  headerAvatar: { width: '100%', height: '100%', borderRadius: 22, borderWidth: 1, borderColor: '#E2E8F0' },
-  headerAvatarPlaceholder: { width: '100%', height: '100%', borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  avatarEditBadge: { position: 'absolute', bottom: -2, right: -2, backgroundColor: '#5B3DF5', width: 16, height: 16, borderRadius: 8, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#FFFFFF' },
+  headerAvatarWrapper: { width: 64, height: 64, borderRadius: 32, position: 'relative', marginRight: 4 },
+  headerAvatar: { width: '100%', height: '100%', borderRadius: 32, borderWidth: 2, borderColor: '#5B3DF5' },
+  headerAvatarPlaceholder: { width: '100%', height: '100%', borderRadius: 32, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#5B3DF5' },
+  avatarEditBadge: { position: 'absolute', bottom: 0, right: 0, backgroundColor: '#5B3DF5', width: 20, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#FFFFFF' },
 
   statsSectionRow: { flexDirection: 'row', gap: 20, marginVertical: 24 },
   statsSectionStacked: { flexDirection: 'column', gap: 16, marginVertical: 24 },

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { apiFetch } from '../api/client';
+import ConfirmModal from '../components/ConfirmModal';
 import { 
   AlertTriangle, 
   CheckCircle2, 
@@ -18,6 +19,7 @@ export default function Categories() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editId, setEditId] = useState(null);
   const [name, setName] = useState('');
+  const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, category: null });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -83,8 +85,13 @@ export default function Categories() {
     }
   };
 
-  const handleDelete = async (c) => {
-    if (!window.confirm(`¿Estás seguro de eliminar la categoría "${c.name}"?`)) return;
+  const handleOpenDelete = (c) => {
+    setDeleteConfirm({ isOpen: true, category: c });
+  };
+
+  const handleConfirmDelete = async () => {
+    const c = deleteConfirm.category;
+    if (!c) return;
     setError(''); setSuccess('');
     try {
       await apiFetch(`/admin/categories/${c.id}`, { method: 'DELETE' });
@@ -141,7 +148,7 @@ export default function Categories() {
                           <Pencil size={12} />
                           <span>Editar</span>
                         </button>
-                        <button className="btn btn--danger" style={{ padding: '6px 12px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }} onClick={() => handleDelete(c)}>
+                        <button className="btn btn--danger" style={{ padding: '6px 12px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }} onClick={() => handleOpenDelete(c)}>
                           <Trash2 size={12} />
                           <span>Eliminar</span>
                         </button>
@@ -178,7 +185,7 @@ export default function Categories() {
 
       {modalOpen && (
         <div className="modal-overlay" onClick={() => setModalOpen(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
+          <div className="modal" style={{ maxWidth: 450 }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <h3 style={{ margin: 0 }}>{editId ? 'Editar Categoría' : 'Nueva Categoría'}</h3>
               <button className="btn btn--ghost" style={{ padding: 6, borderRadius: '50%' }} onClick={() => setModalOpen(false)}><X size={16} /></button>
@@ -204,6 +211,17 @@ export default function Categories() {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={deleteConfirm.isOpen}
+        title="Eliminar Categoría"
+        message={`¿Estás seguro de que deseas eliminar la categoría "${deleteConfirm.category?.name}"? Esta acción no se puede deshacer.`}
+        confirmText="Eliminar Categoría"
+        cancelText="Cancelar"
+        isDanger={true}
+        onConfirm={handleConfirmDelete}
+        onClose={() => setDeleteConfirm({ isOpen: false, category: null })}
+      />
     </div>
   );
 }

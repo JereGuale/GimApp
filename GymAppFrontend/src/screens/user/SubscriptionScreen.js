@@ -286,62 +286,48 @@ export default function SubscriptionScreen() {
     );
   };
 
-  // Sort plans by price and take first 3 plans
+  // Sort plans by price
   const sortedPlans = [...plans]
-    .sort((a, b) => parseFloat(a.price || 0) - parseFloat(b.price || 0))
-    .slice(0, 3);
+    .sort((a, b) => parseFloat(a.price || 0) - parseFloat(b.price || 0));
 
-  const mappedPlans = sortedPlans.map((plan, index) => {
-    if (index === 0) {
-      return {
-        ...plan,
-        displayName: 'Plan Estudiantil',
-        displayPrice: '20',
-        category: 'FLEXIBILIDAD',
-        accentColor: '#00C2FF', // Celeste
-        badge: null,
-        description: 'Económico y flexible, ideal para estudiantes.',
-        features: [
-          'Acceso total al gimnasio',
-          'Horarios flexibles',
-          'Área de cardio y peso libre',
-          'Sin contrato de permanencia'
-        ]
-      };
-    } else if (index === 1) {
-      return {
-        ...plan,
-        displayName: 'Plan Básico',
-        displayPrice: '25',
-        category: 'ESTÁNDAR',
-        accentColor: '#F97316', // Naranja
-        badge: 'MÁS POPULAR',
-        description: 'El plan más equilibrado para tu entrenamiento diario.',
-        features: [
-          'Acceso total ilimitado 24/7',
-          'Uso completo de vestidores',
-          'Clases grupales semanales',
-          '1 sesión de evaluación corporal'
-        ]
-      };
-    } else {
-      return {
-        ...plan,
-        displayName: 'Plan Elite',
-        displayPrice: '50',
-        category: 'EXPERIENCIA PREMIUM',
-        accentColor: '#5B3DF5', // Violeta
-        badge: 'PREMIUM',
-        description: 'La experiencia definitiva con acompañamiento profesional.',
-        features: [
-          'Entrenamiento 100% personalizado',
-          'Plan nutricional a medida',
-          'Acceso ilimitado 24/7 a sedes',
-          'Acceso a zona VIP y sauna',
-          'Masajes de recuperación mensual'
-        ]
-      };
+  const mappedPlans = sortedPlans.map((plan) => {
+    let category = 'ESTÁNDAR';
+    const nameLower = (plan.name || '').toLowerCase();
+    if (nameLower.includes('estudiantil') || nameLower.includes('flex')) category = 'FLEXIBILIDAD';
+    else if (nameLower.includes('elite') || nameLower.includes('premium')) category = 'EXPERIENCIA PREMIUM';
+
+    let featuresList = [];
+    if (Array.isArray(plan.features)) {
+      featuresList = plan.features;
+    } else if (typeof plan.features === 'string') {
+      try {
+        const parsed = JSON.parse(plan.features);
+        featuresList = Array.isArray(parsed) ? parsed : [plan.features];
+      } catch (e) {
+        featuresList = [plan.features];
+      }
     }
+
+    if (featuresList.length === 0 && plan.description) {
+      featuresList = [plan.description];
+    }
+
+    let badge = null;
+    if (plan.is_best_value) badge = 'MÁS POPULAR';
+    else if (category === 'EXPERIENCIA PREMIUM') badge = 'PREMIUM';
+
+    const accentColor = plan.color || (category === 'FLEXIBILIDAD' ? '#00C2FF' : category === 'EXPERIENCIA PREMIUM' ? '#5B3DF5' : '#F97316');
+
+    return {
+      ...plan,
+      displayName: plan.name,
+      displayPrice: plan.price ? Number(plan.price).toFixed(0) : '0',
+      category: category,
+      accentColor: accentColor,
+      badge: badge,
+      description: plan.description || '',
+      features: featuresList
+    };
   });
 
   const screenBg = theme.isDark ? '#090D16' : '#FFFFFF';
@@ -573,7 +559,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 24,
-    paddingBottom: 80,
+    paddingBottom: 140,
   },
   heroSection: {
     alignItems: 'center',

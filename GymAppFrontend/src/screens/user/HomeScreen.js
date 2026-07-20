@@ -225,9 +225,15 @@ export default function HomeScreen() {
   };
 
   const handleBannerPress = (banner) => {
-    if (banner?.button_action === 'subscription') {
+    if (!banner) return;
+    const action = banner.button_action;
+    if (action === 'subscription') {
       navigation.navigate('Suscripción');
-    } else if (banner?.button_action === 'explore') {
+    } else if (action === 'profile') {
+      navigation.navigate('Perfil');
+    } else if (action === 'store' || action === 'explore' || action === 'catalog') {
+      setShowFullCatalog(true);
+    } else {
       setShowFullCatalog(true);
     }
   };
@@ -427,30 +433,32 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 140 }} showsVerticalScrollIndicator={false}>
 
           {isDesktop ? (
             /* ── WEB SPLIT GRID LAYOUT ── */
             <View style={{ flexDirection: 'row', paddingHorizontal: contentPadding, marginTop: 16, alignItems: 'flex-start' }}>
 
               {/* Sidebar Filters */}
-              <View style={{ width: 240, marginRight: 28, backgroundColor: theme.colors.surface, borderRadius: 16, borderHeight: 1, borderColor: theme.colors.border, padding: 20 }}>
+              <View style={{ width: 240, marginRight: 28, backgroundColor: theme.colors.surface, borderRadius: 16, borderWidth: 1, borderColor: theme.colors.border, padding: 20 }}>
                 <Text style={{ fontSize: 16, fontWeight: '800', color: theme.colors.text, marginBottom: 16 }}>Filtros</Text>
 
                 {/* Price range */}
                 <Text style={{ fontSize: 13, fontWeight: '700', color: theme.colors.text, marginBottom: 8 }}>Rango de Precio (USD)</Text>
-                <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
+                <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20, width: '100%' }}>
                   <TextInput
-                    style={{ flex: 1, height: 36, borderWidth: 1, borderColor: theme.colors.border, borderRadius: 8, paddingHorizontal: 8, fontSize: 12, color: theme.colors.text }}
+                    style={{ flex: 1, minWidth: 0, height: 36, borderWidth: 1, borderColor: theme.colors.border, borderRadius: 8, paddingHorizontal: 8, fontSize: 12, color: theme.colors.text }}
                     keyboardType="numeric"
                     placeholder="Min ($)"
+                    placeholderTextColor="#9CA3AF"
                     value={minPrice}
                     onChangeText={setMinPrice}
                   />
                   <TextInput
-                    style={{ flex: 1, height: 36, borderWidth: 1, borderColor: theme.colors.border, borderRadius: 8, paddingHorizontal: 8, fontSize: 12, color: theme.colors.text }}
+                    style={{ flex: 1, minWidth: 0, height: 36, borderWidth: 1, borderColor: theme.colors.border, borderRadius: 8, paddingHorizontal: 8, fontSize: 12, color: theme.colors.text }}
                     keyboardType="numeric"
                     placeholder="Max ($)"
+                    placeholderTextColor="#9CA3AF"
                     value={maxPrice}
                     onChangeText={setMaxPrice}
                   />
@@ -569,11 +577,11 @@ export default function HomeScreen() {
 
               {/* Mobile Filter Drawer */}
               {filterDrawerOpen && (
-                <View style={{ backgroundColor: theme.colors.surface, borderRadius: 12, padding: 16, marginBottom: 16, borderHeight: 1, borderColor: theme.colors.border }}>
+                <View style={{ backgroundColor: theme.colors.surface, borderRadius: 12, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: theme.colors.border }}>
                   <Text style={{ fontSize: 13, fontWeight: '800', color: theme.colors.text, marginBottom: 8 }}>Rango de Precio</Text>
-                  <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
+                  <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16, width: '100%' }}>
                     <TextInput
-                      style={{ flex: 1, height: 36, borderWidth: 1, borderColor: theme.colors.border, borderRadius: 8, paddingHorizontal: 8, fontSize: 12, color: theme.colors.text, backgroundColor: theme.colors.background }}
+                      style={{ flex: 1, minWidth: 0, height: 36, borderWidth: 1, borderColor: theme.colors.border, borderRadius: 8, paddingHorizontal: 8, fontSize: 12, color: theme.colors.text, backgroundColor: theme.colors.background }}
                       keyboardType="numeric"
                       placeholder="Min ($)"
                       placeholderTextColor="#9CA3AF"
@@ -581,7 +589,7 @@ export default function HomeScreen() {
                       onChangeText={setMinPrice}
                     />
                     <TextInput
-                      style={{ flex: 1, height: 36, borderWidth: 1, borderColor: theme.colors.border, borderRadius: 8, paddingHorizontal: 8, fontSize: 12, color: theme.colors.text, backgroundColor: theme.colors.background }}
+                      style={{ flex: 1, minWidth: 0, height: 36, borderWidth: 1, borderColor: theme.colors.border, borderRadius: 8, paddingHorizontal: 8, fontSize: 12, color: theme.colors.text, backgroundColor: theme.colors.background }}
                       keyboardType="numeric"
                       placeholder="Max ($)"
                       placeholderTextColor="#9CA3AF"
@@ -852,7 +860,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 110,
+    paddingBottom: 140,
   },
 
   // ─── Search Bar ───

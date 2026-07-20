@@ -270,7 +270,7 @@ export default function CategoriesScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: { padding: PADDING, paddingBottom: 32 },
+  content: { padding: PADDING, paddingBottom: 140 },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   loadingText: { marginTop: 10, fontSize: 14, fontWeight: '600' },
 
