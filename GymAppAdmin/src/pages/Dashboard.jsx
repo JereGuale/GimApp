@@ -78,17 +78,24 @@ export default function Dashboard() {
     const bgColor = getAvatarBgColor(user.name);
     
     return (
-      <div className="user-profile-cell-wrapper">
-        <div className="avatar-circle" style={!avatarUrl ? { backgroundColor: bgColor } : {}}>
+      <div className="user-profile-cell-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div 
+          className="avatar-circle" 
+          style={
+            !avatarUrl 
+              ? { backgroundColor: bgColor, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '38px', height: '38px', borderRadius: '50%', color: '#fff', fontWeight: 'bold', flexShrink: 0 } 
+              : { display: 'flex', alignItems: 'center', justifyContent: 'center', width: '38px', height: '38px', borderRadius: '50%', overflow: 'hidden', flexShrink: 0 }
+          }
+        >
           {avatarUrl ? (
-            <img src={avatarUrl} alt={user.name} className="avatar-img" />
+            <img src={avatarUrl} alt={user.name} className="avatar-img" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           ) : (
             <span>{initials}</span>
           )}
         </div>
-        <div className="user-text-details">
-          <span className="user-name">{user.name}</span>
-          <span className="user-email">{user.email}</span>
+        <div className="user-text-details" style={{ display: 'flex', flexDirection: 'column', minWidth: '0', textAlign: 'left' }}>
+          <span className="user-name" style={{ fontWeight: '600', color: 'var(--text, #0F172A)', fontSize: '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.name}</span>
+          <span className="user-email" style={{ fontSize: '12px', color: 'var(--text-secondary, #64748B)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.email}</span>
         </div>
       </div>
     );
