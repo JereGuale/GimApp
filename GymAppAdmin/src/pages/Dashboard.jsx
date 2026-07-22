@@ -78,7 +78,7 @@ export default function Dashboard() {
     const bgColor = getAvatarBgColor(user.name);
     
     return (
-      <div className="user-avatar-wrapper">
+      <div className="user-profile-cell-wrapper">
         <div className="avatar-circle" style={!avatarUrl ? { backgroundColor: bgColor } : {}}>
           {avatarUrl ? (
             <img src={avatarUrl} alt={user.name} className="avatar-img" />
