@@ -881,7 +881,7 @@ export default function Orders() {
             <div className="premium-order-modal-header">
               <div>
                 <h3 className="order-receipt-modal-title">Validación de Pago</h3>
-                <p className="order-receipt-modal-subtitle">Pedido #{receiptModal.id} • Cliente: {receiptModal.user?.name || 'Cliente'}</p>
+                <p className="order-receipt-modal-subtitle">Cliente: {receiptModal.user?.name || 'Cliente'}</p>
               </div>
               <button className="btn btn--ghost" style={{ padding: 6, borderRadius: '50%' }} onClick={() => setReceiptModal(null)}>
                 <X size={18} />
@@ -950,9 +950,28 @@ export default function Orders() {
                       type="button"
                       onClick={() => {
                         const clientPhone = receiptModal.billing_phone || receiptModal.user?.phone || '';
-                        const clientName = receiptModal.billing_name || receiptModal.user?.name || '';
-                        const orderId = receiptModal.id;
-                        const message = `Hola ${clientName}, tu pedido #${orderId} en Fitness Club Gym fue recibido y está en proceso de validación. ¡Pronto nos contactaremos contigo para la entrega! 🛍️`;
+                        const clientName = receiptModal.billing_name || receiptModal.user?.name || 'Cliente';
+
+                        const itemsSummary = Array.isArray(receiptModal.items) && receiptModal.items.length > 0
+                          ? receiptModal.items.map(item => `• ${item.name} x${item.quantity}${item.selected_option ? ` [${item.selected_option}]` : ''} ($${Number(item.price * item.quantity).toFixed(2)})`).join('\n')
+                          : '• Productos varios';
+
+                        const shippingText = receiptModal.shipping_method === 'delivery'
+                          ? `Envío a domicilio (${receiptModal.billing_city || 'Manta'}${receiptModal.billing_address ? ` - ${receiptModal.billing_address}` : ''})`
+                          : 'Retiro en local';
+
+                        const message = `¡Hola ${clientName}! 👋 Gracias por tu compra en Fitness Club Gym.
+
+Hemos recibido tu comprobante de pago. Detalles del pedido:
+
+🛒 *Productos:*
+${itemsSummary}
+
+💰 *Total:* $${Number(receiptModal.total).toFixed(2)}
+📍 *Entrega:* ${shippingText}
+
+Estamos validando tu pago y nos comunicaremos contigo de inmediato. ¡Gracias por tu preferencia! 🏋️‍♂️✨`;
+
                         let formattedPhone = clientPhone.replace(/\s+/g, '').replace(/[+\-]/g, '');
                         if (formattedPhone.startsWith('0')) {
                           formattedPhone = '593' + formattedPhone.substring(1);
@@ -962,21 +981,23 @@ export default function Orders() {
                         window.open(`https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`, '_blank');
                       }}
                       style={{
-                        backgroundColor: '#25D366',
-                        color: '#fff',
+                        background: 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)',
+                        color: '#ffffff',
                         border: 'none',
-                        borderRadius: '6px',
-                        padding: '4px 10px',
-                        fontSize: '11px',
+                        borderRadius: '20px',
+                        padding: '6px 14px',
+                        fontSize: '12px',
                         fontWeight: 700,
                         cursor: 'pointer',
                         display: 'inline-flex',
                         alignItems: 'center',
-                        gap: '6px'
+                        gap: '6px',
+                        boxShadow: '0 2px 8px rgba(37, 211, 102, 0.3)',
+                        transition: 'all 0.2s ease'
                       }}
                     >
-                      <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
-                        <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.37 9.863-9.73.001-2.597-1.006-5.038-2.836-6.87C16.634 2.16 14.204.975 11.623.975c-5.442 0-9.866 4.372-9.87 9.737-.002 1.84.482 3.636 1.4 5.2l-.37 1.353 1.385-.363zm10.963-7.53c-.313-.157-1.854-.915-2.14-1.018-.287-.105-.497-.157-.707.157-.21.314-.813 1.018-.996 1.228-.183.21-.366.236-.679.079-.313-.157-1.32-.486-2.515-1.553-.93-.83-1.558-1.855-1.74-2.17-.183-.313-.02-.482.137-.638.14-.14.313-.367.47-.55.157-.185.21-.315.314-.525.105-.21.053-.394-.026-.55-.08-.158-.708-1.703-.97-2.336-.255-.618-.516-.534-.707-.544-.183-.01-.393-.01-.602-.01-.21 0-.55.08-.838.393-.288.315-1.1 1.077-1.1 2.628 0 1.552 1.127 3.042 1.284 3.253.158.21 2.217 3.385 5.372 4.747.75.324 1.336.518 1.794.662.753.24 1.438.207 1.98.127.604-.09 1.853-.758 2.115-1.454.26-.697.26-1.295.183-1.42-.077-.125-.287-.203-.6-.36z"/>
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.197 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c-.001 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
                       </svg>
                       <span>WhatsApp</span>
                     </button>

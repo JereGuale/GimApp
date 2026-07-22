@@ -45,7 +45,6 @@ const navGroups = [
     title: 'Catálogo',
     items: [
       { to: '/usuarios', icon: Users, label: 'Usuarios' },
-      { to: '/categorias', icon: FolderOpen, label: 'Categorías' },
       { to: '/productos', icon: Package, label: 'Productos' },
       { to: '/banners', icon: Image, label: 'Banners' },
     ]

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { apiFetch, API_BASE_URL } from '../api/client';
+import ConfirmModal from '../components/ConfirmModal';
 import { 
   AlertTriangle, 
   CheckCircle2, 
@@ -16,6 +17,7 @@ export default function Banners() {
   const [banners, setBanners] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, banner: null });
 
   // Form states
   const [editId, setEditId] = useState(null);
@@ -136,12 +138,17 @@ export default function Banners() {
     }
   };
 
-  const handleDelete = async (b) => {
-    if (!window.confirm('¿Estás seguro de eliminar este banner?')) return;
+  const handleOpenDelete = (b) => {
+    setDeleteConfirm({ isOpen: true, banner: b });
+  };
+
+  const handleConfirmDelete = async () => {
+    const b = deleteConfirm.banner;
+    if (!b) return;
     setError(''); setSuccess('');
     try {
       await apiFetch(`/admin/banners/${b.id}`, { method: 'DELETE' });
-      setSuccess('Banner eliminado');
+      setSuccess('Banner eliminado correctamente');
       fetchBanners();
     } catch (err) {
       setError(err.message || 'No se pudo eliminar el banner');
@@ -253,7 +260,7 @@ export default function Banners() {
                       <Pencil size={12} />
                       <span>Editar</span>
                     </button>
-                    <button className="btn btn--danger" style={{ flex: 1, padding: '8px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4 }} onClick={() => handleDelete(b)}>
+                    <button className="btn btn--danger" style={{ flex: 1, padding: '8px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4 }} onClick={() => handleOpenDelete(b)}>
                       <Trash2 size={12} />
                       <span>Eliminar</span>
                     </button>
@@ -353,6 +360,17 @@ export default function Banners() {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={deleteConfirm.isOpen}
+        title="Eliminar Banner"
+        message={`¿Estás seguro de que deseas eliminar el banner "${deleteConfirm.banner?.title || 'seleccionado'}"? Esta acción no se puede deshacer.`}
+        confirmText="Eliminar Banner"
+        cancelText="Cancelar"
+        isDanger={true}
+        onConfirm={handleConfirmDelete}
+        onClose={() => setDeleteConfirm({ isOpen: false, banner: null })}
+      />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { apiFetch } from '../api/client';
+import ConfirmModal from '../components/ConfirmModal';
 import { 
   AlertTriangle, 
   CheckCircle2, 
@@ -18,6 +19,7 @@ export default function SubscriptionPlans() {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editId, setEditId] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, plan: null });
   
   // Form fields
   const [name, setName] = useState('');
@@ -146,8 +148,13 @@ export default function SubscriptionPlans() {
     }
   };
 
-  const handleDelete = async (p) => {
-    if (!window.confirm(`¿Estás seguro de eliminar el plan "${p.name}"?`)) return;
+  const handleOpenDelete = (p) => {
+    setDeleteConfirm({ isOpen: true, plan: p });
+  };
+
+  const handleConfirmDelete = async () => {
+    const p = deleteConfirm.plan;
+    if (!p) return;
     setError(''); setSuccess('');
     try {
       await apiFetch(`/admin/subscription-plans/${p.id}`, { method: 'DELETE' });
@@ -165,17 +172,48 @@ export default function SubscriptionPlans() {
     currentPage * itemsPerPage
   );
 
+  const [viewMode, setViewMode] = useState('cards'); // 'cards' | 'table'
+
+  // Sort plans by price for card view
+  const sortedPlans = [...plans].sort((a, b) => parseFloat(a.price || 0) - parseFloat(b.price || 0));
+
   return (
     <div>
       {error && <div className="alert alert--error"><AlertTriangle size={16} /> <span>{error}</span></div>}
       {success && <div className="alert alert--success"><CheckCircle2 size={16} /> <span>{success}</span></div>}
 
-      <div className="page-header">
-        <h2>Planes de Suscripción</h2>
-        <button className="btn btn--primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={handleOpenAdd}>
-          <Plus size={16} />
-          <span>Nuevo Plan</span>
-        </button>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+        <div>
+          <h2 style={{ margin: 0 }}>Planes de Suscripción</h2>
+          <p style={{ margin: '4px 0 0 0', fontSize: 13, color: 'var(--text-secondary)' }}>
+            Gestiona los planes que ven los usuarios clientes en la app móvil.
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          {/* View Toggle */}
+          <div style={{ display: 'inline-flex', backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 10, padding: 3, border: '1px solid var(--border)' }}>
+            <button 
+              className={`btn ${viewMode === 'cards' ? 'btn--primary' : 'btn--ghost'}`}
+              style={{ padding: '6px 12px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6, borderRadius: 8 }}
+              onClick={() => setViewMode('cards')}
+            >
+              <span>Tarjetas</span>
+            </button>
+            <button 
+              className={`btn ${viewMode === 'table' ? 'btn--primary' : 'btn--ghost'}`}
+              style={{ padding: '6px 12px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6, borderRadius: 8 }}
+              onClick={() => setViewMode('table')}
+            >
+              <span>Tabla</span>
+            </button>
+          </div>
+
+          <button className="btn btn--primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={handleOpenAdd}>
+            <Plus size={16} />
+            <span>Nuevo Plan</span>
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -184,6 +222,136 @@ export default function SubscriptionPlans() {
         <div className="empty-state">
           <div className="empty-icon"><CreditCard size={40} /></div>
           <p>No hay planes de suscripción registrados</p>
+        </div>
+      ) : viewMode === 'cards' ? (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(310px, 1fr))', gap: 24, margin: '20px 0' }}>
+          {sortedPlans.map(plan => {
+            let category = 'ESTÁNDAR';
+            const nameLower = (plan.name || '').toLowerCase();
+            if (nameLower.includes('estudiantil') || nameLower.includes('flex')) category = 'FLEXIBILIDAD';
+            else if (nameLower.includes('elite') || nameLower.includes('premium')) category = 'EXPERIENCIA PREMIUM';
+
+            let featuresList = [];
+            if (Array.isArray(plan.features)) {
+              featuresList = plan.features;
+            } else if (typeof plan.features === 'string') {
+              try {
+                const parsed = JSON.parse(plan.features);
+                featuresList = Array.isArray(parsed) ? parsed : [plan.features];
+              } catch (e) {
+                featuresList = [plan.features];
+              }
+            }
+
+            const accentColor = plan.color || (category === 'FLEXIBILIDAD' ? '#00C2FF' : category === 'EXPERIENCIA PREMIUM' ? '#5B3DF5' : '#F97316');
+            const isBest = plan.is_best_value;
+            const isPremium = category === 'EXPERIENCIA PREMIUM';
+
+            return (
+              <div 
+                key={plan.id} 
+                style={{
+                  position: 'relative',
+                  backgroundColor: '#111827',
+                  borderRadius: 20,
+                  border: isBest ? `2px solid ${accentColor}` : isPremium ? `2px solid ${accentColor}` : '1px solid rgba(255,255,255,0.08)',
+                  padding: 24,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  boxShadow: isBest ? `0 8px 30px ${accentColor}25` : '0 4px 20px rgba(0,0,0,0.2)'
+                }}
+              >
+                {isBest && (
+                  <div style={{
+                    position: 'absolute',
+                    top: -12,
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    backgroundColor: accentColor,
+                    color: '#FFF',
+                    fontSize: 11,
+                    fontWeight: 800,
+                    padding: '4px 14px',
+                    borderRadius: 20,
+                    letterSpacing: 0.8,
+                    boxShadow: `0 4px 12px ${accentColor}50`
+                  }}>
+                    MÁS POPULAR
+                  </div>
+                )}
+
+                {isPremium && !isBest && (
+                  <div style={{
+                    position: 'absolute',
+                    top: -12,
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    backgroundColor: accentColor,
+                    color: '#FFF',
+                    fontSize: 11,
+                    fontWeight: 800,
+                    padding: '4px 14px',
+                    borderRadius: 20,
+                    letterSpacing: 0.8
+                  }}>
+                    ★ PREMIUM
+                  </div>
+                )}
+
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1.2, color: accentColor, marginBottom: 8 }}>
+                    {category}
+                  </div>
+
+                  <h3 style={{ fontSize: 24, fontWeight: 800, color: '#F3F4F6', margin: '0 0 8px 0' }}>
+                    {plan.name}
+                  </h3>
+
+                  <p style={{ fontSize: 13, color: '#9CA3AF', lineHeight: 1.5, minHeight: 40, margin: '0 0 20px 0' }}>
+                    {plan.description || 'Sin descripción disponible.'}
+                  </p>
+
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 24 }}>
+                    <span style={{ fontSize: 38, fontWeight: 900, color: '#FFFFFF' }}>
+                      ${Number(plan.price).toFixed(0)}
+                    </span>
+                    <span style={{ fontSize: 14, color: '#9CA3AF' }}>
+                      /{plan.duration === 'monthly' ? 'mes' : plan.duration}
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 28 }}>
+                    {featuresList.map((feat, fIdx) => (
+                      <div key={fIdx} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13.5, color: '#E5E7EB' }}>
+                        <CheckCircle2 size={16} color="#22C55E" style={{ flexShrink: 0 }} />
+                        <span>{feat}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: 10, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                  <button 
+                    className="btn btn--primary" 
+                    style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: accentColor, borderColor: accentColor }}
+                    onClick={() => handleOpenEdit(plan)}
+                  >
+                    <Pencil size={14} />
+                    <span>Editar Plan</span>
+                  </button>
+                  <button 
+                    className="btn btn--danger" 
+                    style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '10px 14px' }}
+                    onClick={() => handleOpenDelete(plan)}
+                    title="Eliminar Plan"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
         </div>
       ) : (
         <>
@@ -246,7 +414,7 @@ export default function SubscriptionPlans() {
                           <Pencil size={12} />
                           <span>Editar</span>
                         </button>
-                        <button className="btn btn--danger" style={{ padding: '6px 12px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }} onClick={() => handleDelete(plan)}>
+                        <button className="btn btn--danger" style={{ padding: '6px 12px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }} onClick={() => handleOpenDelete(plan)}>
                           <Trash2 size={12} />
                           <span>Eliminar</span>
                         </button>
@@ -397,6 +565,17 @@ export default function SubscriptionPlans() {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={deleteConfirm.isOpen}
+        title="Eliminar Plan"
+        message={`¿Estás seguro de que deseas eliminar el plan "${deleteConfirm.plan?.name}"? Esta acción no se puede deshacer.`}
+        confirmText="Eliminar Plan"
+        cancelText="Cancelar"
+        isDanger={true}
+        onConfirm={handleConfirmDelete}
+        onClose={() => setDeleteConfirm({ isOpen: false, plan: null })}
+      />
     </div>
   );
 }

@@ -94,35 +94,41 @@ class DatabaseSeeder extends Seeder
             'is_featured' => true
         ]);
 
-        // Create subscription plans
+        // Clean old plans and create subscription plans matching Client App
+        SubscriptionPlan::whereNotIn('name', ['Plan Estudiantil', 'Plan Básico', 'Plan Elite'])->delete();
+
         SubscriptionPlan::updateOrCreate(
-            ['name' => 'Plan Básico'],
+            ['name' => 'Plan Estudiantil'],
             [
-                'description' => 'Acceso básico al gimnasio',
+                'description' => 'Económico y flexible, ideal para estudiantes.',
                 'price' => 20.00,
                 'duration' => 'monthly',
-                'features' => json_encode(['Acceso al gimnasio', 'Horario limitado']),
-                'icon' => 'barbell-outline',
-                'color' => '#22D3EE',
+                'features' => json_encode([
+                    'Acceso total al gimnasio',
+                    'Horarios flexibles',
+                    'Área de cardio y peso libre',
+                    'Sin contrato de permanencia'
+                ]),
+                'icon' => 'school-outline',
+                'color' => '#00C2FF',
                 'is_best_value' => false
             ]
         );
 
         SubscriptionPlan::updateOrCreate(
-            ['name' => 'Plan Pro'],
+            ['name' => 'Plan Básico'],
             [
-                'description' => 'El plan más popular con todo incluido',
-                'price' => 35.00,
+                'description' => 'El plan más equilibrado para tu entrenamiento diario.',
+                'price' => 25.00,
                 'duration' => 'monthly',
                 'features' => json_encode([
-                    'Acceso ilimitado',
-                    'Clases grupales',
-                    'Entrenador personal (2 sesiones)',
-                    'Descuento en productos',
-                    'Oferta Carnaval incluida'
+                    'Acceso total ilimitado 24/7',
+                    'Uso completo de vestidores',
+                    'Clases grupales semanales',
+                    '1 sesión de evaluación corporal'
                 ]),
-                'icon' => 'fitness',
-                'color' => '#FB923C',
+                'icon' => 'barbell-outline',
+                'color' => '#F97316',
                 'is_best_value' => true
             ]
         );
@@ -130,17 +136,18 @@ class DatabaseSeeder extends Seeder
         SubscriptionPlan::updateOrCreate(
             ['name' => 'Plan Elite'],
             [
-                'description' => 'Experiencia premium completa',
+                'description' => 'La experiencia definitiva con acompañamiento profesional.',
                 'price' => 50.00,
                 'duration' => 'monthly',
                 'features' => json_encode([
-                    'Todo del Plan Pro',
-                    'Entrenador personal ilimitado',
-                    'Nutricionista',
-                    'Zona VIP'
+                    'Entrenamiento 100% personalizado',
+                    'Plan nutricional a medida',
+                    'Acceso ilimitado 24/7 a sedes',
+                    'Acceso a zona VIP y sauna',
+                    'Masajes de recuperación mensual'
                 ]),
                 'icon' => 'trophy',
-                'color' => '#A78BFA',
+                'color' => '#5B3DF5',
                 'is_best_value' => false
             ]
         );
