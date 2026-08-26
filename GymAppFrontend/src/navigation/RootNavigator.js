@@ -34,7 +34,7 @@ export default function RootNavigator() {
   return (
     <Stack.Navigator
       key={user ? (user.role === 'admin' ? 'admin' : 'user') : 'guest'}
-      screenOptions={{ headerShown: false }}
+      screenOptions={{ headerShown: false, cardStyle: { flex: 1 } }}
     >
       {user && user.role === 'admin' ? (
         <>

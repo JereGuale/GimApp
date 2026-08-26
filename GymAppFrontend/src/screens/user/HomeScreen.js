@@ -861,6 +861,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 140,
+    flexGrow: 1,
   },
 
   // ─── Search Bar ───
