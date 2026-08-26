@@ -126,17 +126,18 @@ export default function ProductDetailScreen() {
   };
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: theme.colors.background }}
-      contentContainerStyle={[styles.scrollContent, isWide && styles.scrollContentWide]}
-      showsVerticalScrollIndicator={true}
-      scrollEnabled={true}
-    >
-      <View style={styles.floatingHeaderArea}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.floatingBackBtn, { backgroundColor: theme.isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }]}>
-          <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
-        </TouchableOpacity>
-      </View>
+    <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={[styles.scrollContent, isWide && styles.scrollContentWide]}
+        showsVerticalScrollIndicator={true}
+        scrollEnabled={true}
+      >
+        <View style={styles.floatingHeaderArea}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.floatingBackBtn, { backgroundColor: theme.isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }]}>
+            <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
+          </TouchableOpacity>
+        </View>
         {/* Left: Image gallery */}
         <View style={[styles.gallerySection, isWide && { flex: 1 }]}>
           {/* Main image */}
@@ -265,7 +266,8 @@ export default function ProductDetailScreen() {
             </Text>
           </View>
         </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
