@@ -8,9 +8,9 @@ export default function Settings() {
   const { isDark, toggleTheme } = useTheme();
   const [location, setLocation] = useState({
     name: 'Fitness Club Gym',
-    address: 'Calle 15 y Av. 24, Barrio Córdoba, Manta, Ecuador',
+    address: 'Calle J-1 y Calle 31, Costa Azul, Manta, Ecuador',
     description: 'Fácil acceso, estacionamiento cercano y una zona segura para que entrenar sea parte natural de tu rutina.',
-    maps_url: 'https://maps.google.com/?q=-0.9621,-80.7127'
+    maps_url: 'https://maps.google.com/?q=-0.967601,-80.678922'
   });
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -52,8 +52,8 @@ export default function Settings() {
     const initMap = () => {
       if (!window.L) return;
 
-      let initialLat = -0.9621;
-      let initialLng = -80.7127;
+      let initialLat = -0.967601;
+      let initialLng = -80.678922;
 
       // Try to parse lat/lng from maps_url
       if (location.maps_url) {

@@ -56,9 +56,9 @@ export default function HomeScreen() {
   const [categories, setCategories] = useState([]); // Saved category state
   const [gymLocation, setGymLocation] = useState({
     name: 'Fitness Club Gym',
-    address: 'Calle 15 y Av. 24, Barrio Córdoba, Manta, Ecuador',
+    address: 'Calle J-1 y Calle 31, Costa Azul, Manta, Ecuador',
     description: 'Fácil acceso, estacionamiento cercano y una zona segura para que entrenar sea parte natural de tu rutina.',
-    maps_url: 'https://maps.google.com/?q=Calle+15+y+Av.+24,+Manta,+Ecuador'
+    maps_url: 'https://maps.google.com/?q=-0.967601,-80.678922'
   });
   const [loading, setLoading] = useState(true);
   const [favorites, setFavorites] = useState([]);
@@ -168,9 +168,9 @@ export default function HomeScreen() {
         if (loc && loc.value && isMounted) {
           setGymLocation({
             name: loc.value.name || 'Fitness Club Gym',
-            address: loc.value.address || 'Calle 15 y Av. 24, Barrio Córdoba, Manta, Ecuador',
+            address: loc.value.address || 'Calle J-1 y Calle 31, Costa Azul, Manta, Ecuador',
             description: loc.value.description || 'Fácil acceso, estacionamiento cercano y una zona segura para que entrenar sea parte natural de tu rutina.',
-            maps_url: loc.value.maps_url || 'https://maps.google.com/?q=Calle+15+y+Av.+24,+Manta,+Ecuador'
+            maps_url: loc.value.maps_url || 'https://maps.google.com/?q=-0.967601,-80.678922'
           });
         }
       } catch (err) {

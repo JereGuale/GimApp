@@ -334,7 +334,7 @@ const styles = StyleSheet.create({
   productsLoadingWrap: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
   /* Products grid */
-  productsGridWrap: { padding: PADDING, paddingTop: 4, paddingBottom: 32 },
+  productsGridWrap: { padding: PADDING, paddingTop: 4, paddingBottom: 140 },
   productsGrid: {
     flexDirection: 'row', flexWrap: 'wrap',
     gap: CARD_GAP,

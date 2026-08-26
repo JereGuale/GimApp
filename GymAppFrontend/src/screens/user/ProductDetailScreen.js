@@ -291,7 +291,7 @@ const styles = StyleSheet.create({
   },
 
   /* Content */
-  scrollContent: { padding: 16, paddingTop: 80, paddingBottom: 120 },
+  scrollContent: { padding: 16, paddingTop: 80, paddingBottom: 140 },
   scrollContentWide: { flexDirection: 'row', gap: 24, paddingTop: 80 },
 
   /* Gallery */
