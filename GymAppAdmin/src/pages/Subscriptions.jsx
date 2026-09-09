@@ -29,7 +29,8 @@ import {
   MessageCircle,
   Send,
   Copy,
-  Phone
+  Phone,
+  FileText
 } from 'lucide-react';
 import '../components/Layout.css';
 import './Subscriptions.css';
@@ -64,6 +65,9 @@ export default function Subscriptions() {
   // Multi-step Delete Modal
   const [deleteModal, setDeleteModal] = useState(null); // { sub, step: 1|2|3, typed: '' }
   const DELETE_CONFIRM_WORD = 'ELIMINAR';
+
+  // Administrative Note Modal
+  const [noteModal, setNoteModal] = useState(null); // { sub, note: '', saving: false }
 
   // WhatsApp Reminder State
   const [whatsappModal, setWhatsappModal] = useState({
@@ -131,7 +135,7 @@ export default function Subscriptions() {
   };
 
   const handleOpenWhatsAppReminder = (sub) => {
-    const rawPhone = sub?.user?.phone || sub?.billing_phone || '';
+    const rawPhone = sub?.billing_phone || sub?.user?.phone || sub?.resolved_phone || '';
     setWhatsappModal({
       open: true,
       sub,
@@ -141,12 +145,31 @@ export default function Subscriptions() {
     });
   };
 
-  const sendWhatsAppMessage = () => {
+  const sendWhatsAppMessage = async () => {
     if (!whatsappModal.phone || !whatsappModal.phone.trim()) {
       alert('Por favor ingresa o verifica el número de teléfono del cliente.');
       return;
     }
-    let cleanDigits = whatsappModal.phone.replace(/\D/g, '');
+    const currentPhone = whatsappModal.phone.trim();
+
+    // Auto-save phone to backend so it's permanently stored for this client
+    if (whatsappModal.sub?.id) {
+      try {
+        await apiFetch(`/trainer/subscriptions/${whatsappModal.sub.id}/phone`, {
+          method: 'POST',
+          body: JSON.stringify({ phone: currentPhone })
+        });
+        setSubs(prev => prev.map(item => item.id === whatsappModal.sub.id ? {
+          ...item,
+          billing_phone: currentPhone,
+          user: item.user ? { ...item.user, phone: currentPhone } : item.user
+        } : item));
+      } catch (e) {
+        console.warn('Could not persist phone:', e);
+      }
+    }
+
+    let cleanDigits = currentPhone.replace(/\D/g, '');
     if (cleanDigits.startsWith('0')) {
       cleanDigits = '593' + cleanDigits.substring(1);
     } else if (!cleanDigits.startsWith('593') && cleanDigits.length === 9) {
@@ -163,6 +186,25 @@ export default function Subscriptions() {
     setTimeout(() => {
       setWhatsappModal(prev => ({ ...prev, copied: false }));
     }, 2500);
+  };
+
+  const handleSaveNote = async () => {
+    if (!noteModal?.sub) return;
+    setNoteModal(prev => ({ ...prev, saving: true }));
+    try {
+      await apiFetch(`/trainer/subscriptions/${noteModal.sub.id}/notes`, {
+        method: 'POST',
+        body: JSON.stringify({ notes: noteModal.note.trim() || null })
+      });
+      setSubs(prev => prev.map(item => item.id === noteModal.sub.id ? { ...item, notes: noteModal.note.trim() || null } : item));
+      setSuccess('Nota administrativa guardada correctamente');
+      setTimeout(() => setSuccess(''), 3000);
+      setNoteModal(null);
+    } catch (err) {
+      setError(err.message || 'Error al guardar la nota');
+      setTimeout(() => setError(''), 4000);
+      setNoteModal(prev => ({ ...prev, saving: false }));
+    }
   };
 
   const handleOpenReceiptModal = (sub) => {
@@ -548,7 +590,36 @@ export default function Subscriptions() {
                     return (
                       <tr key={s.id}>
                         <td style={{ minWidth: 200 }}>{renderUserCell(s.user)}</td>
-                        <td style={{ fontWeight: 600 }}>{s.plan?.name || s.plan_id || '—'}</td>
+                        <td style={{ fontWeight: 600 }}>
+                          <div>{s.plan?.name || s.plan_id || '—'}</div>
+                          {s.notes && (
+                            <div
+                              onClick={() => setNoteModal({ sub: s, note: s.notes || '', saving: false })}
+                              style={{
+                                marginTop: 4,
+                                fontSize: 11,
+                                fontWeight: 500,
+                                color: '#b45309',
+                                background: 'rgba(245, 158, 11, 0.12)',
+                                border: '1px solid rgba(245, 158, 11, 0.3)',
+                                padding: '2px 7px',
+                                borderRadius: 6,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 5,
+                                maxWidth: 220,
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                cursor: 'pointer'
+                              }}
+                              title={`Nota: ${s.notes} (Clic para editar)`}
+                            >
+                              <FileText size={11} style={{ flexShrink: 0, color: '#d97706' }} />
+                              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.notes}</span>
+                            </div>
+                          )}
+                        </td>
                         <td>
                           {renderStatusCell(s)}
                         </td>
@@ -673,6 +744,17 @@ export default function Subscriptions() {
                                         })()}
                                         <button
                                           type="button"
+                                          className="actions-dropdown-item"
+                                          onClick={() => {
+                                            setNoteModal({ sub: s, note: s.notes || '', saving: false });
+                                            setActiveDropdown(null);
+                                          }}
+                                        >
+                                          <FileText size={14} style={{ color: '#d97706' }} />
+                                          <span>{s.notes ? 'Editar nota' : 'Agregar nota'}</span>
+                                        </button>
+                                        <button
+                                          type="button"
                                           className="actions-dropdown-item actions-dropdown-item--danger"
                                           onClick={() => handleDelete(s)}
                                         >
@@ -776,6 +858,17 @@ export default function Subscriptions() {
                               })()}
                               <button
                                 type="button"
+                                className="actions-dropdown-item"
+                                onClick={() => {
+                                  setNoteModal({ sub: s, note: s.notes || '', saving: false });
+                                  setActiveDropdown(null);
+                                }}
+                              >
+                                <FileText size={14} style={{ color: '#d97706' }} />
+                                <span>{s.notes ? 'Editar nota' : 'Agregar nota'}</span>
+                              </button>
+                              <button
+                                type="button"
                                 className="actions-dropdown-item actions-dropdown-item--danger"
                                 onClick={() => handleDelete(s)}
                               >
@@ -810,6 +903,18 @@ export default function Subscriptions() {
                         {s.plan?.name || s.plan_id || '—'}
                       </span>
                     </div>
+
+                    {s.notes && (
+                      <div className="sub-mobile-card-row" style={{ alignItems: 'flex-start', cursor: 'pointer' }} onClick={() => setNoteModal({ sub: s, note: s.notes || '', saving: false })}>
+                        <span className="sub-mobile-card-label" style={{ marginTop: '2px', color: '#b45309' }}>
+                          <FileText size={13} style={{ opacity: 0.9, color: '#d97706' }} />
+                          <span>Nota</span>
+                        </span>
+                        <span className="sub-mobile-card-val" style={{ color: '#b45309', fontStyle: 'italic', fontSize: '12px', textAlign: 'right' }}>
+                          {s.notes}
+                        </span>
+                      </div>
+                    )}
 
                     <div className="sub-mobile-card-row">
                       <span className="sub-mobile-card-label">
@@ -1534,6 +1639,98 @@ Estamos validando tu comprobante de pago para activar tu membresía de inmediato
                   <span>Abrir WhatsApp</span>
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: NOTA ADMINISTRATIVA / OBSERVACIONES */}
+      {noteModal && (
+        <div className="modal-overlay" onClick={() => setNoteModal(null)}>
+          <div className="modal" style={{ maxWidth: 480 }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: 8,
+                  background: 'rgba(245, 158, 11, 0.15)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#d97706'
+                }}>
+                  <FileText size={18} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Nota Administrativa</h3>
+                  <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--text-secondary)' }}>
+                    {noteModal.sub?.user?.name || noteModal.sub?.billing_name || 'Cliente'} — {noteModal.sub?.plan?.name || 'Membresía'}
+                  </p>
+                </div>
+              </div>
+              <button className="btn btn--ghost" style={{ padding: 6, borderRadius: '50%' }} onClick={() => setNoteModal(null)}>
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="form-group" style={{ marginBottom: 16 }}>
+              <label style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 6, display: 'block' }}>
+                Observaciones / Control de Abono
+              </label>
+              <textarea
+                value={noteModal.note}
+                onChange={e => setNoteModal(prev => ({ ...prev, note: e.target.value }))}
+                placeholder="Ej. Abonó $10 en efectivo de $25. Saldo pendiente $15 a pagar el viernes."
+                rows={4}
+                style={{
+                  fontFamily: 'inherit',
+                  fontSize: 13,
+                  lineHeight: 1.5,
+                  resize: 'vertical',
+                  padding: 12,
+                  borderRadius: 8,
+                  border: '1px solid var(--border)',
+                  background: 'var(--bg)',
+                  color: 'var(--text)',
+                  width: '100%',
+                  boxSizing: 'border-box'
+                }}
+                autoFocus
+              />
+              <span style={{ fontSize: 11.5, color: 'var(--text-secondary)', marginTop: 4, display: 'block' }}>
+                💡 Deja el campo vacío si el cliente ya canceló todo y deseas borrar la nota.
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+              <button
+                type="button"
+                className="btn btn--secondary"
+                onClick={() => setNoteModal(null)}
+                disabled={noteModal.saving}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="btn btn--primary"
+                onClick={handleSaveNote}
+                disabled={noteModal.saving}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+              >
+                {noteModal.saving ? (
+                  <>
+                    <Loader2 className="spin" size={15} />
+                    <span>Guardando...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check size={15} />
+                    <span>Guardar Nota</span>
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>

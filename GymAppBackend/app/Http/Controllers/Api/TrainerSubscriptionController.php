@@ -42,6 +42,15 @@ class TrainerSubscriptionController extends Controller
 
         $subscriptions = $query->orderByDesc('created_at')->get();
 
+        foreach ($subscriptions as $sub) {
+            if (empty($sub->billing_phone)) {
+                $sub->billing_phone = $sub->resolved_phone;
+            }
+            if ($sub->user && empty($sub->user->phone) && !empty($sub->resolved_phone)) {
+                $sub->user->phone = $sub->resolved_phone;
+            }
+        }
+
         return response()->json($subscriptions);
     }
 
@@ -146,7 +155,12 @@ class TrainerSubscriptionController extends Controller
         elseif ($duration === 'annual' || $duration === 'yearly') { $months = 12; }
         elseif (is_numeric($duration)) { $months = (int)$duration; }
 
-        $subscription = Subscription::create([
+        $user = \App\Models\User::find($request->user_id);
+        $userPhone = $user?->phone ?? \App\Models\Order::where('user_id', $request->user_id)->whereNotNull('billing_phone')->latest()->value('billing_phone');
+
+        $note = trim($request->input('notes', ''));
+
+        $subData = [
             'user_id' => $request->user_id,
             'subscription_plan_id' => $plan->id,
             'status' => 'active',
@@ -155,8 +169,21 @@ class TrainerSubscriptionController extends Controller
             'approved_by' => $request->user()->id,
             'approved_at' => now(),
             'starts_at' => now(),
-            'ends_at' => now()->addDays($months * 30)
-        ]);
+            'ends_at' => now()->addDays($months * 30),
+            'billing_name' => $user?->name,
+            'billing_email' => $user?->email,
+            'billing_phone' => $userPhone,
+        ];
+
+        if (!empty($note)) {
+            if (\Illuminate\Support\Facades\Schema::hasColumn('subscriptions', 'notes')) {
+                $subData['notes'] = $note;
+            } else {
+                $subData['billing_address'] = '[NOTA]: ' . $note;
+            }
+        }
+
+        $subscription = Subscription::create($subData);
 
         return response()->json([
             'message' => 'Suscripción creada exitosamente',
@@ -165,12 +192,11 @@ class TrainerSubscriptionController extends Controller
     }
 
     /**
-     * Renew subscription
+     * Renew subscription (manual renewal by trainer/admin)
      */
     public function renew(Request $request, $id)
     {
-        $subscription = Subscription::findOrFail($id);
-        
+        $subscription = Subscription::with('plan')->findOrFail($id);
         $durationMonths = $subscription->getDurationMonths();
 
         // If the subscription is active and has not expired yet, extend from ends_at. Otherwise, starts from now.
@@ -202,6 +228,44 @@ class TrainerSubscriptionController extends Controller
 
         return response()->json([
             'message' => 'Suscripción eliminada exitosamente'
+        ]);
+    }
+
+    /**
+     * Update client phone for subscription & user
+     */
+    public function updatePhone(Request $request, $id)
+    {
+        $subscription = Subscription::with('user')->findOrFail($id);
+        $phone = trim($request->input('phone', ''));
+        if (!empty($phone)) {
+            $subscription->update(['billing_phone' => $phone]);
+            if ($subscription->user) {
+                $subscription->user->update(['phone' => $phone]);
+            }
+        }
+        return response()->json(['message' => 'Teléfono actualizado', 'phone' => $phone]);
+    }
+
+    /**
+     * Update administrative notes for subscription
+     */
+    public function updateNotes(Request $request, $id)
+    {
+        $subscription = Subscription::findOrFail($id);
+        $note = trim($request->input('notes', ''));
+
+        if (\Illuminate\Support\Facades\Schema::hasColumn('subscriptions', 'notes')) {
+            $subscription->notes = !empty($note) ? $note : null;
+        } else {
+            $subscription->billing_address = !empty($note) ? ('[NOTA]: ' . $note) : null;
+        }
+        $subscription->save();
+
+        return response()->json([
+            'message' => 'Nota administrativa actualizada',
+            'notes' => $subscription->notes,
+            'subscription' => $subscription->load(['user', 'plan'])
         ]);
     }
 }

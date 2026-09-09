@@ -132,6 +132,15 @@ class ReportController extends Controller
             ->orderBy('starts_at', 'desc')
             ->get();
 
+        foreach ($subscriptions as $sub) {
+            if (empty($sub->billing_phone)) {
+                $sub->billing_phone = $sub->resolved_phone;
+            }
+            if ($sub->user && empty($sub->user->phone) && !empty($sub->resolved_phone)) {
+                $sub->user->phone = $sub->resolved_phone;
+            }
+        }
+
         return response()->json([
             'data' => $subscriptions,
             'total' => $subscriptions->sum('price')

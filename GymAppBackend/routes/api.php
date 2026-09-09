@@ -94,6 +94,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/trainer/subscriptions/{id}/renew', [TrainerSubscriptionController::class , 'renew']);
     Route::delete('/trainer/subscriptions/{id}', [TrainerSubscriptionController::class , 'destroy']);
     Route::post('/trainer/subscriptions/create', [TrainerSubscriptionController::class , 'create']);
+    Route::post('/trainer/subscriptions/{id}/phone', [TrainerSubscriptionController::class , 'updatePhone']);
+    Route::post('/trainer/subscriptions/{id}/notes', [TrainerSubscriptionController::class , 'updateNotes']);
 
     // User management (accessible by admin role without requiring Spatie super_admin)
     Route::get('/admin/users', [SuperAdminUserController::class , 'index']);

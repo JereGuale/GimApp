@@ -26,7 +26,8 @@ import {
   ExternalLink,
   Phone,
   UserCheck,
-  UserPlus
+  UserPlus,
+  FileText
 } from 'lucide-react';
 import '../components/Layout.css';
 import './Subscriptions.css';
@@ -182,6 +183,7 @@ export default function Reports() {
 
   const [plans, setPlans] = useState([]);
   const [selectedPlanId, setSelectedPlanId] = useState('');
+  const [manualSubNotes, setManualSubNotes] = useState('');
 
   const [manualSubError, setManualSubError] = useState('');
   const [manualSubSuccess, setManualSubSuccess] = useState('');
@@ -657,7 +659,7 @@ export default function Reports() {
   };
 
   const handleOpenWhatsAppReminder = (sub) => {
-    const rawPhone = sub?.user?.phone || sub?.billing_phone || '';
+    const rawPhone = sub?.billing_phone || sub?.user?.phone || sub?.resolved_phone || '';
     setWhatsappModal({
       open: true,
       sub,
@@ -667,12 +669,25 @@ export default function Reports() {
     });
   };
 
-  const sendWhatsAppMessage = () => {
+  const sendWhatsAppMessage = async () => {
     if (!whatsappModal.phone || !whatsappModal.phone.trim()) {
       alert('Por favor ingresa o verifica el número de teléfono del cliente.');
       return;
     }
-    let cleanDigits = whatsappModal.phone.replace(/\D/g, '');
+    const currentPhone = whatsappModal.phone.trim();
+
+    if (whatsappModal.sub?.id) {
+      try {
+        await apiFetch(`/trainer/subscriptions/${whatsappModal.sub.id}/phone`, {
+          method: 'POST',
+          body: JSON.stringify({ phone: currentPhone })
+        });
+      } catch (e) {
+        console.warn('Could not persist phone:', e);
+      }
+    }
+
+    let cleanDigits = currentPhone.replace(/\D/g, '');
     if (cleanDigits.startsWith('0')) {
       cleanDigits = '593' + cleanDigits.substring(1);
     } else if (!cleanDigits.startsWith('593') && cleanDigits.length === 9) {
@@ -701,6 +716,7 @@ export default function Reports() {
     setNewClientEmail('');
     setNewClientPhone('');
     setSelectedPlanId('');
+    setManualSubNotes('');
     setManualSubError('');
     setManualSubSuccess('');
     setUsers([]);
@@ -768,13 +784,16 @@ export default function Reports() {
       try {
         const tempId = Date.now();
         const randomNum = Math.floor(Math.random() * 1000);
-        const generatedUsername = `user_${tempId}_${randomNum}`;
+        // El backend valida que username tenga un máximo de 10 caracteres (alpha_dash)
+        const timePart = tempId.toString(36).slice(-5);
+        const randPart = Math.floor(1000 + Math.random() * 9000).toString();
+        const generatedUsername = `u${timePart}${randPart}`.toLowerCase(); // exactamente 10 caracteres
         const generatedEmail = newClientEmail.trim() || `cliente_${tempId}_${randomNum}@gimnasio.com`;
         
         const regRes = await apiFetch('/register', {
           method: 'POST',
           body: JSON.stringify({
-            name: newClientName.trim(),
+            name: newClientName.trim().slice(0, 40),
             username: generatedUsername,
             email: generatedEmail,
             password: 'gym12345678',
@@ -802,7 +821,8 @@ export default function Reports() {
         method: 'POST',
         body: JSON.stringify({
           user_id: parseInt(finalUserId),
-          subscription_plan_id: parseInt(selectedPlanId)
+          subscription_plan_id: parseInt(selectedPlanId),
+          notes: manualSubNotes.trim() || null
         })
       });
 
@@ -1037,7 +1057,31 @@ export default function Reports() {
                             return (
                               <tr key={sub.id}>
                                 <td>{renderUserCell(sub.user)}</td>
-                                <td style={{ fontWeight: 600 }}>{sub.plan?.name || sub.plan_id}</td>
+                                <td style={{ fontWeight: 600 }}>
+                                  <div>{sub.plan?.name || sub.plan_id}</div>
+                                  {sub.notes && (
+                                    <div style={{
+                                      marginTop: 4,
+                                      fontSize: 11,
+                                      fontWeight: 500,
+                                      color: '#b45309',
+                                      background: 'rgba(245, 158, 11, 0.12)',
+                                      border: '1px solid rgba(245, 158, 11, 0.3)',
+                                      padding: '2px 7px',
+                                      borderRadius: 6,
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: 5,
+                                      maxWidth: 240,
+                                      whiteSpace: 'nowrap',
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis'
+                                    }} title={`Nota administrativa: ${sub.notes}`}>
+                                      <FileText size={11} style={{ flexShrink: 0, color: '#d97706' }} />
+                                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{sub.notes}</span>
+                                    </div>
+                                  )}
+                                </td>
                                 <td style={{ fontWeight: 700, color: 'var(--success)' }}>${Number(sub.price || 0).toFixed(2)}</td>
                                 <td style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{sub.starts_at ? new Date(sub.starts_at).toLocaleDateString('es-MX') : '—'}</td>
                                 <td style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{sub.ends_at ? new Date(sub.ends_at).toLocaleDateString('es-MX') : '—'}</td>
@@ -1646,6 +1690,36 @@ export default function Reports() {
                     <option key={p.id} value={p.id}>{p.name} - ${Number(p.price).toFixed(2)}</option>
                   ))}
                 </select>
+              </div>
+
+              {/* NOTA / OBSERVACIONES DE PAGO */}
+              <div className="form-group" style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 12.5, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <FileText size={14} style={{ color: 'var(--primary)' }} />
+                  <span>Notas / Observaciones de Pago (Opcional)</span>
+                </label>
+                <textarea
+                  value={manualSubNotes}
+                  onChange={e => setManualSubNotes(e.target.value)}
+                  placeholder="Ej. Abonó $10 de $20 en efectivo. Queda debiendo $10 hasta el 15."
+                  rows={2}
+                  style={{
+                    fontSize: 12.5,
+                    resize: 'vertical',
+                    minHeight: 52,
+                    padding: '8px 12px',
+                    borderRadius: 8,
+                    border: '1px solid var(--border)',
+                    background: 'var(--bg)',
+                    color: 'var(--text)',
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    fontFamily: 'inherit'
+                  }}
+                />
+                <span style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2, display: 'block' }}>
+                  Útil para registrar pagos parciales, saldos pendientes o acuerdos con el cliente.
+                </span>
               </div>
 
               <div style={{

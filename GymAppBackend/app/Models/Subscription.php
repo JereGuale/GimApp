@@ -25,6 +25,7 @@ class Subscription extends Model
         'billing_id_number',
         'billing_city',
         'billing_address',
+        'notes',
     ];
 
     protected $casts = [
@@ -38,6 +39,44 @@ class Subscription extends Model
     protected $hidden = [
         'card_data'
     ];
+
+    protected $appends = [
+        'resolved_phone',
+        'notes'
+    ];
+
+    public function getNotesAttribute($value)
+    {
+        if ($value !== null && $value !== '') {
+            return $value;
+        }
+        // Fallback si la columna notes aún no existe en DB y se guardó en billing_address
+        if (!empty($this->attributes['billing_address']) && str_starts_with($this->attributes['billing_address'], '[NOTA]: ')) {
+            return substr($this->attributes['billing_address'], 8);
+        }
+        return null;
+    }
+
+    public function getResolvedPhoneAttribute()
+    {
+        if (!empty($this->billing_phone)) {
+            return $this->billing_phone;
+        }
+        if (!empty($this->user?->phone)) {
+            return $this->user->phone;
+        }
+        if ($this->user_id) {
+            $orderPhone = \App\Models\Order::where('user_id', $this->user_id)
+                ->whereNotNull('billing_phone')
+                ->where('billing_phone', '!=', '')
+                ->latest()
+                ->value('billing_phone');
+            if (!empty($orderPhone)) {
+                return $orderPhone;
+            }
+        }
+        return null;
+    }
 
     public function user()
     {
