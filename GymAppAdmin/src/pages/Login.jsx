@@ -52,7 +52,7 @@ export default function Login() {
           <span className="login-logo-icon">
             <Dumbbell size={40} />
           </span>
-          <h1 className="login-brand">GimApp</h1>
+          <h1 className="login-brand">GigaFit Gim</h1>
           <p className="login-subtitle">Panel de Administración</p>
         </div>
 

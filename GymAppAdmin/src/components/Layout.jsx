@@ -100,7 +100,7 @@ export default function Layout({ children }) {
             <Dumbbell size={24} />
           </span>
           <div>
-            <div className="sidebar-brand">GimApp</div>
+            <div className="sidebar-brand">GigaFit Gim</div>
             <div className="sidebar-role">Panel Admin</div>
           </div>
         </div>
@@ -159,7 +159,7 @@ export default function Layout({ children }) {
             </button>
             <div>
               <div className="topbar-breadcrumb">
-                <span>GimApp</span>
+                <span>GigaFit Gim</span>
                 <ChevronRight size={12} className="topbar-breadcrumb-sep" />
                 <span>Administración</span>
               </div>
