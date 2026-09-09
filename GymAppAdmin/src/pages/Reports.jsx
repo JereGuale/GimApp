@@ -320,38 +320,34 @@ export default function Reports() {
     }
   };
 
-  // Búsqueda en vivo (debounced) de usuarios registrados en el backend
+  // Búsqueda en vivo (debounced) de usuarios registrados en el backend solo al escribir
   useEffect(() => {
     if (!manualSubModalOpen || manualSubTab !== 'registrado') return;
 
     const query = userSearchQuery.trim();
     if (!query) {
-      setFilteredUsers(users);
+      setFilteredUsers([]);
+      setLoadingUsers(false);
       return;
     }
 
     const timer = setTimeout(async () => {
       setLoadingUsers(true);
       try {
-        const res = await apiFetch(`/admin/users?all=true&search=${encodeURIComponent(query)}`);
+        const res = await apiFetch(`/admin/users?all=true&search=${encodeURIComponent(query)}&limit=25`);
         const list = Array.isArray(res) ? res : (res?.data || []);
         setFilteredUsers(list);
       } catch (err) {
-        const q = query.toLowerCase();
-        setFilteredUsers(users.filter(u => 
-          (u.name || '').toLowerCase().includes(q) ||
-          (u.email || '').toLowerCase().includes(q) ||
-          (u.phone || '').toLowerCase().includes(q)
-        ));
+        setFilteredUsers([]);
       } finally {
         setLoadingUsers(false);
       }
-    }, 280);
+    }, 250);
 
     return () => clearTimeout(timer);
-  }, [userSearchQuery, manualSubModalOpen, manualSubTab, users]);
+  }, [userSearchQuery, manualSubModalOpen, manualSubTab]);
 
-  // Descarga de reporte de mensualidades en CSV / Excel
+  // Descarga de reporte de mensualidades en Excel con diseño visual ejecutivo y colores
   const downloadMonthlyReport = () => {
     if (!monthlySubs || monthlySubs.length === 0) {
       alert('No hay membresías registradas para descargar en el mes seleccionado.');
@@ -360,34 +356,129 @@ export default function Reports() {
 
     const monthNames = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
     const monthName = monthNames[selectedMonth] || selectedMonth;
+    const now = new Date();
+    const emissionDate = now.toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const emissionTime = now.toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit', hour12: true });
 
-    const headers = ['ID', 'Cliente', 'Email', 'Teléfono', 'Plan', 'Precio ($)', 'Fecha Inicio', 'Fecha Vencimiento', 'Estado de Membresía'];
-    const rows = monthlySubs.map(sub => {
+    let rowsHtml = '';
+    monthlySubs.forEach((sub, idx) => {
       const statusObj = getMembershipStatus(sub);
-      const cleanName = (sub.user?.name || sub.billing_name || 'Sin nombre').replace(/"/g, '""');
-      const cleanEmail = (sub.user?.email || sub.billing_email || '').replace(/"/g, '""');
-      const cleanPhone = (sub.user?.phone || sub.billing_phone || '').replace(/"/g, '""');
-      const cleanPlan = (sub.plan?.name || sub.plan_id || 'Plan').replace(/"/g, '""');
+      const cleanName = sub.user?.name || sub.billing_name || 'Sin nombre';
+      const cleanEmail = sub.user?.email || sub.billing_email || '—';
+      const cleanPhone = sub.user?.phone || sub.billing_phone || '—';
+      const cleanPlan = sub.plan?.name || sub.plan_id || 'Plan General';
       const price = Number(sub.price || 0).toFixed(2);
-      const start = sub.starts_at ? new Date(sub.starts_at).toLocaleDateString('es-MX') : '';
-      const end = sub.ends_at ? new Date(sub.ends_at).toLocaleDateString('es-MX') : '';
-      const status = statusObj.label;
+      const start = sub.starts_at ? new Date(sub.starts_at).toLocaleDateString('es-EC') : '—';
+      const end = sub.ends_at ? new Date(sub.ends_at).toLocaleDateString('es-EC') : '—';
 
-      return [sub.id, `"${cleanName}"`, `"${cleanEmail}"`, `"${cleanPhone}"`, `"${cleanPlan}"`, price, `"${start}"`, `"${end}"`, `"${status}"`];
+      // Estilos de badge según estado
+      let badgeBg = '#dcfce7';
+      let badgeColor = '#15803d';
+      let badgeBorder = '#86efac';
+      if (statusObj.type === 'expired' || statusObj.type === 'rejected') {
+        badgeBg = '#fee2e2';
+        badgeColor = '#b91c1c';
+        badgeBorder = '#fca5a5';
+      } else if (statusObj.type === 'expiring' || statusObj.type === 'pending') {
+        badgeBg = '#fef3c7';
+        badgeColor = '#b45309';
+        badgeBorder = '#fde68a';
+      }
+
+      const rowBg = idx % 2 === 0 ? '#ffffff' : '#f8fafc';
+
+      rowsHtml += `
+        <tr style="background-color: ${rowBg};">
+          <td style="border: 1px solid #cbd5e1; padding: 7px 10px; text-align: center; font-size: 10pt; color: #64748b;">${idx + 1}</td>
+          <td style="border: 1px solid #cbd5e1; padding: 7px 12px; font-weight: bold; font-size: 10pt; color: #0f172a;">${cleanName}</td>
+          <td style="border: 1px solid #cbd5e1; padding: 7px 10px; font-size: 9.5pt; color: #334155;">${cleanEmail}</td>
+          <td style="border: 1px solid #cbd5e1; padding: 7px 10px; text-align: center; font-size: 9.5pt; color: #334155;">${cleanPhone}</td>
+          <td style="border: 1px solid #cbd5e1; padding: 7px 12px; text-align: center; font-weight: bold; font-size: 10pt; color: #1e40af; background-color: #eff6ff;">${cleanPlan}</td>
+          <td style="border: 1px solid #cbd5e1; padding: 7px 12px; text-align: right; font-weight: bold; font-size: 10pt; color: #0f172a;">$ ${price}</td>
+          <td style="border: 1px solid #cbd5e1; padding: 7px 10px; text-align: center; font-size: 9.5pt; color: #334155;">${start}</td>
+          <td style="border: 1px solid #cbd5e1; padding: 7px 10px; text-align: center; font-size: 9.5pt; color: #334155;">${end}</td>
+          <td style="border: 1px solid #cbd5e1; padding: 7px 10px; text-align: center;">
+            <span style="display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 8.5pt; font-weight: bold; background-color: ${badgeBg}; color: ${badgeColor}; border: 1px solid ${badgeBorder};">
+              ${statusObj.label}
+            </span>
+          </td>
+        </tr>
+      `;
     });
 
-    const csvLines = [
-      headers.join(';'),
-      ...rows.map(r => r.join(';')),
-      `"TOTAL INGRESOS" ; ; ; ; ; "${Number(monthlyTotal).toFixed(2)}" ; ; ; `
-    ];
+    const excelTemplate = `
+      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+      <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <!--[if gte mso 9]>
+        <xml>
+          <x:ExcelWorkbook>
+            <x:ExcelWorksheets>
+              <x:ExcelWorksheet>
+                <x:Name>Membresías ${monthName}</x:Name>
+                <x:WorksheetOptions>
+                  <x:DisplayGridlines/>
+                </x:WorksheetOptions>
+              </x:ExcelWorksheet>
+            </x:ExcelWorksheets>
+          </x:ExcelWorkbook>
+        </xml>
+        <![endif]-->
+        <style>
+          body { font-family: 'Segoe UI', Arial, sans-serif; }
+          table { border-collapse: collapse; width: 100%; }
+        </style>
+      </head>
+      <body>
+        <table>
+          <tr>
+            <th colspan="9" style="background-color: #1e3a8a; color: #ffffff; font-size: 15pt; font-weight: bold; text-align: center; padding: 14px; height: 42px;">
+              FITNESS CLUB GYM - REPORTE MENSUAL DE MEMBRESÍAS
+            </th>
+          </tr>
+          <tr style="background-color: #f1f5f9;">
+            <td colspan="9" style="padding: 8px 12px; font-size: 10pt; color: #475569; text-align: center; border-bottom: 2px solid #cbd5e1;">
+              <strong>Período:</strong> ${monthName} de ${selectedYear} &nbsp;|&nbsp; 
+              <strong>Total Clientes:</strong> ${monthlySubs.length} &nbsp;|&nbsp; 
+              <strong>Recaudación Total:</strong> $ ${Number(monthlyTotal).toFixed(2)} &nbsp;|&nbsp; 
+              <strong>Generado el:</strong> ${emissionDate} a las ${emissionTime}
+            </td>
+          </tr>
+          <tr><td colspan="9" style="height: 10px;"></td></tr>
+          <tr style="background-color: #2563eb; color: #ffffff;">
+            <th style="border: 1px solid #1d4ed8; padding: 10px 8px; font-size: 10pt; font-weight: bold; text-align: center;">#</th>
+            <th style="border: 1px solid #1d4ed8; padding: 10px 12px; font-size: 10pt; font-weight: bold; text-align: left;">Cliente</th>
+            <th style="border: 1px solid #1d4ed8; padding: 10px 12px; font-size: 10pt; font-weight: bold; text-align: left;">Correo Electrónico</th>
+            <th style="border: 1px solid #1d4ed8; padding: 10px 10px; font-size: 10pt; font-weight: bold; text-align: center;">Teléfono</th>
+            <th style="border: 1px solid #1d4ed8; padding: 10px 12px; font-size: 10pt; font-weight: bold; text-align: center;">Plan Contratado</th>
+            <th style="border: 1px solid #1d4ed8; padding: 10px 12px; font-size: 10pt; font-weight: bold; text-align: right;">Valor ($)</th>
+            <th style="border: 1px solid #1d4ed8; padding: 10px 10px; font-size: 10pt; font-weight: bold; text-align: center;">Fecha Inicio</th>
+            <th style="border: 1px solid #1d4ed8; padding: 10px 10px; font-size: 10pt; font-weight: bold; text-align: center;">Fecha Vencimiento</th>
+            <th style="border: 1px solid #1d4ed8; padding: 10px 12px; font-size: 10pt; font-weight: bold; text-align: center;">Estado Membresía</th>
+          </tr>
+          ${rowsHtml}
+          <tr><td colspan="9" style="height: 6px;"></td></tr>
+          <tr style="background-color: #dbeafe; font-weight: bold; border-top: 2px solid #2563eb; border-bottom: 2px solid #2563eb;">
+            <td colspan="5" style="border: 1px solid #93c5fd; padding: 10px 12px; font-size: 11pt; color: #1e40af; text-align: right;">
+              TOTAL RECAUDADO EN EL MES:
+            </td>
+            <td style="border: 1px solid #93c5fd; padding: 10px 12px; font-size: 11pt; color: #1e40af; text-align: right; font-weight: bold;">
+              $ ${Number(monthlyTotal).toFixed(2)}
+            </td>
+            <td colspan="3" style="border: 1px solid #93c5fd; padding: 10px 12px; font-size: 9.5pt; color: #1e40af; text-align: center;">
+              ${monthlySubs.length} membresías registradas
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
+    `;
 
-    const csvContent = '\uFEFF' + csvLines.join('\r\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob(['\uFEFF' + excelTemplate], { type: 'application/vnd.ms-excel;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `Reporte_Mensualidades_${monthName}_${selectedYear}.csv`);
+    link.setAttribute('download', `Reporte_Mensualidades_${monthName}_${selectedYear}.xls`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -430,35 +521,105 @@ export default function Reports() {
     }
   };
 
-  // Descarga de reporte de asistencias diarias en CSV / Excel
+  // Descarga de reporte de asistencias diarias en Excel con diseño visual ejecutivo y colores
   const downloadDailyReport = () => {
     if (!dailyIncomes || dailyIncomes.length === 0) {
       alert('No hay asistencias registradas para descargar en la fecha seleccionada.');
       return;
     }
 
-    const headers = ['ID', 'Cliente', 'Monto de Entrada ($)', 'Hora de Ingreso', 'Fecha Registro'];
-    const rows = dailyIncomes.map(item => {
-      const cleanName = (item.client_name || 'Invitado').replace(/"/g, '""');
+    const now = new Date();
+    const emissionDate = now.toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const emissionTime = now.toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+    let rowsHtml = '';
+    dailyIncomes.forEach((item, idx) => {
+      const cleanName = item.client_name || 'Invitado Diario';
       const amount = Number(item.amount || 0).toFixed(2);
       const time = formatAttendanceTime(item.entry_date);
       const date = formatAttendanceDate(item.entry_date);
+      const rowBg = idx % 2 === 0 ? '#ffffff' : '#f8fafc';
 
-      return [item.id, `"${cleanName}"`, amount, `"${time}"`, `"${date}"`];
+      rowsHtml += `
+        <tr style="background-color: ${rowBg};">
+          <td style="border: 1px solid #cbd5e1; padding: 7px 10px; text-align: center; font-size: 10pt; color: #64748b;">${idx + 1}</td>
+          <td style="border: 1px solid #cbd5e1; padding: 7px 12px; font-weight: bold; font-size: 10pt; color: #0f172a;">${cleanName}</td>
+          <td style="border: 1px solid #cbd5e1; padding: 7px 12px; text-align: right; font-weight: bold; font-size: 10pt; color: #065f46; background-color: #ecfdf5;">$ ${amount}</td>
+          <td style="border: 1px solid #cbd5e1; padding: 7px 10px; text-align: center; font-weight: bold; font-size: 10pt; color: #2563eb;">${time}</td>
+          <td style="border: 1px solid #cbd5e1; padding: 7px 10px; text-align: center; font-size: 9.5pt; color: #334155;">${date}</td>
+        </tr>
+      `;
     });
 
-    const csvLines = [
-      headers.join(';'),
-      ...rows.map(r => r.join(';')),
-      `"TOTAL ASISTENCIAS" ; "${dailyIncomes.length}" ; "${Number(dailyTotal).toFixed(2)}" ; ; `
-    ];
+    const excelTemplate = `
+      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+      <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <!--[if gte mso 9]>
+        <xml>
+          <x:ExcelWorkbook>
+            <x:ExcelWorksheets>
+              <x:ExcelWorksheet>
+                <x:Name>Asistencias ${selectedDailyDate}</x:Name>
+                <x:WorksheetOptions>
+                  <x:DisplayGridlines/>
+                </x:WorksheetOptions>
+              </x:ExcelWorksheet>
+            </x:ExcelWorksheets>
+          </x:ExcelWorkbook>
+        </xml>
+        <![endif]-->
+        <style>
+          body { font-family: 'Segoe UI', Arial, sans-serif; }
+          table { border-collapse: collapse; width: 100%; }
+        </style>
+      </head>
+      <body>
+        <table>
+          <tr>
+            <th colspan="5" style="background-color: #065f46; color: #ffffff; font-size: 15pt; font-weight: bold; text-align: center; padding: 14px; height: 42px;">
+              FITNESS CLUB GYM - REPORTE DIARIO DE ASISTENCIAS
+            </th>
+          </tr>
+          <tr style="background-color: #f1f5f9;">
+            <td colspan="5" style="padding: 8px 12px; font-size: 10pt; color: #475569; text-align: center; border-bottom: 2px solid #cbd5e1;">
+              <strong>Fecha:</strong> ${selectedDailyDate} &nbsp;|&nbsp; 
+              <strong>Total Asistencias:</strong> ${dailyIncomes.length} visitas &nbsp;|&nbsp; 
+              <strong>Recaudación del Día:</strong> $ ${Number(dailyTotal).toFixed(2)} &nbsp;|&nbsp; 
+              <strong>Generado el:</strong> ${emissionDate} a las ${emissionTime}
+            </td>
+          </tr>
+          <tr><td colspan="5" style="height: 10px;"></td></tr>
+          <tr style="background-color: #059669; color: #ffffff;">
+            <th style="border: 1px solid #047857; padding: 10px 8px; font-size: 10pt; font-weight: bold; text-align: center;">#</th>
+            <th style="border: 1px solid #047857; padding: 10px 12px; font-size: 10pt; font-weight: bold; text-align: left;">Cliente / Visitante</th>
+            <th style="border: 1px solid #047857; padding: 10px 12px; font-size: 10pt; font-weight: bold; text-align: right;">Entrada Pagada ($)</th>
+            <th style="border: 1px solid #047857; padding: 10px 10px; font-size: 10pt; font-weight: bold; text-align: center;">Hora de Ingreso</th>
+            <th style="border: 1px solid #047857; padding: 10px 10px; font-size: 10pt; font-weight: bold; text-align: center;">Fecha de Registro</th>
+          </tr>
+          ${rowsHtml}
+          <tr><td colspan="5" style="height: 6px;"></td></tr>
+          <tr style="background-color: #d1fae5; font-weight: bold; border-top: 2px solid #059669; border-bottom: 2px solid #059669;">
+            <td colspan="2" style="border: 1px solid #6ee7b7; padding: 10px 12px; font-size: 11pt; color: #065f46; text-align: right;">
+              TOTAL RECAUDADO EN EL DÍA:
+            </td>
+            <td style="border: 1px solid #6ee7b7; padding: 10px 12px; font-size: 11pt; color: #065f46; text-align: right; font-weight: bold;">
+              $ ${Number(dailyTotal).toFixed(2)}
+            </td>
+            <td colspan="2" style="border: 1px solid #6ee7b7; padding: 10px 12px; font-size: 9.5pt; color: #065f46; text-align: center;">
+              ${dailyIncomes.length} clientes atendidos
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
+    `;
 
-    const csvContent = '\uFEFF' + csvLines.join('\r\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob(['\uFEFF' + excelTemplate], { type: 'application/vnd.ms-excel;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `Reporte_Asistencias_${selectedDailyDate}.csv`);
+    link.setAttribute('download', `Reporte_Asistencias_${selectedDailyDate}.xls`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -469,17 +630,17 @@ export default function Reports() {
   const generateWhatsAppMessage = (sub) => {
     const clientName = sub?.user?.name || sub?.billing_name || 'Estimado/a cliente';
     const planName = sub?.plan?.name || sub?.plan_id || 'Membresía del Gimnasio';
-    const endsAtDate = sub?.ends_at ? new Date(sub.ends_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' }) : 'recientemente';
+    const endsAtDate = sub?.ends_at ? new Date(sub.ends_at).toLocaleDateString('es-EC', { day: 'numeric', month: 'long', year: 'numeric' }) : 'recientemente';
 
-    return `¡Hola, ${clientName}! 🏋️‍♂️ Esperamos que te encuentres con la mejor energía.\n\n` +
-      `Te saludamos cordialmente de parte del equipo de *Fitness Club Gym*. Te escribimos para recordarte que tu membresía (*${planName}*) finalizó el ${endsAtDate}.\n\n` +
-      `Sabemos lo importante que es mantener la constancia para alcanzar tus metas físicas y de salud. ¡No dejes que tu progreso se detenga! 💪🔥\n\n` +
-      `✨ *Opciones para renovar:*\n` +
-      `• Directamente en la recepción del gimnasio\n` +
-      `• A través de nuestra aplicación móvil\n` +
-      `💳 Aceptamos transferencia bancaria y efectivo.\n\n` +
-      `Si tienes alguna pregunta sobre nuestras promociones vigentes o deseas ayuda para reactivar tu plan, estamos a tu total disposición.\n\n` +
-      `¡Te esperamos en el gym para seguir entrenando fuerte! 🥊🔥`;
+    return `¡Hola, *${clientName}*! 🏋️‍♂️ Esperamos que te encuentres excelente.\n\n` +
+      `Te saludamos cordialmente de parte del equipo de *Fitness Club Gym*.\n` +
+      `Te escribimos para recordarte de manera atenta que tu plan de membresía (*${planName}*) finalizó el ${endsAtDate}.\n\n` +
+      `Tu esfuerzo y constancia son fundamentales para seguir alcanzando tus metas físicas y de bienestar. ¡No detengas tu progreso! 💪🔥\n\n` +
+      `📋 *Opciones rápidas para renovar tu membresía:*\n` +
+      `1️⃣ Directamente en recepción (Efectivo o Transferencia)\n` +
+      `2️⃣ Desde nuestra aplicación móvil\n\n` +
+      `Si deseas conocer nuestras promociones vigentes o tienes alguna consulta, escríbenos por aquí y con gusto te asistiremos.\n\n` +
+      `¡Te esperamos pronto en el gym para seguir entrenando con todo! 🥊✨`;
   };
 
   const handleOpenWhatsAppReminder = (sub) => {
@@ -521,7 +682,7 @@ export default function Reports() {
     }, 2500);
   };
 
-  // Open manual membership modal and pre-load lists
+  // Open manual membership modal (cargado instantáneo sin traer usuarios masivos)
   const handleOpenManualSub = async () => {
     setManualSubTab('registrado');
     setUserSearchQuery('');
@@ -533,25 +694,18 @@ export default function Reports() {
     setSelectedPlanId('');
     setManualSubError('');
     setManualSubSuccess('');
+    setUsers([]);
+    setFilteredUsers([]);
+    setLoadingUsers(false);
     setManualSubModalOpen(true);
-    setLoadingUsers(true);
     
     try {
-      const [usersData, plansData] = await Promise.all([
-        apiFetch('/admin/users?all=true&limit=100'),
-        apiFetch('/admin/subscription-plans')
-      ]);
-      const usersList = Array.isArray(usersData) ? usersData : (usersData?.data || []);
-      setUsers(usersList);
-      setFilteredUsers(usersList);
-
+      const plansData = await apiFetch('/admin/subscription-plans');
       const plansList = Array.isArray(plansData) ? plansData : (plansData?.data || []);
       setPlans(plansList);
       if (plansList && plansList.length > 0) setSelectedPlanId(plansList[0].id);
     } catch (e) {
-      setManualSubError('Error al cargar datos: ' + e.message);
-    } finally {
-      setLoadingUsers(false);
+      setManualSubError('Error al cargar planes: ' + e.message);
     }
   };
 
@@ -1304,14 +1458,24 @@ export default function Reports() {
                         overflowY: 'auto',
                         padding: 2
                       }}>
-                        {loadingUsers ? (
-                          <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: 12.5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                        {!userSearchQuery.trim() ? (
+                          <div style={{ padding: '28px 16px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                            <Search size={26} style={{ opacity: 0.35, margin: '0 auto 8px', display: 'block' }} />
+                            <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)' }}>
+                              Escribe el nombre del usuario
+                            </div>
+                            <div style={{ fontSize: 11.5, marginTop: 4, color: 'var(--text-secondary)' }}>
+                              Escribe el nombre, correo o teléfono para buscar en la base de datos en tiempo real.
+                            </div>
+                          </div>
+                        ) : loadingUsers ? (
+                          <div style={{ padding: '24px 16px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: 12.5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                             <Loader2 className="spin" size={16} />
-                            <span>Buscando en la base de datos...</span>
+                            <span>Buscando "{userSearchQuery}" en la base de datos...</span>
                           </div>
                         ) : filteredUsers.length === 0 ? (
                           <div style={{ padding: '24px 16px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: 12.5 }}>
-                            <p style={{ margin: 0 }}>No se encontraron usuarios registrados {userSearchQuery ? `con "${userSearchQuery}"` : ''}.</p>
+                            <p style={{ margin: 0, fontWeight: 600, color: 'var(--text)' }}>No se encontraron usuarios registrados con "{userSearchQuery}".</p>
                             <p style={{ margin: '6px 0 0', fontSize: 11.5 }}>Si es un cliente nuevo sin cuenta, usa la pestaña superior "Nuevo Cliente (Sin App)".</p>
                           </div>
                         ) : (
