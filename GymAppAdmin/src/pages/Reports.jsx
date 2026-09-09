@@ -25,7 +25,8 @@ import {
   Send,
   ExternalLink,
   Phone,
-  UserCheck
+  UserCheck,
+  UserPlus
 } from 'lucide-react';
 import '../components/Layout.css';
 import './Subscriptions.css';
@@ -166,17 +167,21 @@ export default function Reports() {
 
   // ── Manual Membership Registration State ──
   const [manualSubModalOpen, setManualSubModalOpen] = useState(false);
+  const [manualSubTab, setManualSubTab] = useState('registrado'); // 'registrado' | 'nuevo'
   const [users, setUsers] = useState([]);
-  const [plans, setPlans] = useState([]);
-  const [selectedPlanId, setSelectedPlanId] = useState('');
-  
-  // Unified Client Autocomplete State
-  const [clientNameInput, setClientNameInput] = useState('');
+  const [filteredUsers, setFilteredUsers] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [userSearchQuery, setUserSearchQuery] = useState('');
   const [selectedUser, setSelectedUser] = useState(null);
   const [selectedUserId, setSelectedUserId] = useState('');
-  const [showUserDropdown, setShowUserDropdown] = useState(false);
-  const [manualClientEmail, setManualClientEmail] = useState('');
-  const [manualClientPhone, setManualClientPhone] = useState('');
+  
+  // New unregistered client inputs
+  const [newClientName, setNewClientName] = useState('');
+  const [newClientEmail, setNewClientEmail] = useState('');
+  const [newClientPhone, setNewClientPhone] = useState('');
+
+  const [plans, setPlans] = useState([]);
+  const [selectedPlanId, setSelectedPlanId] = useState('');
 
   const [manualSubError, setManualSubError] = useState('');
   const [manualSubSuccess, setManualSubSuccess] = useState('');
@@ -303,16 +308,48 @@ export default function Reports() {
     return Math.max(...arr.map((item) => parseFloat(item[key] || 0))) || 1;
   };
 
-  // Sugerencias de usuarios registrados al escribir el nombre del cliente
-  const matchingUsers = users.filter((u) => {
-    if (!clientNameInput.trim()) return false;
-    const q = clientNameInput.toLowerCase().trim();
-    const name = (u.name || '').toLowerCase();
-    const email = (u.email || '').toLowerCase();
-    const phone = (u.phone || '').toLowerCase();
-    const username = (u.username || '').toLowerCase();
-    return name.includes(q) || email.includes(q) || phone.includes(q) || username.includes(q);
-  });
+  // Formatear fecha de vencimiento de suscripción de forma segura
+  const formatEndDate = (dateVal) => {
+    if (!dateVal) return '';
+    try {
+      const d = new Date(dateVal);
+      if (isNaN(d.getTime())) return String(dateVal);
+      return d.toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    } catch {
+      return String(dateVal);
+    }
+  };
+
+  // Búsqueda en vivo (debounced) de usuarios registrados en el backend
+  useEffect(() => {
+    if (!manualSubModalOpen || manualSubTab !== 'registrado') return;
+
+    const query = userSearchQuery.trim();
+    if (!query) {
+      setFilteredUsers(users);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setLoadingUsers(true);
+      try {
+        const res = await apiFetch(`/admin/users?all=true&search=${encodeURIComponent(query)}`);
+        const list = Array.isArray(res) ? res : (res?.data || []);
+        setFilteredUsers(list);
+      } catch (err) {
+        const q = query.toLowerCase();
+        setFilteredUsers(users.filter(u => 
+          (u.name || '').toLowerCase().includes(q) ||
+          (u.email || '').toLowerCase().includes(q) ||
+          (u.phone || '').toLowerCase().includes(q)
+        ));
+      } finally {
+        setLoadingUsers(false);
+      }
+    }, 280);
+
+    return () => clearTimeout(timer);
+  }, [userSearchQuery, manualSubModalOpen, manualSubTab, users]);
 
   // Descarga de reporte de mensualidades en CSV / Excel
   const downloadMonthlyReport = () => {
@@ -486,81 +523,100 @@ export default function Reports() {
 
   // Open manual membership modal and pre-load lists
   const handleOpenManualSub = async () => {
-    setClientNameInput('');
+    setManualSubTab('registrado');
+    setUserSearchQuery('');
     setSelectedUser(null);
     setSelectedUserId('');
-    setShowUserDropdown(false);
-    setManualClientEmail('');
-    setManualClientPhone('');
+    setNewClientName('');
+    setNewClientEmail('');
+    setNewClientPhone('');
     setSelectedPlanId('');
     setManualSubError('');
     setManualSubSuccess('');
     setManualSubModalOpen(true);
+    setLoadingUsers(true);
     
     try {
       const [usersData, plansData] = await Promise.all([
-        apiFetch('/admin/users'),
+        apiFetch('/admin/users?all=true&limit=100'),
         apiFetch('/admin/subscription-plans')
       ]);
-      setUsers(Array.isArray(usersData) ? usersData : []);
-      setPlans(Array.isArray(plansData) ? plansData : []);
-      if (plansData && plansData.length > 0) setSelectedPlanId(plansData[0].id);
+      const usersList = Array.isArray(usersData) ? usersData : (usersData?.data || []);
+      setUsers(usersList);
+      setFilteredUsers(usersList);
+
+      const plansList = Array.isArray(plansData) ? plansData : (plansData?.data || []);
+      setPlans(plansList);
+      if (plansList && plansList.length > 0) setSelectedPlanId(plansList[0].id);
     } catch (e) {
       setManualSubError('Error al cargar datos: ' + e.message);
+    } finally {
+      setLoadingUsers(false);
     }
   };
 
   const handleSelectUser = (u) => {
+    if (u.has_active_subscription) {
+      setManualSubError(`El usuario "${u.name}" ya cuenta con una suscripción activa (${u.active_subscription_plan || 'Plan Activo'}). No puede registrar una nueva membresía hasta que expire.`);
+      return;
+    }
     setSelectedUser(u);
     setSelectedUserId(u.id);
-    setClientNameInput(u.name);
-    setManualClientEmail(u.email || '');
-    setManualClientPhone(u.phone || '');
-    setShowUserDropdown(false);
+    setManualSubError('');
   };
 
   const handleClearSelectedUser = () => {
     setSelectedUser(null);
     setSelectedUserId('');
-    setManualClientEmail('');
-    setManualClientPhone('');
+    setManualSubError('');
   };
 
   // Submit manual membership
   const handleSaveManualSub = async (e) => {
     e.preventDefault();
-    if (!clientNameInput.trim()) {
-      setManualSubError('Debes ingresar el nombre del cliente.');
-      return;
-    }
+    setManualSubError('');
+    setManualSubSuccess('');
+
     if (!selectedPlanId) {
       setManualSubError('Debes seleccionar un plan de suscripción.');
       return;
     }
 
-    setSubmittingManualSub(true);
-    setManualSubError('');
-    setManualSubSuccess('');
+    let finalUserId = null;
 
-    try {
-      let finalUserId = selectedUserId;
+    if (manualSubTab === 'registrado') {
+      if (!selectedUserId || !selectedUser) {
+        setManualSubError('Debes buscar y seleccionar un usuario registrado de la lista.');
+        return;
+      }
+      if (selectedUser.has_active_subscription) {
+        setManualSubError(`El usuario "${selectedUser.name}" ya cuenta con una membresía activa (${selectedUser.active_subscription_plan || 'Plan Activo'}). No puede registrar otra membresía.`);
+        return;
+      }
+      finalUserId = selectedUserId;
+    } else {
+      // Pestaña: Nuevo Cliente (Sin App)
+      if (!newClientName.trim()) {
+        setManualSubError('Debes ingresar el nombre completo del cliente.');
+        return;
+      }
 
-      // Si no seleccionó un usuario registrado existente, creamos el perfil del nuevo cliente
-      if (!finalUserId) {
+      setSubmittingManualSub(true);
+      try {
         const tempId = Date.now();
         const randomNum = Math.floor(Math.random() * 1000);
         const generatedUsername = `user_${tempId}_${randomNum}`;
-        const generatedEmail = manualClientEmail.trim() || `cliente_${tempId}_${randomNum}@gimnasio.com`;
+        const generatedEmail = newClientEmail.trim() || `cliente_${tempId}_${randomNum}@gimnasio.com`;
         
         const regRes = await apiFetch('/register', {
           method: 'POST',
           body: JSON.stringify({
-            name: clientNameInput.trim(),
+            name: newClientName.trim(),
             username: generatedUsername,
             email: generatedEmail,
             password: 'gym12345678',
             password_confirmation: 'gym12345678',
-            phone: manualClientPhone.trim() || null
+            phone: newClientPhone.trim() || null
           })
         });
 
@@ -569,8 +625,16 @@ export default function Reports() {
         }
 
         finalUserId = regRes.user.id;
+      } catch (err) {
+        setSubmittingManualSub(false);
+        setManualSubError(err.message || 'Error al registrar al cliente externo.');
+        return;
       }
+    }
 
+    setSubmittingManualSub(true);
+
+    try {
       await apiFetch('/trainer/subscriptions/create', {
         method: 'POST',
         body: JSON.stringify({
@@ -579,13 +643,13 @@ export default function Reports() {
         })
       });
 
-      setManualSubSuccess('Membresía creada y activada exitosamente');
+      setManualSubSuccess('¡Membresía creada y activada exitosamente!');
       setTimeout(() => {
         setManualSubModalOpen(false);
         fetchMonthlyReport(selectedMonth, selectedYear);
       }, 1200);
     } catch (err) {
-      setManualSubError(err.message || 'El usuario ya tiene una membresía activa.');
+      setManualSubError(err.message || 'El usuario ya tiene una membresía activa o no se pudo crear.');
     } finally {
       setSubmittingManualSub(false);
     }
@@ -1072,195 +1136,330 @@ export default function Reports() {
       {/* MODAL 1: REGISTRAR MEMBRESÍA MANUAL */}
       {manualSubModalOpen && (
         <div className="modal-overlay" onClick={() => setManualSubModalOpen(false)}>
-          <div className="modal" style={{ maxWidth: 500 }} onClick={e => e.stopPropagation()}>
+          <div className="modal" style={{ maxWidth: 520 }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h3 style={{ margin: 0 }}>Registrar Membresía Manual</h3>
+              <div>
+                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Registrar Membresía Manual</h3>
+                <p style={{ margin: '3px 0 0', fontSize: 12.5, color: 'var(--text-secondary)' }}>
+                  Asigna una membresía directa con pago en efectivo o caja
+                </p>
+              </div>
               <button className="btn btn--ghost" style={{ padding: 6, borderRadius: '50%' }} onClick={() => setManualSubModalOpen(false)}>
                 <X size={16} />
               </button>
             </div>
 
-            {manualSubError && <div className="alert alert--error" style={{ marginBottom: 16 }}><AlertTriangle size={14} /> <span>{manualSubError}</span></div>}
-            {manualSubSuccess && <div className="alert alert--success" style={{ marginBottom: 16 }}><CheckCircle2 size={14} /> <span>{manualSubSuccess}</span></div>}
+            {/* Selector de dos secciones: Usuario Registrado vs Nuevo Cliente */}
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: '1fr 1fr', 
+              gap: 6, 
+              padding: 4, 
+              background: 'var(--bg)', 
+              border: '1px solid var(--border)', 
+              borderRadius: 10, 
+              marginBottom: 16 
+            }}>
+              <button
+                type="button"
+                onClick={() => { setManualSubTab('registrado'); setManualSubError(''); }}
+                style={{
+                  padding: '9px 12px',
+                  borderRadius: 7,
+                  border: 'none',
+                  fontWeight: 600,
+                  fontSize: 13,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  background: manualSubTab === 'registrado' ? 'var(--primary)' : 'transparent',
+                  color: manualSubTab === 'registrado' ? '#ffffff' : 'var(--text-secondary)',
+                  boxShadow: manualSubTab === 'registrado' ? '0 2px 8px rgba(37,99,235,0.25)' : 'none',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <UserCheck size={16} />
+                <span>Usuario Registrado</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => { setManualSubTab('nuevo'); setManualSubError(''); }}
+                style={{
+                  padding: '9px 12px',
+                  borderRadius: 7,
+                  border: 'none',
+                  fontWeight: 600,
+                  fontSize: 13,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  background: manualSubTab === 'nuevo' ? 'var(--primary)' : 'transparent',
+                  color: manualSubTab === 'nuevo' ? '#ffffff' : 'var(--text-secondary)',
+                  boxShadow: manualSubTab === 'nuevo' ? '0 2px 8px rgba(37,99,235,0.25)' : 'none',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <UserPlus size={16} />
+                <span>Nuevo Cliente (Sin App)</span>
+              </button>
+            </div>
+
+            {manualSubError && (
+              <div className="alert alert--error" style={{ marginBottom: 14 }}>
+                <AlertTriangle size={15} /> 
+                <span style={{ fontSize: 13 }}>{manualSubError}</span>
+              </div>
+            )}
+            {manualSubSuccess && (
+              <div className="alert alert--success" style={{ marginBottom: 14 }}>
+                <CheckCircle2 size={15} /> 
+                <span style={{ fontSize: 13 }}>{manualSubSuccess}</span>
+              </div>
+            )}
 
             <form onSubmit={handleSaveManualSub} className="modal-form">
-              {/* Unified Client Name with Autocomplete */}
-              <div className="form-group" style={{ position: 'relative', marginBottom: 16 }}>
-                <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                  <span style={{ fontWeight: 600 }}>Nombre del Cliente *</span>
-                  {selectedUser && (
-                    <span style={{ fontSize: 11, color: '#16a34a', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                      <CheckCircle2 size={12} /> Usuario Registrado Vinculado
-                    </span>
-                  )}
-                </label>
+              {/* SECCIÓN 1: USUARIO REGISTRADO */}
+              {manualSubTab === 'registrado' && (
+                <div style={{ marginBottom: 16 }}>
+                  {selectedUser ? (
+                    // Ficha del usuario registrado seleccionado
+                    <div style={{
+                      padding: '12px 14px',
+                      background: 'rgba(34, 197, 94, 0.08)',
+                      border: '1.5px solid #22c55e',
+                      borderRadius: 10,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: 12
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div className="avatar-circle" style={!getUserAvatarUrl(selectedUser) ? { backgroundColor: getAvatarBgColor(selectedUser.name), width: 36, height: 36, fontSize: 13 } : { width: 36, height: 36 }}>
+                          {getUserAvatarUrl(selectedUser) ? (
+                            <img src={getUserAvatarUrl(selectedUser)} alt={selectedUser.name} className="avatar-img" />
+                          ) : (
+                            <span>{getUserInitials(selectedUser.name)}</span>
+                          )}
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: 13.5, color: 'var(--text)' }}>
+                            {selectedUser.name}
+                          </div>
+                          <div style={{ fontSize: 11.5, color: 'var(--text-secondary)' }}>
+                            {selectedUser.email || 'Sin correo'} {selectedUser.phone ? `• 📞 ${selectedUser.phone}` : ''}
+                          </div>
+                          <div style={{ fontSize: 11, color: '#16a34a', fontWeight: 600, marginTop: 2, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <Check size={12} /> Usuario Seleccionado (Listo para asignar membresía)
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleClearSelectedUser}
+                        className="btn btn--secondary btn--sm"
+                        style={{ fontSize: 12, padding: '4px 10px' }}
+                      >
+                        Cambiar
+                      </button>
+                    </div>
+                  ) : (
+                    // Buscador y lista de usuarios registrados
+                    <div>
+                      <div className="form-group" style={{ marginBottom: 10 }}>
+                        <label style={{ fontSize: 12.5, fontWeight: 600, display: 'block', marginBottom: 5 }}>
+                          Buscar Usuario Registrado *
+                        </label>
+                        <div style={{ position: 'relative' }}>
+                          <Search size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+                          <input
+                            type="text"
+                            value={userSearchQuery}
+                            onChange={(e) => setUserSearchQuery(e.target.value)}
+                            placeholder="Escribe el nombre, correo o teléfono (ej. Liliana)..."
+                            style={{ paddingLeft: 34, width: '100%', fontSize: 13 }}
+                            autoFocus
+                          />
+                          {userSearchQuery && (
+                            <button
+                              type="button"
+                              onClick={() => setUserSearchQuery('')}
+                              style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: 4 }}
+                            >
+                              <X size={14} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
 
-                <div style={{ position: 'relative' }}>
-                  <input
-                    type="text"
-                    value={clientNameInput}
-                    onChange={(e) => {
-                      setClientNameInput(e.target.value);
-                      setShowUserDropdown(true);
-                      if (selectedUser && e.target.value !== selectedUser.name) {
-                        setSelectedUser(null);
-                        setSelectedUserId('');
-                      }
-                    }}
-                    onFocus={() => {
-                      if (clientNameInput.trim().length >= 1) {
-                        setShowUserDropdown(true);
-                      }
-                    }}
-                    placeholder="Escribe el nombre del cliente (ej. Juan Pérez)..."
-                    required
-                    style={{
-                      paddingRight: selectedUser ? 36 : 12,
-                      borderColor: selectedUser ? '#16a34a' : undefined,
-                      boxShadow: selectedUser ? '0 0 0 1px #16a34a' : undefined
-                    }}
-                  />
+                      {/* Lista de resultados */}
+                      <div style={{
+                        border: '1px solid var(--border)',
+                        borderRadius: 8,
+                        background: 'var(--card)',
+                        maxHeight: 230,
+                        overflowY: 'auto',
+                        padding: 2
+                      }}>
+                        {loadingUsers ? (
+                          <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: 12.5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                            <Loader2 className="spin" size={16} />
+                            <span>Buscando en la base de datos...</span>
+                          </div>
+                        ) : filteredUsers.length === 0 ? (
+                          <div style={{ padding: '24px 16px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: 12.5 }}>
+                            <p style={{ margin: 0 }}>No se encontraron usuarios registrados {userSearchQuery ? `con "${userSearchQuery}"` : ''}.</p>
+                            <p style={{ margin: '6px 0 0', fontSize: 11.5 }}>Si es un cliente nuevo sin cuenta, usa la pestaña superior "Nuevo Cliente (Sin App)".</p>
+                          </div>
+                        ) : (
+                          filteredUsers.map((u) => {
+                            const avatarUrl = getUserAvatarUrl(u);
+                            const initials = getUserInitials(u.name);
+                            const bgColor = getAvatarBgColor(u.name);
+                            const hasActive = Boolean(u.has_active_subscription);
 
-                  {selectedUser && (
-                    <button
-                      type="button"
-                      onClick={handleClearSelectedUser}
-                      title="Desvincular usuario registrado"
-                      style={{
-                        position: 'absolute',
-                        right: 8,
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        background: 'transparent',
-                        border: 'none',
-                        cursor: 'pointer',
-                        color: 'var(--text-secondary)',
-                        padding: 4,
-                        display: 'flex',
-                        alignItems: 'center'
-                      }}
-                    >
-                      <X size={16} />
-                    </button>
+                            return (
+                              <div
+                                key={u.id}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  gap: 10,
+                                  padding: '8px 12px',
+                                  borderBottom: '1px solid var(--border)',
+                                  background: hasActive ? 'rgba(239, 68, 68, 0.04)' : 'transparent',
+                                  opacity: hasActive ? 0.78 : 1,
+                                  transition: 'background 0.15s ease'
+                                }}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
+                                  <div className="avatar-circle" style={!avatarUrl ? { backgroundColor: bgColor, width: 32, height: 32, fontSize: 11 } : { width: 32, height: 32 }}>
+                                    {avatarUrl ? (
+                                      <img src={avatarUrl} alt={u.name} className="avatar-img" />
+                                    ) : (
+                                      <span>{initials}</span>
+                                    )}
+                                  </div>
+                                  <div style={{ minWidth: 0, flex: 1 }}>
+                                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                      {u.name}
+                                    </div>
+                                    <div style={{ fontSize: 11, color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                      {u.email} {u.phone ? `• 📞 ${u.phone}` : ''}
+                                    </div>
+                                    {hasActive ? (
+                                      <div style={{ marginTop: 2, fontSize: 10.5, color: '#dc2626', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                        <span>⛔ Membresía Activa: <strong>{u.active_subscription_plan || 'Plan Activo'}</strong></span>
+                                        {u.active_subscription_ends_at && <span>(Vence {formatEndDate(u.active_subscription_ends_at)})</span>}
+                                      </div>
+                                    ) : (
+                                      <div style={{ marginTop: 2, fontSize: 10.5, color: '#16a34a', fontWeight: 600 }}>
+                                        🟢 Sin membresía activa (Disponible)
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <div>
+                                  {hasActive ? (
+                                    <button
+                                      type="button"
+                                      disabled
+                                      title="Este usuario ya cuenta con una suscripción activa y no puede tener otra."
+                                      style={{
+                                        fontSize: 11,
+                                        padding: '4px 8px',
+                                        borderRadius: 6,
+                                        background: 'rgba(239, 68, 68, 0.1)',
+                                        color: '#dc2626',
+                                        border: '1px solid rgba(239, 68, 68, 0.25)',
+                                        cursor: 'not-allowed',
+                                        fontWeight: 600
+                                      }}
+                                    >
+                                      Ya suscrito
+                                    </button>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleSelectUser(u)}
+                                      className="btn btn--primary btn--sm"
+                                      style={{ fontSize: 11, padding: '4px 10px' }}
+                                    >
+                                      Seleccionar
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
                   )}
                 </div>
+              )}
 
-                {/* Autocomplete suggestions popup */}
-                {showUserDropdown && clientNameInput.trim().length >= 1 && !selectedUser && (
-                  <div
-                    className="autocomplete-dropdown"
-                    style={{
-                      position: 'absolute',
-                      top: '100%',
-                      left: 0,
-                      right: 0,
-                      zIndex: 100,
-                      background: 'var(--card)',
-                      border: '1px solid var(--border)',
-                      borderRadius: 8,
-                      marginTop: 4,
-                      boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.2)',
-                      maxHeight: 220,
-                      overflowY: 'auto'
-                    }}
-                  >
-                    {matchingUsers.length === 0 ? (
-                      <div style={{ padding: '12px 14px', fontSize: 12.5, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span>👤 No hay usuarios registrados que coincidan. Se registrará como cliente nuevo.</span>
-                      </div>
-                    ) : (
-                      <>
-                        <div style={{ padding: '6px 12px', fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', background: 'var(--bg)', borderBottom: '1px solid var(--border)' }}>
-                          Usuarios registrados encontrados (haz clic para autocompletar):
-                        </div>
-                        {matchingUsers.slice(0, 8).map((u) => {
-                          const avatarUrl = getUserAvatarUrl(u);
-                          const initials = getUserInitials(u.name);
-                          const bgColor = getAvatarBgColor(u.name);
-                          return (
-                            <div
-                              key={u.id}
-                              className="user-search-result-item"
-                              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', cursor: 'pointer' }}
-                              onClick={() => handleSelectUser(u)}
-                            >
-                              <div className="avatar-circle" style={!avatarUrl ? { backgroundColor: bgColor, width: 32, height: 32, fontSize: 12 } : { width: 32, height: 32 }}>
-                                {avatarUrl ? (
-                                  <img src={avatarUrl} alt={u.name} className="avatar-img" />
-                                ) : (
-                                  <span>{initials}</span>
-                                )}
-                              </div>
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
-                                  {u.name}
-                                </div>
-                                <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
-                                  {u.email} {u.phone && `• 📞 ${u.phone}`}
-                                </div>
-                              </div>
-                              <span style={{ fontSize: 10, padding: '3px 8px', borderRadius: 4, background: 'rgba(34, 197, 94, 0.1)', color: '#16a34a', fontWeight: 600 }}>
-                                Autocompletar
-                              </span>
-                            </div>
-                          );
-                        })}
-                      </>
-                    )}
+              {/* SECCIÓN 2: NUEVO CLIENTE (SIN APP) */}
+              {manualSubTab === 'nuevo' && (
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{
+                    padding: '8px 12px',
+                    background: 'var(--bg)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 8,
+                    fontSize: 12,
+                    color: 'var(--text-secondary)',
+                    marginBottom: 14,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6
+                  }}>
+                    <span>💡 <strong>Cliente Nuevo:</strong> Se creará el perfil del cliente en el sistema y se le activará su membresía en el acto.</span>
                   </div>
-                )}
 
-                {/* Status indicator */}
-                {selectedUser ? (
-                  <div style={{ marginTop: 8, padding: '8px 12px', background: 'rgba(34, 197, 94, 0.08)', border: '1px solid rgba(34, 197, 94, 0.25)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 12 }}>
-                    <div>
-                      <span style={{ fontWeight: 600, color: '#16a34a' }}>✓ Cliente Registrado: </span>
-                      <span style={{ color: 'var(--text)' }}>{selectedUser.name} ({selectedUser.email || 'Sin correo'})</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleClearSelectedUser}
-                      style={{ background: 'transparent', border: 'none', color: '#dc2626', cursor: 'pointer', fontSize: 11, fontWeight: 600, padding: 0 }}
-                    >
-                      Desvincular
-                    </button>
-                  </div>
-                ) : (
-                  clientNameInput.trim().length >= 1 && (
-                    <div style={{ marginTop: 8, padding: '8px 12px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span>💡 <strong>Cliente Nuevo / Externo:</strong> Si no seleccionas un usuario registrado, se creará la membresía para este cliente.</span>
-                    </div>
-                  )
-                )}
-              </div>
-
-              {/* Extra optional fields for unregistered clients */}
-              {!selectedUser && (
-                <div className="form-grid-2" style={{ marginBottom: 16 }}>
-                  <div className="form-group" style={{ margin: 0 }}>
-                    <label style={{ fontSize: 12 }}>Teléfono (Opcional)</label>
-                    <input 
-                      type="text" 
-                      value={manualClientPhone} 
-                      onChange={e => setManualClientPhone(e.target.value)} 
-                      placeholder="Ej. 0987654321" 
+                  <div className="form-group" style={{ marginBottom: 12 }}>
+                    <label style={{ fontSize: 12.5, fontWeight: 600 }}>Nombre Completo del Cliente *</label>
+                    <input
+                      type="text"
+                      value={newClientName}
+                      onChange={(e) => setNewClientName(e.target.value)}
+                      placeholder="Ej. Liliana Anchundia"
+                      required
                     />
                   </div>
-                  <div className="form-group" style={{ margin: 0 }}>
-                    <label style={{ fontSize: 12 }}>Correo (Opcional)</label>
-                    <input 
-                      type="email" 
-                      value={manualClientEmail} 
-                      onChange={e => setManualClientEmail(e.target.value)} 
-                      placeholder="Ej. cliente@gmail.com" 
-                    />
+
+                  <div className="form-grid-2" style={{ marginBottom: 0 }}>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label style={{ fontSize: 12 }}>Teléfono / WhatsApp (Opcional)</label>
+                      <input 
+                        type="text" 
+                        value={newClientPhone} 
+                        onChange={e => setNewClientPhone(e.target.value)} 
+                        placeholder="Ej. 0987654321" 
+                      />
+                    </div>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label style={{ fontSize: 12 }}>Correo Electrónico (Opcional)</label>
+                      <input 
+                        type="email" 
+                        value={newClientEmail} 
+                        onChange={e => setNewClientEmail(e.target.value)} 
+                        placeholder="Ej. cliente@gmail.com" 
+                      />
+                    </div>
                   </div>
                 </div>
               )}
 
-              <div className="form-group">
-                <label>Plan de Suscripción *</label>
-                <select value={selectedPlanId} onChange={e => setSelectedPlanId(e.target.value)} required>
+              {/* SELECCIÓN DEL PLAN (COMÚN A AMBAS SECCIONES) */}
+              <div className="form-group" style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 12.5, fontWeight: 600 }}>Plan de Suscripción *</label>
+                <select value={selectedPlanId} onChange={e => setSelectedPlanId(e.target.value)} required style={{ fontSize: 13 }}>
                   <option value="">Selecciona un plan...</option>
                   {plans.map(p => (
                     <option key={p.id} value={p.id}>{p.name} - ${Number(p.price).toFixed(2)}</option>
@@ -1268,15 +1467,44 @@ export default function Reports() {
                 </select>
               </div>
 
-              <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: 12, fontSize: 12, color: 'var(--text-secondary)', marginBottom: 20 }}>
-                💡 <strong>Nota:</strong> Al registrar la membresía manualmente, se creará inmediatamente en estado <strong>Activo</strong> con una vigencia de 30 días, simulando que el usuario pagó con dinero en efectivo o de forma directa.
+              <div style={{
+                padding: '8px 12px',
+                background: 'var(--bg)',
+                border: '1px solid var(--border)',
+                borderRadius: 8,
+                fontSize: 11.5,
+                color: 'var(--text-secondary)',
+                marginBottom: 16
+              }}>
+                💡 <strong>Nota:</strong> Al registrar la membresía manualmente, se creará inmediatamente en estado <strong>Activo</strong> con una vigencia de 30 días, simulando el pago en efectivo o directo.
               </div>
 
-              <div className="modal-actions">
-                <button type="button" className="btn btn--ghost" onClick={() => setManualSubModalOpen(false)}>Cancelar</button>
-                <button type="submit" className="btn btn--primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }} disabled={submittingManualSub}>
-                  {submittingManualSub ? <Loader2 className="spin" size={14} /> : <Check size={14} />}
-                  <span>Registrar Membresía</span>
+              <div className="modal-actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                <button
+                  type="button"
+                  className="btn btn--secondary"
+                  onClick={() => setManualSubModalOpen(false)}
+                  disabled={submittingManualSub}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn--primary"
+                  disabled={submittingManualSub || (manualSubTab === 'registrado' && (!selectedUserId || selectedUser?.has_active_subscription))}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                >
+                  {submittingManualSub ? (
+                    <>
+                      <Loader2 className="spin" size={15} />
+                      <span>Registrando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check size={15} />
+                      <span>Registrar Membresía</span>
+                    </>
+                  )}
                 </button>
               </div>
             </form>
