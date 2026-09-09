@@ -192,7 +192,6 @@ export default function Reports() {
     open: false,
     sub: null,
     phone: '',
-    countryCode: '593',
     customMessage: '',
     copied: false
   });
@@ -433,7 +432,7 @@ export default function Reports() {
         <table>
           <tr>
             <th colspan="9" style="background-color: #1e3a8a; color: #ffffff; font-size: 15pt; font-weight: bold; text-align: center; padding: 14px; height: 42px;">
-              FITNESS CLUB GYM - REPORTE MENSUAL DE MEMBRESÍAS
+              GIGAFIT GIM - REPORTE MENSUAL DE MEMBRESÍAS
             </th>
           </tr>
           <tr style="background-color: #f1f5f9;">
@@ -578,7 +577,7 @@ export default function Reports() {
         <table>
           <tr>
             <th colspan="5" style="background-color: #065f46; color: #ffffff; font-size: 15pt; font-weight: bold; text-align: center; padding: 14px; height: 42px;">
-              FITNESS CLUB GYM - REPORTE DIARIO DE ASISTENCIAS
+              GIGAFIT GIM - REPORTE DIARIO DE ASISTENCIAS
             </th>
           </tr>
           <tr style="background-color: #f1f5f9;">
@@ -634,58 +633,54 @@ export default function Reports() {
     const status = getMembershipStatus(sub);
 
     if (status.type === 'expiring') {
-      const daysMsg = status.diffDays === 0 ? '¡Vence hoy!' : (status.diffDays === 1 ? '¡Queda solo 1 día!' : `¡Quedan solo ${status.diffDays} días!`);
-      return `¡Hola, *${clientName}*! 🏋️‍♂️ Esperamos que te encuentres excelente.\n\n` +
-        `Te saludamos cordialmente de parte del equipo de *Fitness Club Gym*.\n` +
+      const daysMsg = status.diffDays === 0 ? '¡Vence hoy!' : (status.diffDays === 1 ? '¡Queda solo 1 día!' : `¡Quedan ${status.diffDays} días!`);
+      return `¡Hola, *${clientName}*! 💪 Esperamos que te encuentres excelente.\n\n` +
+        `Te saludamos cordialmente de parte del equipo de *Gigafit Gim*.\n` +
         `Te recordamos atentamente que tu membresía (*${planName}*) está próxima a vencer el *${endsAtDate}* (${daysMsg}).\n\n` +
-        `Mantener la constancia y no perder tus días de entrenamiento es clave para tus metas físicas y de bienestar. ¡Tu disciplina hace la diferencia! 💪🔥\n\n` +
+        `Mantener la constancia y no perder tus días de entrenamiento es clave para tus metas físicas y de bienestar. ¡Tu disciplina hace la diferencia! 🔥\n\n` +
         `📋 *Puedes renovar anticipadamente:*\n` +
-        `1️⃣ Directamente en recepción (Efectivo o Transferencia)\n` +
-        `2️⃣ Desde nuestra aplicación móvil\n\n` +
+        `🔹 1. Directamente en recepción (Efectivo o Transferencia)\n` +
+        `🔹 2. Desde nuestra aplicación móvil\n\n` +
         `Si tienes alguna pregunta o deseas consultar sobre promociones vigentes, escríbenos por aquí con gusto.\n\n` +
-        `¡Te esperamos en el gym para seguir entrenando con todo! 🥊✨`;
+        `¡Te esperamos en el gym para seguir entrenando con todo! 🥊`;
     }
 
-    return `¡Hola, *${clientName}*! 🏋️‍♂️ Esperamos que te encuentres con la mejor energía.\n\n` +
-      `Te saludamos cordialmente de parte del equipo de *Fitness Club Gym*.\n` +
-      `Te escribimos para recordarte de manera atenta que tu plan de membresía (*${planName}*) finalizó el ${endsAtDate}.\n\n` +
-      `Sabemos lo importante que es mantener la constancia en tus entrenamientos para alcanzar tus metas físicas y de salud. ¡No dejes que tu progreso se detenga! 💪🔥\n\n` +
+    return `¡Hola, *${clientName}*! 💪 Esperamos que te encuentres con la mejor energía.\n\n` +
+      `Te saludamos cordialmente de parte del equipo de *Gigafit Gim*.\n` +
+      `Te escribimos para recordarte de manera atenta que tu plan de membresía (*${planName}*) finalizó el *${endsAtDate}*.\n\n` +
+      `Sabemos lo importante que es mantener la constancia en tus entrenamientos para alcanzar tus metas físicas y de salud. ¡No dejes que tu progreso se detenga! 🔥\n\n` +
       `📋 *Opciones rápidas para renovar tu membresía:*\n` +
-      `1️⃣ Directamente en recepción (Efectivo o Transferencia)\n` +
-      `2️⃣ Desde nuestra aplicación móvil\n\n` +
+      `🔹 1. Directamente en recepción (Efectivo o Transferencia)\n` +
+      `🔹 2. Desde nuestra aplicación móvil\n\n` +
       `Si deseas conocer nuestras promociones vigentes o necesitas ayuda para reactivar tu plan, estamos a tu total disposición.\n\n` +
-      `¡Te esperamos pronto en el gym para seguir entrenando fuerte! 🥊✨`;
+      `¡Te esperamos pronto en el gym para seguir entrenando fuerte! 🥊`;
   };
 
   const handleOpenWhatsAppReminder = (sub) => {
     const rawPhone = sub?.user?.phone || sub?.billing_phone || '';
-    let cleanPhone = rawPhone.replace(/\D/g, '');
-    let countryCode = '593'; // Ecuador por defecto
-    if (cleanPhone.startsWith('0')) {
-      cleanPhone = cleanPhone.substring(1);
-    } else if (cleanPhone.startsWith('593')) {
-      cleanPhone = cleanPhone.substring(3);
-    }
-
     setWhatsappModal({
       open: true,
       sub,
-      phone: cleanPhone,
-      countryCode,
+      phone: rawPhone,
       customMessage: generateWhatsAppMessage(sub),
       copied: false
     });
   };
 
   const sendWhatsAppMessage = () => {
-    if (!whatsappModal.phone.trim()) {
+    if (!whatsappModal.phone || !whatsappModal.phone.trim()) {
       alert('Por favor ingresa o verifica el número de teléfono del cliente.');
       return;
     }
-    const cleanDigits = whatsappModal.phone.replace(/\D/g, '');
-    const fullPhone = `${whatsappModal.countryCode.replace(/\D/g, '')}${cleanDigits}`;
-    const encoded = encodeURIComponent(whatsappModal.customMessage);
-    window.open(`https://wa.me/${fullPhone}?text=${encoded}`, '_blank');
+    let cleanDigits = whatsappModal.phone.replace(/\D/g, '');
+    if (cleanDigits.startsWith('0')) {
+      cleanDigits = '593' + cleanDigits.substring(1);
+    } else if (!cleanDigits.startsWith('593') && cleanDigits.length === 9) {
+      cleanDigits = '593' + cleanDigits;
+    }
+    const normalizedMsg = (whatsappModal.customMessage || '').normalize('NFC');
+    const encoded = encodeURIComponent(normalizedMsg);
+    window.open(`https://api.whatsapp.com/send/?phone=${cleanDigits}&text=${encoded}`, '_blank');
   };
 
   const copyWhatsAppMessage = () => {
@@ -1879,29 +1874,17 @@ export default function Reports() {
                   })()}
                 </div>
 
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <div style={{ width: 85 }}>
-                    <label style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'block', marginBottom: 2 }}>Código</label>
+                <div>
+                  <label style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Número de Teléfono</label>
+                  <div style={{ position: 'relative' }}>
                     <input
                       type="text"
-                      value={whatsappModal.countryCode}
-                      onChange={e => setWhatsappModal(prev => ({ ...prev, countryCode: e.target.value }))}
-                      placeholder="+593"
-                      style={{ textAlign: 'center', fontWeight: 600 }}
+                      value={whatsappModal.phone}
+                      onChange={e => setWhatsappModal(prev => ({ ...prev, phone: e.target.value }))}
+                      placeholder="Ej. 0984280334"
+                      style={{ paddingLeft: 30, width: '100%' }}
                     />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'block', marginBottom: 2 }}>Número de Teléfono</label>
-                    <div style={{ position: 'relative' }}>
-                      <input
-                        type="text"
-                        value={whatsappModal.phone}
-                        onChange={e => setWhatsappModal(prev => ({ ...prev, phone: e.target.value }))}
-                        placeholder="Ej. 987654321 (sin 0)"
-                        style={{ paddingLeft: 30 }}
-                      />
-                      <Phone size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
-                    </div>
+                    <Phone size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
                   </div>
                 </div>
               </div>

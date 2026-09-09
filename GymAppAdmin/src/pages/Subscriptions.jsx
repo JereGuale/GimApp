@@ -70,16 +70,15 @@ export default function Subscriptions() {
     open: false,
     sub: null,
     phone: '',
-    countryCode: '593',
     customMessage: '',
     copied: false
   });
 
   const getSubscriptionExpirationState = (sub) => {
-    if (!sub) return { eligible: false, isExpired: false, diffDays: null };
-    if (sub.status === 'expired') return { eligible: true, isExpired: true, diffDays: -1 };
+    if (!sub) return { eligible: false, isExpired: false, diffDays: null, label: 'Recordatorio WhatsApp' };
+    if (sub.status === 'expired') return { eligible: true, isExpired: true, diffDays: -1, label: 'Recordatorio (Vencida)' };
     if (sub.status === 'cancelled' || sub.status === 'rejected' || sub.status === 'pending') {
-      return { eligible: false, isExpired: false, diffDays: null };
+      return { eligible: false, isExpired: false, diffDays: null, label: 'Recordatorio WhatsApp' };
     }
 
     if (sub.ends_at) {
@@ -90,13 +89,14 @@ export default function Subscriptions() {
       const diffDays = Math.ceil((endsAt - today) / (1000 * 60 * 60 * 24));
 
       if (diffDays < 0) {
-        return { eligible: true, isExpired: true, diffDays };
+        return { eligible: true, isExpired: true, diffDays, label: 'Recordatorio (Vencida)' };
       }
       if (diffDays <= 7) {
-        return { eligible: true, isExpired: false, diffDays };
+        return { eligible: true, isExpired: false, diffDays, label: 'Recordatorio (Por vencer)' };
       }
+      return { eligible: true, isExpired: false, diffDays, label: 'Recordatorio WhatsApp' };
     }
-    return { eligible: false, isExpired: false, diffDays: null };
+    return { eligible: true, isExpired: false, diffDays: null, label: 'Recordatorio WhatsApp' };
   };
 
   const generateWhatsAppMessage = (sub) => {
@@ -106,58 +106,55 @@ export default function Subscriptions() {
     const endsAtDate = sub?.ends_at ? new Date(sub.ends_at).toLocaleDateString('es-EC', { day: 'numeric', month: 'long', year: 'numeric' }) : 'recientemente';
 
     if (!expState.isExpired) {
-      const daysMsg = expState.diffDays === 0 ? '¡Vence hoy!' : (expState.diffDays === 1 ? '¡Queda solo 1 día!' : `¡Quedan solo ${expState.diffDays} días!`);
-      return `¡Hola, *${clientName}*! 🏋️‍♂️ Esperamos que te encuentres excelente.\n\n` +
-        `Te saludamos cordialmente de parte del equipo de *Fitness Club Gym*.\n` +
-        `Te recordamos atentamente que tu membresía (*${planName}*) está próxima a vencer el *${endsAtDate}* (${daysMsg}).\n\n` +
-        `Mantener la constancia y no perder tus días de entrenamiento es clave para tus metas físicas y de bienestar. ¡Tu disciplina hace la diferencia! 💪🔥\n\n` +
-        `📋 *Puedes renovar anticipadamente:* \n` +
-        `1️⃣ Directamente en recepción (Efectivo o Transferencia)\n` +
-        `2️⃣ Desde nuestra aplicación móvil\n\n` +
+      const daysMsg = expState.diffDays === 0 ? '¡Vence hoy!' : (expState.diffDays === 1 ? '¡Queda solo 1 día!' : `¡Quedan ${expState.diffDays} días!`);
+      const statusVigencia = expState.diffDays <= 7 ? 'está próxima a vencer el' : 'se encuentra activa y tiene vigencia hasta el';
+      return `¡Hola, *${clientName}*! 💪 Esperamos que te encuentres excelente.\n\n` +
+        `Te saludamos cordialmente de parte del equipo de *Gigafit Gim*.\n` +
+        `Te recordamos atentamente que tu membresía (*${planName}*) ${statusVigencia} *${endsAtDate}* (${daysMsg}).\n\n` +
+        `Mantener la constancia y no perder tus días de entrenamiento es clave para tus metas físicas y de bienestar. ¡Tu disciplina hace la diferencia! 🔥\n\n` +
+        `📋 *Puedes renovar tu plan:*\n` +
+        `🔹 1. Directamente en recepción (Efectivo o Transferencia)\n` +
+        `🔹 2. Desde nuestra aplicación móvil\n\n` +
         `Si tienes alguna pregunta o deseas consultar sobre promociones vigentes, escríbenos por aquí con gusto.\n\n` +
-        `¡Te esperamos en el gym para seguir entrenando con todo! 🥊✨`;
+        `¡Te esperamos en el gym para seguir entrenando con todo! 🥊`;
     }
 
-    return `¡Hola, *${clientName}*! 🏋️‍♂️ Esperamos que te encuentres con la mejor energía.\n\n` +
-      `Te saludamos cordialmente de parte del equipo de *Fitness Club Gym*.\n` +
-      `Te escribimos para recordarte de forma atenta que tu plan de membresía (*${planName}*) finalizó el ${endsAtDate}.\n\n` +
-      `Sabemos lo importante que es mantener la constancia en tus entrenamientos para alcanzar tus metas físicas y de salud. ¡No dejes que tu progreso se detenga! 💪🔥\n\n` +
+    return `¡Hola, *${clientName}*! 💪 Esperamos que te encuentres con la mejor energía.\n\n` +
+      `Te saludamos cordialmente de parte del equipo de *Gigafit Gim*.\n` +
+      `Te escribimos para recordarte de forma atenta que tu plan de membresía (*${planName}*) finalizó el *${endsAtDate}*.\n\n` +
+      `Sabemos lo importante que es mantener la constancia en tus entrenamientos para alcanzar tus metas físicas y de salud. ¡No dejes que tu progreso se detenga! 🔥\n\n` +
       `📋 *Opciones rápidas para renovar tu membresía:*\n` +
-      `1️⃣ Directamente en recepción (Efectivo o Transferencia)\n` +
-      `2️⃣ Desde nuestra aplicación móvil\n\n` +
+      `🔹 1. Directamente en recepción (Efectivo o Transferencia)\n` +
+      `🔹 2. Desde nuestra aplicación móvil\n\n` +
       `Si deseas conocer nuestras promociones vigentes o necesitas ayuda para reactivar tu plan, estamos a tu total disposición.\n\n` +
-      `¡Te esperamos pronto en el gym para seguir entrenando fuerte! 🥊✨`;
+      `¡Te esperamos pronto en el gym para seguir entrenando fuerte! 🥊`;
   };
 
   const handleOpenWhatsAppReminder = (sub) => {
     const rawPhone = sub?.user?.phone || sub?.billing_phone || '';
-    let cleanPhone = rawPhone.replace(/\D/g, '');
-    let countryCode = '593';
-    if (cleanPhone.startsWith('0')) {
-      cleanPhone = cleanPhone.substring(1);
-    } else if (cleanPhone.startsWith('593')) {
-      cleanPhone = cleanPhone.substring(3);
-    }
-
     setWhatsappModal({
       open: true,
       sub,
-      phone: cleanPhone,
-      countryCode,
+      phone: rawPhone,
       customMessage: generateWhatsAppMessage(sub),
       copied: false
     });
   };
 
   const sendWhatsAppMessage = () => {
-    if (!whatsappModal.phone.trim()) {
+    if (!whatsappModal.phone || !whatsappModal.phone.trim()) {
       alert('Por favor ingresa o verifica el número de teléfono del cliente.');
       return;
     }
-    const cleanDigits = whatsappModal.phone.replace(/\D/g, '');
-    const fullPhone = `${whatsappModal.countryCode.replace(/\D/g, '')}${cleanDigits}`;
-    const encoded = encodeURIComponent(whatsappModal.customMessage);
-    window.open(`https://wa.me/${fullPhone}?text=${encoded}`, '_blank');
+    let cleanDigits = whatsappModal.phone.replace(/\D/g, '');
+    if (cleanDigits.startsWith('0')) {
+      cleanDigits = '593' + cleanDigits.substring(1);
+    } else if (!cleanDigits.startsWith('593') && cleanDigits.length === 9) {
+      cleanDigits = '593' + cleanDigits;
+    }
+    const normalizedMsg = (whatsappModal.customMessage || '').normalize('NFC');
+    const encoded = encodeURIComponent(normalizedMsg);
+    window.open(`https://api.whatsapp.com/send/?phone=${cleanDigits}&text=${encoded}`, '_blank');
   };
 
   const copyWhatsAppMessage = () => {
@@ -585,35 +582,6 @@ export default function Subscriptions() {
                         </td>
                         <td style={{ textAlign: 'right' }}>
                           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end', width: '100%' }}>
-                            {(() => {
-                              const expState = getSubscriptionExpirationState(s);
-                              if (!expState.eligible) return null;
-                              return (
-                                <button
-                                  type="button"
-                                  className="btn-whatsapp-reminder"
-                                  onClick={() => handleOpenWhatsAppReminder(s)}
-                                  title={expState.isExpired ? "Enviar recordatorio de membresía vencida por WhatsApp" : "Enviar recordatorio de membresía por vencer por WhatsApp"}
-                                  style={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: 6,
-                                    background: expState.isExpired ? 'rgba(239, 68, 68, 0.1)' : 'rgba(37, 211, 102, 0.12)',
-                                    color: expState.isExpired ? '#dc2626' : '#15803d',
-                                    border: `1px solid ${expState.isExpired ? 'rgba(239, 68, 68, 0.25)' : 'rgba(37, 211, 102, 0.3)'}`,
-                                    padding: '5px 10px',
-                                    borderRadius: 8,
-                                    fontSize: 12,
-                                    fontWeight: 600,
-                                    cursor: 'pointer'
-                                  }}
-                                >
-                                  <MessageCircle size={14} style={{ color: expState.isExpired ? '#dc2626' : '#25D366' }} />
-                                  <span>Recordatorio</span>
-                                </button>
-                              );
-                            })()}
-
                             {/* Eye icon slot */}
                             <div style={{ width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                               {getReceiptUrl(s) && (
@@ -698,7 +666,7 @@ export default function Subscriptions() {
                                             >
                                               <MessageCircle size={14} style={{ color: expState.isExpired ? '#dc2626' : '#25D366' }} />
                                               <span style={{ color: expState.isExpired ? '#dc2626' : '#16a34a', fontWeight: 600 }}>
-                                                Recordatorio ({expState.isExpired ? 'Vencida' : 'Por vencer'})
+                                                {expState.label}
                                               </span>
                                             </button>
                                           );
@@ -801,7 +769,7 @@ export default function Subscriptions() {
                                   >
                                     <MessageCircle size={14} style={{ color: expState.isExpired ? '#dc2626' : '#25D366' }} />
                                     <span style={{ color: expState.isExpired ? '#dc2626' : '#16a34a', fontWeight: 600 }}>
-                                      Recordatorio ({expState.isExpired ? 'Vencida' : 'Por vencer'})
+                                      {expState.label}
                                     </span>
                                   </button>
                                 );
@@ -891,28 +859,6 @@ export default function Subscriptions() {
 
                   {/* Receipt & Validation actions */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    {(() => {
-                      const expState = getSubscriptionExpirationState(s);
-                      if (!expState.eligible) return null;
-                      return (
-                        <button
-                          type="button"
-                          className="btn-whatsapp-reminder"
-                          style={{
-                            width: '100%',
-                            justifyContent: 'center',
-                            minHeight: 38,
-                            background: expState.isExpired ? 'rgba(239, 68, 68, 0.1)' : 'rgba(37, 211, 102, 0.12)',
-                            color: expState.isExpired ? '#dc2626' : '#15803d',
-                            border: `1px solid ${expState.isExpired ? 'rgba(239, 68, 68, 0.25)' : 'rgba(37, 211, 102, 0.3)'}`
-                          }}
-                          onClick={() => handleOpenWhatsAppReminder(s)}
-                        >
-                          <MessageCircle size={15} style={{ color: expState.isExpired ? '#dc2626' : '#25D366' }} />
-                          <span>Recordatorio WhatsApp ({expState.isExpired ? 'Vencida' : 'Por vencer'})</span>
-                        </button>
-                      );
-                    })()}
 
                     {getReceiptUrl(s) && (
                       <button
@@ -1065,12 +1011,12 @@ export default function Subscriptions() {
                           const planName = receiptModal.plan?.name || 'Membresía Gym';
                           const planPrice = receiptModal.plan?.price ? `$${Number(receiptModal.plan.price).toFixed(2)}` : '';
 
-                          const message = `¡Hola ${clientName}! 👋 Gracias por elegir Fitness Club Gym.
+                          const message = `¡Hola ${clientName}! 👋 Gracias por elegir Gigafit Gim.
 
 Hemos recibido tu solicitud de membresía:
 ⭐ *Plan:* ${planName} ${planPrice ? `(${planPrice})` : ''}
 
-Estamos validando tu comprobante de pago para activar tu membresía de inmediato. ¡Nos vemos pronto en el gimnasio para entrenar! 🏋️‍♂️💪✨`;
+Estamos validando tu comprobante de pago para activar tu membresía de inmediato. ¡Nos vemos pronto en el gimnasio para entrenar! 💪🔥`;
 
                           let formattedPhone = clientPhone.replace(/\s+/g, '').replace(/[+\-]/g, '');
                           if (formattedPhone.startsWith('0')) {
@@ -1520,29 +1466,17 @@ Estamos validando tu comprobante de pago para activar tu membresía de inmediato
                   })()}
                 </div>
 
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <div style={{ width: 85 }}>
-                    <label style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'block', marginBottom: 2 }}>Código</label>
+                <div>
+                  <label style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Número de Teléfono</label>
+                  <div style={{ position: 'relative' }}>
                     <input
                       type="text"
-                      value={whatsappModal.countryCode}
-                      onChange={e => setWhatsappModal(prev => ({ ...prev, countryCode: e.target.value }))}
-                      placeholder="+593"
-                      style={{ textAlign: 'center', fontWeight: 600 }}
+                      value={whatsappModal.phone}
+                      onChange={e => setWhatsappModal(prev => ({ ...prev, phone: e.target.value }))}
+                      placeholder="Ej. 0984280334"
+                      style={{ paddingLeft: 30, width: '100%' }}
                     />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'block', marginBottom: 2 }}>Número de Teléfono</label>
-                    <div style={{ position: 'relative' }}>
-                      <input
-                        type="text"
-                        value={whatsappModal.phone}
-                        onChange={e => setWhatsappModal(prev => ({ ...prev, phone: e.target.value }))}
-                        placeholder="Ej. 987654321 (sin 0)"
-                        style={{ paddingLeft: 30 }}
-                      />
-                      <Phone size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
-                    </div>
+                    <Phone size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
                   </div>
                 </div>
               </div>

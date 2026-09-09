@@ -7,7 +7,7 @@ import '../components/Layout.css';
 export default function Settings() {
   const { isDark, toggleTheme } = useTheme();
   const [location, setLocation] = useState({
-    name: 'Fitness Club Gym',
+    name: 'Gigafit Gim',
     address: 'Calle J-1 y Calle 31, Costa Azul, Manta, Ecuador',
     description: 'Fácil acceso, estacionamiento cercano y una zona segura para que entrenar sea parte natural de tu rutina.',
     maps_url: 'https://maps.google.com/?q=-0.967601,-80.678922'
@@ -361,7 +361,7 @@ export default function Settings() {
                     required
                     value={location.name}
                     onChange={e => handleFieldChange('name', e.target.value)}
-                    placeholder="Ej: Fitness Club Gym"
+                    placeholder="Ej: Gigafit Gim"
                     style={{
                       width: '100%',
                       padding: '12px',

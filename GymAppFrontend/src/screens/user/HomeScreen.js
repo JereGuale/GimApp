@@ -55,7 +55,7 @@ export default function HomeScreen() {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]); // Saved category state
   const [gymLocation, setGymLocation] = useState({
-    name: 'Fitness Club Gym',
+    name: 'Gigafit Gim',
     address: 'Calle J-1 y Calle 31, Costa Azul, Manta, Ecuador',
     description: 'Fácil acceso, estacionamiento cercano y una zona segura para que entrenar sea parte natural de tu rutina.',
     maps_url: 'https://maps.google.com/?q=-0.967601,-80.678922'
@@ -200,7 +200,7 @@ export default function HomeScreen() {
         const loc = Array.isArray(data) ? data.find(s => s.key === 'gym_location') : null;
         if (loc && loc.value && isMounted) {
           const newLoc = {
-            name: loc.value.name || 'Fitness Club Gym',
+            name: loc.value.name || 'Gigafit Gim',
             address: loc.value.address || 'Calle J-1 y Calle 31, Costa Azul, Manta, Ecuador',
             description: loc.value.description || 'Fácil acceso, estacionamiento cercano y una zona segura para que entrenar sea parte natural de tu rutina.',
             maps_url: loc.value.maps_url || 'https://maps.google.com/?q=-0.967601,-80.678922'

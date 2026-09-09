@@ -960,7 +960,7 @@ export default function Orders() {
                           ? `Envío a domicilio (${receiptModal.billing_city || 'Manta'}${receiptModal.billing_address ? ` - ${receiptModal.billing_address}` : ''})`
                           : 'Retiro en local';
 
-                        const message = `¡Hola ${clientName}! 👋 Gracias por tu compra en Fitness Club Gym.
+                        const message = `¡Hola ${clientName}! 👋 Gracias por tu compra en Gigafit Gim.
 
 Hemos recibido tu comprobante de pago. Detalles del pedido:
 
@@ -970,7 +970,7 @@ ${itemsSummary}
 💰 *Total:* $${Number(receiptModal.total).toFixed(2)}
 📍 *Entrega:* ${shippingText}
 
-Estamos validando tu pago y nos comunicaremos contigo de inmediato. ¡Gracias por tu preferencia! 🏋️‍♂️✨`;
+Estamos validando tu pago y nos comunicaremos contigo de inmediato. ¡Gracias por tu preferencia! 💪🔥`;
 
                         let formattedPhone = clientPhone.replace(/\s+/g, '').replace(/[+\-]/g, '');
                         if (formattedPhone.startsWith('0')) {
