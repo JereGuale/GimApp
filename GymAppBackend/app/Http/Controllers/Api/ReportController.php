@@ -68,7 +68,8 @@ class ReportController extends Controller
 
     public function daily(Request $request)
     {
-        $date = $request->query('date', Carbon::today()->toDateString());
+        $tz = config('app.timezone', 'America/Guayaquil');
+        $date = $request->query('date', Carbon::today($tz)->toDateString());
 
         $incomes = DailyIncome::whereDate('entry_date', $date)
             ->orderBy('entry_date', 'desc')
@@ -85,13 +86,36 @@ class ReportController extends Controller
         $request->validate([
             'client_name' => 'required|string|max:255',
             'amount' => 'required|numeric|min:0',
-            'entry_date' => 'nullable|date'
+            'entry_date' => 'nullable'
         ]);
+
+        $tz = config('app.timezone', 'America/Guayaquil');
+        $now = Carbon::now($tz);
+
+        if ($request->filled('entry_date')) {
+            $inputDate = trim($request->entry_date);
+            try {
+                if (strlen($inputDate) > 10) {
+                    $entryDate = Carbon::parse($inputDate, $tz);
+                } else {
+                    $parsed = Carbon::parse($inputDate, $tz);
+                    if ($parsed->isSameDay($now)) {
+                        $entryDate = $now;
+                    } else {
+                        $entryDate = $parsed->setTime($now->hour, $now->minute, $now->second);
+                    }
+                }
+            } catch (\Exception $e) {
+                $entryDate = $now;
+            }
+        } else {
+            $entryDate = $now;
+        }
 
         $income = DailyIncome::create([
             'client_name' => $request->client_name,
             'amount' => $request->amount,
-            'entry_date' => $request->entry_date ?Carbon::parse($request->entry_date) : now()
+            'entry_date' => $entryDate
         ]);
 
         return response()->json(['message' => 'Ingreso registrado', 'data' => $income], 201);

@@ -83,9 +83,12 @@ export default function MyPurchasesScreen() {
 
     useFocusEffect(
         useCallback(() => {
-            setLoading(true);
+            // Solo mostrar loader de pantalla completa si aún no hay órdenes en memoria
+            if (orders.length === 0) {
+                setLoading(true);
+            }
             loadOrders();
-        }, [])
+        }, [orders.length])
     );
 
     const onRefresh = async () => {

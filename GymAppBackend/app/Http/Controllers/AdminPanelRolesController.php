@@ -10,14 +10,25 @@ use Illuminate\Support\Facades\Validator;
 
 class AdminPanelRolesController extends Controller
 {
-    // Listar todos los usuarios y sus roles
-    public function listUsers()
+    // Listar todos los usuarios y sus roles (con soporte para búsqueda en vivo)
+    public function listUsers(Request $request)
     {
-        // Log de autenticación y headers
-        \Log::info('[listUsers] Auth user:', ['id' => optional(auth()->user())->id, 'email' => optional(auth()->user())->email, 'roles' => optional(auth()->user())->getRoleNames()]);
-        \Log::info('[listUsers] Headers:', request()->headers->all());
+        $query = User::with('roles');
 
-        $users = User::with('roles')->get();
+        if ($request->filled('search')) {
+            $search = trim($request->search);
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%")
+                  ->orWhere('phone', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->has('limit')) {
+            $query->limit((int)$request->limit);
+        }
+
+        $users = $query->orderBy('name')->get();
         return response()->json($users);
     }
 

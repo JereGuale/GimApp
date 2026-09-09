@@ -14,6 +14,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useResponsive } from '../../hooks/useResponsive';
 import BillingModal from '../../components/BillingModal';
 import { ProfileAPI } from '../../services/notificationService';
+import { PersistentCache } from '../../services/api';
 
 const getPlanCategory = (planName) => {
   const name = planName.toLowerCase();
@@ -60,7 +61,7 @@ export default function SubscriptionScreen() {
   }, [user]);
 
   const fetchExistingSubscription = async () => {
-    setLoadingSub(true);
+    if (!existingSub) setLoadingSub(true);
     const result = await SubscriptionAPI.getMySubscription();
     if (result.success && result.data && ['active', 'pending'].includes(result.data.status)) {
       setExistingSub(result.data);
@@ -71,14 +72,31 @@ export default function SubscriptionScreen() {
   };
 
   const fetchPlans = async () => {
-    setLoadingPlans(true);
-    const result = await SubscriptionPlanAPI.getPlans();
-    if (result.success && Array.isArray(result.data)) {
-      setPlans(result.data);
-    } else {
-      setPlans([]);
+    // 1. Hidratación instantánea desde caché (0ms)
+    try {
+      const cachedPlans = await PersistentCache.get('subscription_plans');
+      if (Array.isArray(cachedPlans) && cachedPlans.length > 0) {
+        setPlans(cachedPlans);
+        setLoadingPlans(false);
+      } else if (plans.length === 0) {
+        setLoadingPlans(true);
+      }
+    } catch (e) {
+      if (plans.length === 0) setLoadingPlans(true);
     }
-    setLoadingPlans(false);
+
+    // 2. Sincronización en segundo plano
+    try {
+      const result = await SubscriptionPlanAPI.getPlans();
+      if (result.success && Array.isArray(result.data) && result.data.length > 0) {
+        setPlans(result.data);
+        PersistentCache.set('subscription_plans', result.data);
+      }
+    } catch (e) {
+      // Mantiene los planes en caché
+    } finally {
+      setLoadingPlans(false);
+    }
   };
 
   const handlePlanPress = (plan) => {

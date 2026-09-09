@@ -25,7 +25,11 @@ import {
   MoreVertical,
   XCircle,
   AlertCircle,
-  ShieldAlert
+  ShieldAlert,
+  MessageCircle,
+  Send,
+  Copy,
+  Phone
 } from 'lucide-react';
 import '../components/Layout.css';
 import './Subscriptions.css';
@@ -60,6 +64,71 @@ export default function Subscriptions() {
   // Multi-step Delete Modal
   const [deleteModal, setDeleteModal] = useState(null); // { sub, step: 1|2|3, typed: '' }
   const DELETE_CONFIRM_WORD = 'ELIMINAR';
+
+  // WhatsApp Reminder State
+  const [whatsappModal, setWhatsappModal] = useState({
+    open: false,
+    sub: null,
+    phone: '',
+    countryCode: '593',
+    customMessage: '',
+    copied: false
+  });
+
+  const generateWhatsAppMessage = (sub) => {
+    const clientName = sub?.user?.name || sub?.billing_name || 'Estimado/a cliente';
+    const planName = sub?.plan?.name || sub?.plan_id || 'Membresía del Gimnasio';
+    const endsAtDate = sub?.ends_at ? new Date(sub.ends_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' }) : 'recientemente';
+
+    return `¡Hola, ${clientName}! 🏋️‍♂️ Esperamos que te encuentres con la mejor energía.\n\n` +
+      `Te saludamos cordialmente de parte del equipo de *Fitness Club Gym*. Te escribimos para recordarte que tu membresía (*${planName}*) finalizó el ${endsAtDate}.\n\n` +
+      `Sabemos lo importante que es mantener la constancia para alcanzar tus metas físicas y de salud. ¡No dejes que tu progreso se detenga! 💪🔥\n\n` +
+      `✨ *Opciones para renovar:*\n` +
+      `• Directamente en la recepción del gimnasio\n` +
+      `• A través de nuestra aplicación móvil\n` +
+      `💳 Aceptamos transferencia bancaria y efectivo.\n\n` +
+      `Si tienes alguna pregunta sobre nuestras promociones vigentes o deseas ayuda para reactivar tu plan, estamos a tu total disposición.\n\n` +
+      `¡Te esperamos en el gym para seguir entrenando fuerte! 🥊🔥`;
+  };
+
+  const handleOpenWhatsAppReminder = (sub) => {
+    const rawPhone = sub?.user?.phone || sub?.billing_phone || '';
+    let cleanPhone = rawPhone.replace(/\D/g, '');
+    let countryCode = '593';
+    if (cleanPhone.startsWith('0')) {
+      cleanPhone = cleanPhone.substring(1);
+    } else if (cleanPhone.startsWith('593')) {
+      cleanPhone = cleanPhone.substring(3);
+    }
+
+    setWhatsappModal({
+      open: true,
+      sub,
+      phone: cleanPhone,
+      countryCode,
+      customMessage: generateWhatsAppMessage(sub),
+      copied: false
+    });
+  };
+
+  const sendWhatsAppMessage = () => {
+    if (!whatsappModal.phone.trim()) {
+      alert('Por favor ingresa o verifica el número de teléfono del cliente.');
+      return;
+    }
+    const cleanDigits = whatsappModal.phone.replace(/\D/g, '');
+    const fullPhone = `${whatsappModal.countryCode.replace(/\D/g, '')}${cleanDigits}`;
+    const encoded = encodeURIComponent(whatsappModal.customMessage);
+    window.open(`https://wa.me/${fullPhone}?text=${encoded}`, '_blank');
+  };
+
+  const copyWhatsAppMessage = () => {
+    navigator.clipboard.writeText(whatsappModal.customMessage);
+    setWhatsappModal(prev => ({ ...prev, copied: true }));
+    setTimeout(() => {
+      setWhatsappModal(prev => ({ ...prev, copied: false }));
+    }, 2500);
+  };
 
   const handleOpenReceiptModal = (sub) => {
     setZoom(1);
@@ -478,6 +547,18 @@ export default function Subscriptions() {
                         </td>
                         <td style={{ textAlign: 'right' }}>
                           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end', width: '100%' }}>
+                            {s.status === 'expired' && (
+                              <button
+                                type="button"
+                                className="btn-whatsapp-reminder"
+                                onClick={() => handleOpenWhatsAppReminder(s)}
+                                title="Enviar recordatorio de membresía vencida por WhatsApp"
+                              >
+                                <MessageCircle size={14} />
+                                <span>Recordatorio</span>
+                              </button>
+                            )}
+
                             {/* Eye icon slot */}
                             <div style={{ width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                               {getReceiptUrl(s) && (
@@ -548,6 +629,19 @@ export default function Subscriptions() {
                                           <RefreshCw size={14} style={{ color: '#16a34a' }} />
                                           <span style={{ color: '#16a34a', fontWeight: 600 }}>Renovar suscripción</span>
                                         </button>
+                                        {s.status === 'expired' && (
+                                          <button
+                                            type="button"
+                                            className="actions-dropdown-item"
+                                            onClick={() => {
+                                              handleOpenWhatsAppReminder(s);
+                                              setActiveDropdown(null);
+                                            }}
+                                          >
+                                            <MessageCircle size={14} style={{ color: '#25D366' }} />
+                                            <span style={{ color: '#25D366', fontWeight: 600 }}>Recordatorio WhatsApp</span>
+                                          </button>
+                                        )}
                                         <button
                                           type="button"
                                           className="actions-dropdown-item actions-dropdown-item--danger"
@@ -632,6 +726,19 @@ export default function Subscriptions() {
                                 <RefreshCw size={14} style={{ color: '#16a34a' }} />
                                 <span style={{ color: '#16a34a', fontWeight: 600 }}>Renovar suscripción</span>
                               </button>
+                              {s.status === 'expired' && (
+                                <button
+                                  type="button"
+                                  className="actions-dropdown-item"
+                                  onClick={() => {
+                                    handleOpenWhatsAppReminder(s);
+                                    setActiveDropdown(null);
+                                  }}
+                                >
+                                  <MessageCircle size={14} style={{ color: '#25D366' }} />
+                                  <span style={{ color: '#25D366', fontWeight: 600 }}>Recordatorio WhatsApp</span>
+                                </button>
+                              )}
                               <button
                                 type="button"
                                 className="actions-dropdown-item actions-dropdown-item--danger"
@@ -717,6 +824,18 @@ export default function Subscriptions() {
 
                   {/* Receipt & Validation actions */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {s.status === 'expired' && (
+                      <button
+                        type="button"
+                        className="btn-whatsapp-reminder"
+                        style={{ width: '100%', justifyContent: 'center', minHeight: 38 }}
+                        onClick={() => handleOpenWhatsAppReminder(s)}
+                      >
+                        <MessageCircle size={15} />
+                        <span>Recordatorio WhatsApp</span>
+                      </button>
+                    )}
+
                     {getReceiptUrl(s) && (
                       <button
                         type="button"
@@ -1253,6 +1372,144 @@ Estamos validando tu comprobante de pago para activar tu membresía de inmediato
               </>
             )}
 
+          </div>
+        </div>
+      )}
+
+      {/* WhatsApp Reminder Modal */}
+      {whatsappModal.open && (
+        <div className="modal-overlay" onClick={() => setWhatsappModal(prev => ({ ...prev, open: false }))}>
+          <div className="modal whatsapp-modal" style={{ maxWidth: 520, padding: '24px 24px' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 10,
+                  backgroundColor: '#25D366',
+                  color: '#fff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 4px 12px rgba(37, 211, 102, 0.25)'
+                }}>
+                  <MessageCircle size={20} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: 'var(--text)' }}>
+                    Recordatorio de Membresía
+                  </h3>
+                  <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                    Envío directo de aviso de vencimiento vía WhatsApp
+                  </span>
+                </div>
+              </div>
+              <button 
+                type="button"
+                className="btn-action-circle"
+                onClick={() => setWhatsappModal(prev => ({ ...prev, open: false }))}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {/* Cliente y Teléfono */}
+              <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 10, padding: 14 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 8 }}>
+                  DESTINATARIO
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
+                  <div style={{ fontWeight: 600, fontSize: 15, color: 'var(--text)' }}>
+                    {whatsappModal.sub?.user?.name || whatsappModal.sub?.billing_name || 'Cliente'}
+                  </div>
+                  <span className="badge-status badge-status--expired" style={{ padding: '2px 8px', fontSize: 11 }}>
+                    <span className="badge-status-dot badge-status-dot--expired" />
+                    Membresía Expirada
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <div style={{ width: 85 }}>
+                    <label style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'block', marginBottom: 2 }}>Código</label>
+                    <input
+                      type="text"
+                      value={whatsappModal.countryCode}
+                      onChange={e => setWhatsappModal(prev => ({ ...prev, countryCode: e.target.value }))}
+                      placeholder="+593"
+                      style={{ textAlign: 'center', fontWeight: 600 }}
+                    />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'block', marginBottom: 2 }}>Número de Teléfono</label>
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        type="text"
+                        value={whatsappModal.phone}
+                        onChange={e => setWhatsappModal(prev => ({ ...prev, phone: e.target.value }))}
+                        placeholder="Ej. 987654321 (sin 0)"
+                        style={{ paddingLeft: 30 }}
+                      />
+                      <Phone size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Mensaje Editable */}
+              <div className="form-group" style={{ margin: 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <label style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>Mensaje Personalizado</label>
+                  <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Puedes editar el texto antes de enviar</span>
+                </div>
+                <textarea
+                  rows={8}
+                  value={whatsappModal.customMessage}
+                  onChange={e => setWhatsappModal(prev => ({ ...prev, customMessage: e.target.value }))}
+                  style={{
+                    fontFamily: 'inherit',
+                    fontSize: 13,
+                    lineHeight: 1.45,
+                    resize: 'vertical',
+                    padding: 12,
+                    borderRadius: 8,
+                    border: '1px solid var(--border)',
+                    background: 'var(--card)'
+                  }}
+                />
+              </div>
+
+              {/* Botones de acción */}
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
+                <button
+                  type="button"
+                  className="btn btn--secondary"
+                  onClick={copyWhatsAppMessage}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                >
+                  {whatsappModal.copied ? <Check size={15} style={{ color: 'var(--success)' }} /> : <Copy size={15} />}
+                  <span>{whatsappModal.copied ? '¡Copiado!' : 'Copiar Texto'}</span>
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={sendWhatsAppMessage}
+                  style={{
+                    backgroundColor: '#25D366',
+                    color: '#ffffff',
+                    border: 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    fontWeight: 600,
+                    boxShadow: '0 2px 8px rgba(37, 211, 102, 0.3)'
+                  }}
+                >
+                  <Send size={15} />
+                  <span>Abrir WhatsApp</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

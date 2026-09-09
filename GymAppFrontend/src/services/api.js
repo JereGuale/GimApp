@@ -24,9 +24,50 @@ export const ENDPOINTS = {
   activeOffer: `${API_URL}/offers/active`,
 };
 
-// In-memory cache for API GET requests to reduce load times
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// In-memory & Persistent cache for API GET requests to enable 0ms load times
 const apiCache = {};
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+export const PersistentCache = {
+  get: async (key) => {
+    // 1. Check in-memory first (0ms)
+    if (apiCache[key] && (Date.now() - apiCache[key].timestamp < CACHE_DURATION)) {
+      return apiCache[key].data;
+    }
+    // 2. Fallback to AsyncStorage (<10ms)
+    try {
+      const raw = await AsyncStorage.getItem(`@fast_cache_${key}`);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.data) {
+        apiCache[key] = parsed; // warm up in-memory cache
+        return parsed.data;
+      }
+    } catch (e) {
+      // Ignore reading errors
+    }
+    return null;
+  },
+  set: async (key, data) => {
+    apiCache[key] = { data, timestamp: Date.now() };
+    try {
+      await AsyncStorage.setItem(`@fast_cache_${key}`, JSON.stringify({
+        data,
+        timestamp: Date.now()
+      }));
+    } catch (e) {
+      // Ignore write errors
+    }
+  },
+  remove: async (key) => {
+    delete apiCache[key];
+    try {
+      await AsyncStorage.removeItem(`@fast_cache_${key}`);
+    } catch (e) {}
+  }
+};
 
 const getCachedResponse = (key) => {
   const cached = apiCache[key];
@@ -37,10 +78,7 @@ const getCachedResponse = (key) => {
 };
 
 const setCachedResponse = (key, data) => {
-  apiCache[key] = {
-    data,
-    timestamp: Date.now()
-  };
+  PersistentCache.set(key, data);
 };
 
 const fetchWithAuth = async (endpoint, token, options = {}) => {

@@ -7,6 +7,7 @@ use App\Models\Category;
 use App\Models\Checkin;
 use App\Models\Product;
 use App\Models\Subscription;
+use App\Models\Order;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -21,7 +22,7 @@ class SuperAdminMetricsController extends Controller
             $monthsToFetch = max(1, (int)$request->query('months', 6));
 
             // Reusable cache key based on requested months
-            $cacheKey = "superadmin_metrics_v2_{$monthsToFetch}";
+            $cacheKey = "superadmin_metrics_v3_{$monthsToFetch}";
 
             $metrics = Cache::remember($cacheKey, 60, function () use ($monthsToFetch) {
                 $now = Carbon::now();
@@ -95,6 +96,14 @@ class SuperAdminMetricsController extends Controller
                 $categoriesCount = DB::table('categories')->count();
                 $productsCount = DB::table('products')->count();
 
+                // ── 6. Operational pending counts & recent subscriptions for fast dashboard load ──
+                $pendingSubsCount = Subscription::where('status', 'pending')->count();
+                $pendingOrdersCount = Order::where('status', 'pending')->count();
+                $recentSubscriptions = Subscription::with(['user', 'plan'])
+                    ->orderByDesc('created_at')
+                    ->limit(5)
+                    ->get();
+
                 return [
                 'revenue_by_month' => $revenueByMonth,
                 'registrations_by_month' => $registrationsByMonth,
@@ -113,6 +122,9 @@ class SuperAdminMetricsController extends Controller
                 'peak_users_total' => $peakUsersTotal,
                 'categories_count' => $categoriesCount,
                 'products_count' => $productsCount,
+                'pending_subscriptions_count' => $pendingSubsCount,
+                'pending_orders_count' => $pendingOrdersCount,
+                'recent_subscriptions' => $recentSubscriptions,
                 ];
             });
 

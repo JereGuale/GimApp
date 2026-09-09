@@ -17,7 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
-import { CategoryService, BannerService, API_URL } from '../../services/api';
+import { CategoryService, BannerService, API_URL, PersistentCache } from '../../services/api';
 import { useResponsive } from '../../hooks/useResponsive';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -96,38 +96,125 @@ export default function HomeScreen() {
     },
   ];
 
-  // Fetch banners
+  // ── 1. Cache-First Hydration & Background Sync (0ms load time) ──
   useEffect(() => {
     let isMounted = true;
-    const loadBanners = async () => {
+
+    // A) Fast initial hydration from persistent storage (<10ms)
+    const hydrateFromCache = async () => {
       try {
-        setBannersLoading(true);
-        const response = await BannerService.getActiveBanners(token);
+        const [cachedBanners, cachedCats, cachedLoc] = await Promise.all([
+          PersistentCache.get('home_banners'),
+          PersistentCache.get('home_categories'),
+          PersistentCache.get('home_location'),
+        ]);
+
         if (!isMounted) return;
 
-        const bannerData = response?.data || response || [];
-        if (Array.isArray(bannerData) && bannerData.length > 0) {
-          const fixedBanners = bannerData.map(b => ({
-            ...b,
-            image_url: b.image_url
-              ? (b.image_url.startsWith('http')
-                ? b.image_url
-                : `${BASE_URL}/storage/${b.image_url}`)
-              : null,
-          }));
-          setBanners(fixedBanners);
-        } else {
-          setBanners(fallbackBanners);
+        if (Array.isArray(cachedBanners) && cachedBanners.length > 0) {
+          setBanners(cachedBanners);
+          setBannersLoading(false);
         }
-      } catch (error) {
-        if (!isMounted) return;
-        setBanners(fallbackBanners);
-      } finally {
-        if (isMounted) setBannersLoading(false);
+
+        if (Array.isArray(cachedCats) && cachedCats.length > 0) {
+          setCategories(cachedCats);
+          const allProds = [];
+          cachedCats.forEach((cat) => {
+            if (cat.products && Array.isArray(cat.products)) {
+              cat.products.forEach((prod) => allProds.push(prod));
+            }
+          });
+          allProds.sort((a, b) => (b.is_featured ? 1 : 0) - (a.is_featured ? 1 : 0));
+          setProducts(allProds);
+          setLoading(false);
+        }
+
+        if (cachedLoc) {
+          setGymLocation(cachedLoc);
+        }
+      } catch (e) {
+        // Continue to network fetch
       }
     };
 
-    loadBanners();
+    hydrateFromCache();
+
+    // B) Background Fresh Network Sync
+    const syncNetworkData = async () => {
+      // 1. Banners
+      try {
+        const bannerResp = await BannerService.getActiveBanners(token);
+        if (isMounted) {
+          const bannerData = bannerResp?.data || bannerResp || [];
+          if (Array.isArray(bannerData) && bannerData.length > 0) {
+            const fixedBanners = bannerData.map(b => ({
+              ...b,
+              image_url: b.image_url
+                ? (b.image_url.startsWith('http')
+                  ? b.image_url
+                  : `${BASE_URL}/storage/${b.image_url}`)
+                : null,
+            }));
+            setBanners(fixedBanners);
+            PersistentCache.set('home_banners', fixedBanners);
+          } else {
+            setBanners(fallbackBanners);
+          }
+          setBannersLoading(false);
+        }
+      } catch (err) {
+        if (isMounted && banners.length === 0) {
+          setBanners(fallbackBanners);
+          setBannersLoading(false);
+        }
+      }
+
+      // 2. Categories & Products
+      try {
+        const categoriesData = await CategoryService.getAll(token);
+        if (isMounted) {
+          const catsArray = Array.isArray(categoriesData) ? categoriesData : (categoriesData?.data || []);
+          if (catsArray.length > 0) {
+            setCategories(catsArray);
+            PersistentCache.set('home_categories', catsArray);
+
+            const allProds = [];
+            catsArray.forEach((cat) => {
+              if (cat.products && Array.isArray(cat.products)) {
+                cat.products.forEach((prod) => allProds.push(prod));
+              }
+            });
+            allProds.sort((a, b) => (b.is_featured ? 1 : 0) - (a.is_featured ? 1 : 0));
+            setProducts(allProds);
+          }
+          setLoading(false);
+        }
+      } catch (err) {
+        if (isMounted) setLoading(false);
+      }
+
+      // 3. Gym Location
+      try {
+        const res = await fetch(`${API_URL}/settings/public`);
+        const data = await res.json();
+        const loc = Array.isArray(data) ? data.find(s => s.key === 'gym_location') : null;
+        if (loc && loc.value && isMounted) {
+          const newLoc = {
+            name: loc.value.name || 'Fitness Club Gym',
+            address: loc.value.address || 'Calle J-1 y Calle 31, Costa Azul, Manta, Ecuador',
+            description: loc.value.description || 'Fácil acceso, estacionamiento cercano y una zona segura para que entrenar sea parte natural de tu rutina.',
+            maps_url: loc.value.maps_url || 'https://maps.google.com/?q=-0.967601,-80.678922'
+          };
+          setGymLocation(newLoc);
+          PersistentCache.set('home_location', newLoc);
+        }
+      } catch (err) {
+        // keep current location
+      }
+    };
+
+    syncNetworkData();
+
     return () => { isMounted = false; };
   }, [token]);
 
@@ -156,65 +243,6 @@ export default function HomeScreen() {
     const index = Math.round(offsetX / bannerWidth);
     setCurrentBannerIndex(index);
   }, [bannerWidth]);
-
-  // Fetch gym location settings
-  useEffect(() => {
-    let isMounted = true;
-    const loadGymLocation = async () => {
-      try {
-        const res = await fetch(`${API_URL}/settings/public`);
-        const data = await res.json();
-        const loc = data.find(s => s.key === 'gym_location');
-        if (loc && loc.value && isMounted) {
-          setGymLocation({
-            name: loc.value.name || 'Fitness Club Gym',
-            address: loc.value.address || 'Calle J-1 y Calle 31, Costa Azul, Manta, Ecuador',
-            description: loc.value.description || 'Fácil acceso, estacionamiento cercano y una zona segura para que entrenar sea parte natural de tu rutina.',
-            maps_url: loc.value.maps_url || 'https://maps.google.com/?q=-0.967601,-80.678922'
-          });
-        }
-      } catch (err) {
-        console.error('Error fetching gym location settings:', err);
-      }
-    };
-    loadGymLocation();
-    return () => { isMounted = false; };
-  }, []);
-
-  // Fetch products and populate categories
-  useEffect(() => {
-    let isMounted = true;
-    const loadProducts = async () => {
-      try {
-        setLoading(true);
-        const categoriesData = await CategoryService.getAll(token);
-        if (!isMounted) return;
-
-        const catsArray = Array.isArray(categoriesData) ? categoriesData : (categoriesData?.data || []);
-        setCategories(catsArray);
-
-        const allProds = [];
-        catsArray.forEach((cat) => {
-          if (cat.products && Array.isArray(cat.products)) {
-            cat.products.forEach((prod) => {
-              allProds.push(prod);
-            });
-          }
-        });
-        // Sort: featured products first
-        allProds.sort((a, b) => (b.is_featured ? 1 : 0) - (a.is_featured ? 1 : 0));
-        setProducts(allProds);
-      } catch (error) {
-        if (!isMounted) return;
-        setProducts([]);
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    };
-
-    loadProducts();
-    return () => { isMounted = false; };
-  }, []);
 
   const toggleFavorite = (productId) => {
     setFavorites((prev) =>

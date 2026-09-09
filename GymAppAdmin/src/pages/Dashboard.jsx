@@ -102,29 +102,43 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    Promise.all([
-      apiFetch('/admin/metrics').catch((e) => {
+    let isMounted = true;
+    apiFetch('/admin/metrics')
+      .then(async (metricsData) => {
+        if (!isMounted || !metricsData) return;
+        setStats(metricsData);
+
+        // Si el backend entrega los datos consolidados directamente (ultrarrápido)
+        if (metricsData.recent_subscriptions) {
+          setRecentSubs(metricsData.recent_subscriptions);
+          setPendingSubsCount(metricsData.pending_subscriptions_count || 0);
+          setPendingOrdersCount(metricsData.pending_orders_count || 0);
+        } else {
+          // Fallback optimizado con limit=5
+          try {
+            const [subsData, ordersCountData] = await Promise.all([
+              apiFetch('/trainer/subscriptions?limit=5').catch(() => []),
+              apiFetch('/admin/orders/pending-count').catch(() => ({ count: 0 })),
+            ]);
+            if (isMounted) {
+              const subsList = Array.isArray(subsData) ? subsData : [];
+              setRecentSubs(subsList.slice(0, 5));
+              setPendingSubsCount(subsList.filter(s => s.status === 'pending').length);
+              setPendingOrdersCount(ordersCountData?.count ?? 0);
+            }
+          } catch (e) {
+            console.error('Fallback fetch error:', e);
+          }
+        }
+      })
+      .catch((e) => {
         console.error('Metrics fetch error:', e);
-        return null;
-      }),
-      apiFetch('/trainer/subscriptions').catch((e) => {
-        console.error('Subscriptions fetch error:', e);
-        return [];
-      }),
-      apiFetch('/admin/orders').catch((e) => {
-        console.error('Orders fetch error:', e);
-        return [];
-      }),
-    ]).then(([metricsData, subsData, ordersData]) => {
-      setStats(metricsData);
-      
-      const subsList = Array.isArray(subsData) ? subsData : [];
-      setRecentSubs(subsList.slice(0, 5));
-      setPendingSubsCount(subsList.filter(s => s.status === 'pending').length);
-      
-      const ordersList = Array.isArray(ordersData) ? ordersData : [];
-      setPendingOrdersCount(ordersList.filter(o => o.status === 'pending').length);
-    }).finally(() => setLoading(false));
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
+
+    return () => { isMounted = false; };
   }, []);
 
   const statCards = [

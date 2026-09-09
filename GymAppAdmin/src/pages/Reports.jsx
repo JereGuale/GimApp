@@ -17,7 +17,15 @@ import {
   ChevronRight,
   Layers,
   Clock,
-  MoreVertical
+  MoreVertical,
+  Search,
+  Download,
+  MessageCircle,
+  Copy,
+  Send,
+  ExternalLink,
+  Phone,
+  UserCheck
 } from 'lucide-react';
 import '../components/Layout.css';
 import './Subscriptions.css';
@@ -162,7 +170,19 @@ export default function Reports() {
   const [users, setUsers] = useState([]);
   const [plans, setPlans] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState('');
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [userSearchQuery, setUserSearchQuery] = useState('');
   const [selectedPlanId, setSelectedPlanId] = useState('');
+  
+  // WhatsApp Reminder State
+  const [whatsappModal, setWhatsappModal] = useState({
+    open: false,
+    sub: null,
+    phone: '',
+    countryCode: '593',
+    customMessage: '',
+    copied: false
+  });
   
   // Offline client form state
   const [newClientName, setNewClientName] = useState('');
@@ -173,8 +193,22 @@ export default function Reports() {
   const [manualSubSuccess, setManualSubSuccess] = useState('');
   const [submittingManualSub, setSubmittingManualSub] = useState(false);
 
+  // Helper for real local date and time strings
+  const getLocalDateString = (d = new Date()) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const getLocalTimeString = (d = new Date()) => {
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
+  };
+
   // ── Daily Attendance State ──
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = getLocalDateString();
   const [selectedDailyDate, setSelectedDailyDate] = useState(todayStr);
   const [dailyIncomes, setDailyIncomes] = useState([]);
   const [dailyTotal, setDailyTotal] = useState(0);
@@ -184,6 +218,7 @@ export default function Reports() {
   const [dailyClientName, setDailyClientName] = useState('');
   const [dailyAmount, setDailyAmount] = useState('2.00'); // default gym entrance price set to $2.00
   const [dailyEntryDate, setDailyEntryDate] = useState(todayStr);
+  const [dailyEntryTime, setDailyEntryTime] = useState(getLocalTimeString());
   const [dailyError, setDailyError] = useState('');
   const [dailySuccess, setDailySuccess] = useState('');
   const [dailySubmitting, setDailySubmitting] = useState(false);
@@ -269,6 +304,187 @@ export default function Reports() {
     return Math.max(...arr.map((item) => parseFloat(item[key] || 0))) || 1;
   };
 
+  // Helper para filtrar usuarios en modal de membresía manual
+  const filteredUsers = users.filter((u) => {
+    if (!userSearchQuery.trim()) return true;
+    const q = userSearchQuery.toLowerCase().trim();
+    const name = (u.name || '').toLowerCase();
+    const email = (u.email || '').toLowerCase();
+    const phone = (u.phone || '').toLowerCase();
+    const username = (u.username || '').toLowerCase();
+    return name.includes(q) || email.includes(q) || phone.includes(q) || username.includes(q);
+  });
+
+  // Descarga de reporte de mensualidades en CSV / Excel
+  const downloadMonthlyReport = () => {
+    if (!monthlySubs || monthlySubs.length === 0) {
+      alert('No hay membresías registradas para descargar en el mes seleccionado.');
+      return;
+    }
+
+    const monthNames = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    const monthName = monthNames[selectedMonth] || selectedMonth;
+
+    const headers = ['ID', 'Cliente', 'Email', 'Teléfono', 'Plan', 'Precio ($)', 'Fecha Inicio', 'Fecha Vencimiento', 'Estado de Membresía'];
+    const rows = monthlySubs.map(sub => {
+      const statusObj = getMembershipStatus(sub);
+      const cleanName = (sub.user?.name || sub.billing_name || 'Sin nombre').replace(/"/g, '""');
+      const cleanEmail = (sub.user?.email || sub.billing_email || '').replace(/"/g, '""');
+      const cleanPhone = (sub.user?.phone || sub.billing_phone || '').replace(/"/g, '""');
+      const cleanPlan = (sub.plan?.name || sub.plan_id || 'Plan').replace(/"/g, '""');
+      const price = Number(sub.price || 0).toFixed(2);
+      const start = sub.starts_at ? new Date(sub.starts_at).toLocaleDateString('es-MX') : '';
+      const end = sub.ends_at ? new Date(sub.ends_at).toLocaleDateString('es-MX') : '';
+      const status = statusObj.label;
+
+      return [sub.id, `"${cleanName}"`, `"${cleanEmail}"`, `"${cleanPhone}"`, `"${cleanPlan}"`, price, `"${start}"`, `"${end}"`, `"${status}"`];
+    });
+
+    const csvLines = [
+      headers.join(';'),
+      ...rows.map(r => r.join(';')),
+      `"TOTAL INGRESOS" ; ; ; ; ; "${Number(monthlyTotal).toFixed(2)}" ; ; ; `
+    ];
+
+    const csvContent = '\uFEFF' + csvLines.join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `Reporte_Mensualidades_${monthName}_${selectedYear}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const formatAttendanceTime = (dateStr) => {
+    if (!dateStr) return '—';
+    try {
+      const normalized = typeof dateStr === 'string' && dateStr.includes(' ') && !dateStr.includes('T')
+        ? dateStr.replace(' ', 'T')
+        : dateStr;
+      const d = new Date(normalized);
+      if (isNaN(d.getTime())) return dateStr;
+      return d.toLocaleTimeString('es-MX', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const formatAttendanceDate = (dateStr) => {
+    if (!dateStr) return '';
+    try {
+      const normalized = typeof dateStr === 'string' && dateStr.includes(' ') && !dateStr.includes('T')
+        ? dateStr.replace(' ', 'T')
+        : dateStr;
+      const d = new Date(normalized);
+      if (isNaN(d.getTime())) return '';
+      return d.toLocaleDateString('es-MX', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+      });
+    } catch {
+      return '';
+    }
+  };
+
+  // Descarga de reporte de asistencias diarias en CSV / Excel
+  const downloadDailyReport = () => {
+    if (!dailyIncomes || dailyIncomes.length === 0) {
+      alert('No hay asistencias registradas para descargar en la fecha seleccionada.');
+      return;
+    }
+
+    const headers = ['ID', 'Cliente', 'Monto de Entrada ($)', 'Hora de Ingreso', 'Fecha Registro'];
+    const rows = dailyIncomes.map(item => {
+      const cleanName = (item.client_name || 'Invitado').replace(/"/g, '""');
+      const amount = Number(item.amount || 0).toFixed(2);
+      const time = formatAttendanceTime(item.entry_date);
+      const date = formatAttendanceDate(item.entry_date);
+
+      return [item.id, `"${cleanName}"`, amount, `"${time}"`, `"${date}"`];
+    });
+
+    const csvLines = [
+      headers.join(';'),
+      ...rows.map(r => r.join(';')),
+      `"TOTAL ASISTENCIAS" ; "${dailyIncomes.length}" ; "${Number(dailyTotal).toFixed(2)}" ; ; `
+    ];
+
+    const csvContent = '\uFEFF' + csvLines.join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `Reporte_Asistencias_${selectedDailyDate}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // Generador de mensaje profesional de WhatsApp para membresía vencida
+  const generateWhatsAppMessage = (sub) => {
+    const clientName = sub?.user?.name || sub?.billing_name || 'Estimado/a cliente';
+    const planName = sub?.plan?.name || sub?.plan_id || 'Membresía del Gimnasio';
+    const endsAtDate = sub?.ends_at ? new Date(sub.ends_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' }) : 'recientemente';
+
+    return `¡Hola, ${clientName}! 🏋️‍♂️ Esperamos que te encuentres con la mejor energía.\n\n` +
+      `Te saludamos cordialmente de parte del equipo de *Fitness Club Gym*. Te escribimos para recordarte que tu membresía (*${planName}*) finalizó el ${endsAtDate}.\n\n` +
+      `Sabemos lo importante que es mantener la constancia para alcanzar tus metas físicas y de salud. ¡No dejes que tu progreso se detenga! 💪🔥\n\n` +
+      `✨ *Opciones para renovar:*\n` +
+      `• Directamente en la recepción del gimnasio\n` +
+      `• A través de nuestra aplicación móvil\n` +
+      `💳 Aceptamos transferencia bancaria y efectivo.\n\n` +
+      `Si tienes alguna pregunta sobre nuestras promociones vigentes o deseas ayuda para reactivar tu plan, estamos a tu total disposición.\n\n` +
+      `¡Te esperamos en el gym para seguir entrenando fuerte! 🥊🔥`;
+  };
+
+  const handleOpenWhatsAppReminder = (sub) => {
+    const rawPhone = sub?.user?.phone || sub?.billing_phone || '';
+    let cleanPhone = rawPhone.replace(/\D/g, '');
+    let countryCode = '593'; // Ecuador por defecto
+    if (cleanPhone.startsWith('0')) {
+      cleanPhone = cleanPhone.substring(1);
+    } else if (cleanPhone.startsWith('593')) {
+      cleanPhone = cleanPhone.substring(3);
+    }
+
+    setWhatsappModal({
+      open: true,
+      sub,
+      phone: cleanPhone,
+      countryCode,
+      customMessage: generateWhatsAppMessage(sub),
+      copied: false
+    });
+  };
+
+  const sendWhatsAppMessage = () => {
+    if (!whatsappModal.phone.trim()) {
+      alert('Por favor ingresa o verifica el número de teléfono del cliente.');
+      return;
+    }
+    const cleanDigits = whatsappModal.phone.replace(/\D/g, '');
+    const fullPhone = `${whatsappModal.countryCode.replace(/\D/g, '')}${cleanDigits}`;
+    const encoded = encodeURIComponent(whatsappModal.customMessage);
+    window.open(`https://wa.me/${fullPhone}?text=${encoded}`, '_blank');
+  };
+
+  const copyWhatsAppMessage = () => {
+    navigator.clipboard.writeText(whatsappModal.customMessage);
+    setWhatsappModal(prev => ({ ...prev, copied: true }));
+    setTimeout(() => {
+      setWhatsappModal(prev => ({ ...prev, copied: false }));
+    }, 2500);
+  };
+
   // Open manual membership modal and pre-load lists
   const handleOpenManualSub = async () => {
     setUserType('existente');
@@ -278,6 +494,8 @@ export default function Reports() {
     setManualSubError('');
     setManualSubSuccess('');
     setSelectedUserId('');
+    setSelectedUser(null);
+    setUserSearchQuery('');
     setSelectedPlanId('');
     setManualSubModalOpen(true);
     
@@ -288,7 +506,6 @@ export default function Reports() {
       ]);
       setUsers(Array.isArray(usersData) ? usersData : []);
       setPlans(Array.isArray(plansData) ? plansData : []);
-      if (usersData && usersData.length > 0) setSelectedUserId(usersData[0].id);
       if (plansData && plansData.length > 0) setSelectedPlanId(plansData[0].id);
     } catch (e) {
       setManualSubError('Error al cargar datos: ' + e.message);
@@ -369,7 +586,8 @@ export default function Reports() {
   const handleOpenDailyModal = () => {
     setDailyClientName('');
     setDailyAmount('2.00'); // default gym entrance price is now $2.00
-    setDailyEntryDate(selectedDailyDate);
+    setDailyEntryDate(selectedDailyDate || getLocalDateString());
+    setDailyEntryTime(getLocalTimeString());
     setDailyError('');
     setDailySuccess('');
     setDailyModalOpen(true);
@@ -388,12 +606,15 @@ export default function Reports() {
     setDailySuccess('');
 
     try {
+      const timePart = dailyEntryTime || getLocalTimeString();
+      const combinedDateTime = `${dailyEntryDate} ${timePart}:00`;
+
       await apiFetch('/admin/reports/daily', {
         method: 'POST',
         body: JSON.stringify({
-          client_name: dailyClientName,
+          client_name: dailyClientName.trim(),
           amount: parseFloat(dailyAmount) || 0,
-          entry_date: dailyEntryDate
+          entry_date: combinedDateTime
         })
       });
       setDailySuccess('Asistencia de cliente registrada exitosamente.');
@@ -535,9 +756,22 @@ export default function Reports() {
               </div>
 
               <div className="card">
-                <div className="page-header" style={{ marginBottom: 16 }}>
-                  <h3 style={{ margin: 0, fontSize: 16 }}>Membresías Vendidas</h3>
-                  <span className="badge badge--blue">{filteredSubs.length} suscripciones</span>
+                <div className="page-header" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <h3 style={{ margin: 0, fontSize: 16 }}>Membresías Vendidas</h3>
+                    <span className="badge badge--blue">{filteredSubs.length} suscripciones</span>
+                  </div>
+                  <button 
+                    type="button"
+                    className="btn btn--secondary" 
+                    onClick={downloadMonthlyReport}
+                    disabled={filteredSubs.length === 0}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13 }}
+                    title="Exportar listado del mes a Excel/CSV"
+                  >
+                    <Download size={15} />
+                    <span>Descargar Reporte (CSV)</span>
+                  </button>
                 </div>
 
                 {filteredSubs.length === 0 ? (
@@ -557,24 +791,44 @@ export default function Reports() {
                             <th>Inicio</th>
                             <th>Vencimiento</th>
                             <th>Estado</th>
+                            <th style={{ textAlign: 'right' }}>Acciones</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {paginatedSubs.map((sub) => (
-                            <tr key={sub.id}>
-                              <td>{renderUserCell(sub.user)}</td>
-                              <td style={{ fontWeight: 600 }}>{sub.plan?.name || sub.plan_id}</td>
-                              <td style={{ fontWeight: 700, color: 'var(--success)' }}>${Number(sub.price || 0).toFixed(2)}</td>
-                              <td style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{sub.starts_at ? new Date(sub.starts_at).toLocaleDateString('es-MX') : '—'}</td>
-                              <td style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{sub.ends_at ? new Date(sub.ends_at).toLocaleDateString('es-MX') : '—'}</td>
-                              <td>
-                                <span className={`badge-status badge-status--${sub.status}`}>
-                                  <span className={`badge-status-dot badge-status-dot--${sub.status}`} />
-                                  <span>{sub.status === 'active' ? 'Activa' : sub.status === 'pending' ? 'Pendiente' : sub.status}</span>
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
+                          {paginatedSubs.map((sub) => {
+                            const status = getMembershipStatus(sub);
+                            const isExpired = status.type === 'expired';
+                            return (
+                              <tr key={sub.id}>
+                                <td>{renderUserCell(sub.user)}</td>
+                                <td style={{ fontWeight: 600 }}>{sub.plan?.name || sub.plan_id}</td>
+                                <td style={{ fontWeight: 700, color: 'var(--success)' }}>${Number(sub.price || 0).toFixed(2)}</td>
+                                <td style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{sub.starts_at ? new Date(sub.starts_at).toLocaleDateString('es-MX') : '—'}</td>
+                                <td style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{sub.ends_at ? new Date(sub.ends_at).toLocaleDateString('es-MX') : '—'}</td>
+                                <td>
+                                  <span className={`badge-status badge-status--${status.type}`}>
+                                    <span className={`badge-status-dot badge-status-dot--${status.type}`} />
+                                    <span>{status.label}</span>
+                                  </span>
+                                </td>
+                                <td>
+                                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 6 }}>
+                                    {isExpired && (
+                                      <button
+                                        type="button"
+                                        className="btn-whatsapp-reminder"
+                                        onClick={() => handleOpenWhatsAppReminder(sub)}
+                                        title="Enviar recordatorio de membresía vencida por WhatsApp"
+                                      >
+                                        <MessageCircle size={14} />
+                                        <span>Recordatorio</span>
+                                      </button>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
@@ -614,7 +868,7 @@ export default function Reports() {
                     <h3 style={{ margin: 0, fontSize: 16 }}>Control de Asistencia Diaria</h3>
                     <p style={{ margin: '4px 0 0 0', fontSize: 13, color: 'var(--text-secondary)' }}>Filtra por día para ver y registrar quién asistió al gimnasio.</p>
                   </div>
-                  <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                  <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--card)', border: '1px solid var(--border)', padding: '6px 12px', borderRadius: 8 }}>
                       <Calendar size={14} style={{ color: 'var(--text-secondary)' }} />
                       <input 
@@ -624,6 +878,17 @@ export default function Reports() {
                         style={{ border: 'none', background: 'transparent', outline: 'none', padding: 0, color: 'var(--text)', fontSize: 14 }}
                       />
                     </div>
+                    <button 
+                      type="button"
+                      className="btn btn--secondary" 
+                      onClick={downloadDailyReport}
+                      disabled={dailyIncomes.length === 0}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                      title="Descargar asistencias del día en CSV"
+                    >
+                      <Download size={15} />
+                      <span>Descargar Asistencias (CSV)</span>
+                    </button>
                     <button className="btn btn--primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={handleOpenDailyModal}>
                       <Plus size={16} />
                       <span>Registrar Asistencia</span>
@@ -665,11 +930,15 @@ export default function Reports() {
                               <td style={{ fontWeight: 700, color: item.amount > 0 ? 'var(--success)' : 'var(--text)' }}>
                                 ${Number(item.amount).toFixed(2)}
                               </td>
-                              <td style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
-                                {item.entry_date ? new Date(item.entry_date).toLocaleString('es-MX', {
-                                  hour: '2-digit',
-                                  minute: '2-digit'
-                                }) : '—'}
+                              <td>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                  <span style={{ fontWeight: 600, color: 'var(--text)', fontSize: 13.5 }}>
+                                    {formatAttendanceTime(item.entry_date)}
+                                  </span>
+                                  <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+                                    {formatAttendanceDate(item.entry_date)}
+                                  </span>
+                                </div>
                               </td>
                               <td>
                                 <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
@@ -833,14 +1102,115 @@ export default function Reports() {
               </div>
 
               {userType === 'existente' ? (
-                <div className="form-group">
-                  <label>Seleccionar Usuario Registrado *</label>
-                  <select value={selectedUserId} onChange={e => setSelectedUserId(e.target.value)} required={userType === 'existente'}>
-                    <option value="">Selecciona un usuario...</option>
-                    {users.map(u => (
-                      <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
-                    ))}
-                  </select>
+                <div className="form-group" style={{ position: 'relative' }}>
+                  <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                    <span>Seleccionar Usuario Registrado *</span>
+                    <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Escribe nombre, correo o teléfono</span>
+                  </label>
+
+                  {selectedUser ? (
+                    <div className="user-selected-card">
+                      <div className="user-selected-info">
+                        <div className="avatar-circle" style={!getUserAvatarUrl(selectedUser) ? { backgroundColor: getAvatarBgColor(selectedUser.name) } : {}}>
+                          {getUserAvatarUrl(selectedUser) ? (
+                            <img src={getUserAvatarUrl(selectedUser)} alt={selectedUser.name} className="avatar-img" />
+                          ) : (
+                            <span>{getUserInitials(selectedUser.name)}</span>
+                          )}
+                        </div>
+                        <div className="user-selected-text">
+                          <div className="user-selected-name">{selectedUser.name}</div>
+                          <div className="user-selected-sub">
+                            {selectedUser.email && <span>{selectedUser.email}</span>}
+                            {selectedUser.phone && <span> • 📞 {selectedUser.phone}</span>}
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        className="btn-change-user"
+                        onClick={() => {
+                          setSelectedUser(null);
+                          setSelectedUserId('');
+                          setUserSearchQuery('');
+                        }}
+                      >
+                        Cambiar
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="user-search-wrapper">
+                      <div className="user-search-input-box">
+                        <Search size={16} className="search-icon" />
+                        <input
+                          type="text"
+                          className="user-search-input"
+                          placeholder="Escribe el nombre, correo o teléfono para buscar..."
+                          value={userSearchQuery}
+                          onChange={(e) => setUserSearchQuery(e.target.value)}
+                          autoFocus
+                        />
+                        {userSearchQuery && (
+                          <button
+                            type="button"
+                            className="clear-search-btn"
+                            onClick={() => setUserSearchQuery('')}
+                          >
+                            <X size={14} />
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Dropdown list of filtered users */}
+                      <div className="user-search-results-dropdown">
+                        {filteredUsers.length === 0 ? (
+                          <div className="user-search-empty">
+                            No se encontraron usuarios registrados que coincidan con "{userSearchQuery}".
+                          </div>
+                        ) : (
+                          filteredUsers.slice(0, 30).map((u) => {
+                            const avatarUrl = getUserAvatarUrl(u);
+                            const initials = getUserInitials(u.name);
+                            const bgColor = getAvatarBgColor(u.name);
+                            return (
+                              <div
+                                key={u.id}
+                                className="user-search-result-item"
+                                onClick={() => {
+                                  setSelectedUser(u);
+                                  setSelectedUserId(u.id);
+                                }}
+                              >
+                                <div className="avatar-circle" style={!avatarUrl ? { backgroundColor: bgColor } : {}}>
+                                  {avatarUrl ? (
+                                    <img src={avatarUrl} alt={u.name} className="avatar-img" />
+                                  ) : (
+                                    <span>{initials}</span>
+                                  )}
+                                </div>
+                                <div className="user-search-result-info">
+                                  <div className="result-name">{u.name}</div>
+                                  <div className="result-sub">
+                                    {u.email && <span>{u.email}</span>}
+                                    {u.phone && <span> • 📞 {u.phone}</span>}
+                                  </div>
+                                </div>
+                                <UserCheck size={16} className="select-icon" />
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {/* Hidden validation trigger */}
+                  <input
+                    type="text"
+                    value={selectedUserId}
+                    required={userType === 'existente'}
+                    style={{ opacity: 0, height: 0, width: 0, position: 'absolute', pointerEvents: 'none' }}
+                    onChange={() => {}}
+                  />
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 12 }}>
@@ -941,13 +1311,25 @@ export default function Reports() {
                 />
               </div>
 
-              <div className="form-group">
-                <label>Fecha de Entrada</label>
-                <input 
-                  type="date" 
-                  value={dailyEntryDate} 
-                  onChange={e => setDailyEntryDate(e.target.value)} 
-                />
+              <div className="form-grid-2">
+                <div className="form-group">
+                  <label>Fecha de Asistencia *</label>
+                  <input 
+                    type="date" 
+                    value={dailyEntryDate} 
+                    onChange={e => setDailyEntryDate(e.target.value)} 
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Hora de Ingreso *</label>
+                  <input 
+                    type="time" 
+                    value={dailyEntryTime} 
+                    onChange={e => setDailyEntryTime(e.target.value)} 
+                    required
+                  />
+                </div>
               </div>
 
               <div className="modal-actions">
@@ -1002,6 +1384,143 @@ export default function Reports() {
               >
                 Confirmar
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* WhatsApp Reminder Modal */}
+      {whatsappModal.open && (
+        <div className="modal-overlay" onClick={() => setWhatsappModal(prev => ({ ...prev, open: false }))}>
+          <div className="modal whatsapp-modal" style={{ maxWidth: 520, padding: '24px 24px' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 10,
+                  backgroundColor: '#25D366',
+                  color: '#fff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 4px 12px rgba(37, 211, 102, 0.25)'
+                }}>
+                  <MessageCircle size={20} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: 'var(--text)' }}>
+                    Recordatorio de Membresía
+                  </h3>
+                  <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                    Envío directo de aviso de vencimiento vía WhatsApp
+                  </span>
+                </div>
+              </div>
+              <button 
+                type="button"
+                className="btn-action-circle"
+                onClick={() => setWhatsappModal(prev => ({ ...prev, open: false }))}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {/* Cliente y Teléfono */}
+              <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 10, padding: 14 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 8 }}>
+                  DESTINATARIO
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
+                  <div style={{ fontWeight: 600, fontSize: 15, color: 'var(--text)' }}>
+                    {whatsappModal.sub?.user?.name || whatsappModal.sub?.billing_name || 'Cliente'}
+                  </div>
+                  <span className="badge-status badge-status--expired" style={{ padding: '2px 8px', fontSize: 11 }}>
+                    <span className="badge-status-dot badge-status-dot--expired" />
+                    Membresía Vencida
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <div style={{ width: 85 }}>
+                    <label style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'block', marginBottom: 2 }}>Código</label>
+                    <input
+                      type="text"
+                      value={whatsappModal.countryCode}
+                      onChange={e => setWhatsappModal(prev => ({ ...prev, countryCode: e.target.value }))}
+                      placeholder="+593"
+                      style={{ textAlign: 'center', fontWeight: 600 }}
+                    />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'block', marginBottom: 2 }}>Número de Teléfono</label>
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        type="text"
+                        value={whatsappModal.phone}
+                        onChange={e => setWhatsappModal(prev => ({ ...prev, phone: e.target.value }))}
+                        placeholder="Ej. 987654321 (sin 0)"
+                        style={{ paddingLeft: 30 }}
+                      />
+                      <Phone size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Mensaje Editable */}
+              <div className="form-group" style={{ margin: 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <label style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>Mensaje Personalizado</label>
+                  <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Puedes editar el texto antes de enviar</span>
+                </div>
+                <textarea
+                  rows={8}
+                  value={whatsappModal.customMessage}
+                  onChange={e => setWhatsappModal(prev => ({ ...prev, customMessage: e.target.value }))}
+                  style={{
+                    fontFamily: 'inherit',
+                    fontSize: 13,
+                    lineHeight: 1.45,
+                    resize: 'vertical',
+                    padding: 12,
+                    borderRadius: 8,
+                    border: '1px solid var(--border)',
+                    background: 'var(--card)'
+                  }}
+                />
+              </div>
+
+              {/* Botones de acción */}
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
+                <button
+                  type="button"
+                  className="btn btn--secondary"
+                  onClick={copyWhatsAppMessage}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                >
+                  {whatsappModal.copied ? <Check size={15} style={{ color: 'var(--success)' }} /> : <Copy size={15} />}
+                  <span>{whatsappModal.copied ? '¡Copiado!' : 'Copiar Texto'}</span>
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={sendWhatsAppMessage}
+                  style={{
+                    backgroundColor: '#25D366',
+                    color: '#ffffff',
+                    border: 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    fontWeight: 600,
+                    boxShadow: '0 2px 8px rgba(37, 211, 102, 0.3)'
+                  }}
+                >
+                  <Send size={15} />
+                  <span>Abrir WhatsApp</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

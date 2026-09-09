@@ -37,9 +37,13 @@ export default function AdminDashboard() {
   const loadData = async () => {
     if (!token) return;
     try {
-      const [catData, prodData] = await Promise.all([
+      const [catData, prodData, metricsData] = await Promise.all([
         CategoryService.getAll(token).catch(() => []),
         SuperAdminService.getProducts(token).catch(() => []),
+        SuperAdminService.getMetrics(token).catch((e) => {
+          console.log('[Dashboard] Metrics not available:', e.message);
+          return null;
+        }),
       ]);
 
       const catList = Array.isArray(catData) ? catData : (catData?.data || []);
@@ -51,26 +55,18 @@ export default function AdminDashboard() {
       else if (prodData?.products) prodList = prodData.products;
       setProducts(prodList);
 
-      // Try to load metrics
-      try {
-        const metricsData = await SuperAdminService.getMetrics(token);
-        if (metricsData) {
-          setMetrics({
-            totalUsers: metricsData.total_users || metricsData.totalUsers || 0,
-            activeSubscriptions: metricsData.active_subscriptions || metricsData.activeSubscriptions || 0,
-            monthlyIncome: metricsData.monthly_income || metricsData.monthlyIncome || 0,
-            expiringSoon: metricsData.expiring_soon || metricsData.expiringSoon || 0,
-          });
-        }
-      } catch (e) {
-        console.log('[Dashboard] Metrics not available:', e.message);
+      if (metricsData) {
+        setMetrics({
+          totalUsers: metricsData.total_users || metricsData.totalUsers || 0,
+          activeSubscriptions: metricsData.active_subscriptions || metricsData.activeSubscriptions || 0,
+          monthlyIncome: metricsData.monthly_income || metricsData.monthlyIncome || 0,
+          expiringSoon: metricsData.expiring_soon || metricsData.expiringSoon || 0,
+        });
       }
     } catch (error) {
       console.error('[Dashboard] Error loading data:', error);
     }
   };
-
-  useEffect(() => { loadData(); }, [token]);
 
   useFocusEffect(useCallback(() => { loadData(); }, [token]));
 

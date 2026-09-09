@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { 
@@ -193,7 +193,7 @@ export default function Layout({ children }) {
           </div>
         </header>
         <main className="content">
-          {children}
+          {children || <Outlet />}
         </main>
       </div>
     </div>

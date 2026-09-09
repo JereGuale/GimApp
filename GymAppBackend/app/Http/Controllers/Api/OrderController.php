@@ -199,6 +199,11 @@ class OrderController extends Controller
             });
         }
 
+        // Límite opcional para consultas optimizadas
+        if ($request->has('limit')) {
+            $query->limit((int)$request->limit);
+        }
+
         $orders = $query->orderByDesc('created_at')->get();
 
         return response()->json($orders);

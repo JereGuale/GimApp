@@ -35,6 +35,11 @@ class TrainerSubscriptionController extends Controller
             });
         }
 
+        // Límite opcional de registros para cargas rápidas
+        if ($request->has('limit')) {
+            $query->limit((int)$request->limit);
+        }
+
         $subscriptions = $query->orderByDesc('created_at')->get();
 
         return response()->json($subscriptions);
