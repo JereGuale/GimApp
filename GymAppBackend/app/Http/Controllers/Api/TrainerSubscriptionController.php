@@ -178,16 +178,26 @@ class TrainerSubscriptionController extends Controller
         if (!empty($note)) {
             if (\Illuminate\Support\Facades\Schema::hasColumn('subscriptions', 'notes')) {
                 $subData['notes'] = $note;
-            } else {
-                $subData['billing_address'] = '[NOTA]: ' . $note;
             }
+            $subData['billing_address'] = '[NOTA]: ' . $note;
         }
 
         $subscription = Subscription::create($subData);
 
+        if (!empty($note)) {
+            // Guardado garantizado directo por si el create filtró atributos
+            try {
+                if (\Illuminate\Support\Facades\Schema::hasColumn('subscriptions', 'notes')) {
+                    $subscription->notes = $note;
+                }
+            } catch (\Exception $e) {}
+            $subscription->billing_address = '[NOTA]: ' . $note;
+            $subscription->save();
+        }
+
         return response()->json([
             'message' => 'Suscripción creada exitosamente',
-            'subscription' => $subscription->load(['user', 'plan'])
+            'subscription' => $subscription->refresh()->load(['user', 'plan'])
         ], 201);
     }
 
@@ -266,6 +276,58 @@ class TrainerSubscriptionController extends Controller
             'message' => 'Nota administrativa actualizada',
             'notes' => $subscription->notes,
             'subscription' => $subscription->load(['user', 'plan'])
+        ]);
+    }
+
+    /**
+     * Update client details (name, phone, email, notes) for a subscription & user
+     */
+    public function updateClientDetails(Request $request, $id)
+    {
+        $subscription = Subscription::with('user')->findOrFail($id);
+
+        $name = trim($request->input('name', ''));
+        $phone = trim($request->input('phone', ''));
+        $email = trim($request->input('email', ''));
+        $notes = $request->has('notes') ? trim($request->input('notes', '')) : null;
+
+        $subUpdates = [];
+        if (!empty($name)) $subUpdates['billing_name'] = $name;
+        if (!empty($phone)) $subUpdates['billing_phone'] = $phone;
+        if (!empty($email)) $subUpdates['billing_email'] = $email;
+
+        if ($request->has('notes')) {
+            if (\Illuminate\Support\Facades\Schema::hasColumn('subscriptions', 'notes')) {
+                $subUpdates['notes'] = !empty($notes) ? $notes : null;
+            }
+            $subUpdates['billing_address'] = !empty($notes) ? ('[NOTA]: ' . $notes) : null;
+        }
+
+        if (!empty($subUpdates)) {
+            $subscription->update($subUpdates);
+        }
+
+        // Also update the underlying user if exists
+        if ($subscription->user) {
+            $userUpdates = [];
+            if (!empty($name)) $userUpdates['name'] = $name;
+            if (!empty($phone)) $userUpdates['phone'] = $phone;
+            if (!empty($email) && $email !== $subscription->user->email) {
+                $exists = \App\Models\User::where('email', $email)->where('id', '!=', $subscription->user->id)->exists();
+                if (!$exists) {
+                    $userUpdates['email'] = $email;
+                }
+            }
+            if (!empty($userUpdates)) {
+                $subscription->user->update($userUpdates);
+            }
+        }
+
+        $subscription->refresh()->load(['user', 'plan']);
+
+        return response()->json([
+            'message' => 'Datos del cliente actualizados exitosamente',
+            'subscription' => $subscription
         ]);
     }
 }

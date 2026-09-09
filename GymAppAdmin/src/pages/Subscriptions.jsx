@@ -30,7 +30,8 @@ import {
   Send,
   Copy,
   Phone,
-  FileText
+  FileText,
+  Mail
 } from 'lucide-react';
 import '../components/Layout.css';
 import './Subscriptions.css';
@@ -68,6 +69,9 @@ export default function Subscriptions() {
 
   // Administrative Note Modal
   const [noteModal, setNoteModal] = useState(null); // { sub, note: '', saving: false }
+
+  // Edit Client Details Modal
+  const [editClientModal, setEditClientModal] = useState(null); // { sub, name: '', phone: '', email: '', notes: '', saving: false }
 
   // WhatsApp Reminder State
   const [whatsappModal, setWhatsappModal] = useState({
@@ -204,6 +208,57 @@ export default function Subscriptions() {
       setError(err.message || 'Error al guardar la nota');
       setTimeout(() => setError(''), 4000);
       setNoteModal(prev => ({ ...prev, saving: false }));
+    }
+  };
+
+  const handleOpenEditClient = (sub) => {
+    setEditClientModal({
+      sub,
+      name: sub.user?.name || sub.billing_name || '',
+      phone: sub.billing_phone || sub.user?.phone || sub.resolved_phone || '',
+      email: sub.user?.email || sub.billing_email || '',
+      notes: sub.notes || '',
+      saving: false
+    });
+  };
+
+  const handleSaveClientDetails = async (e) => {
+    if (e) e.preventDefault();
+    if (!editClientModal?.sub) return;
+    setEditClientModal(prev => ({ ...prev, saving: true }));
+    try {
+      await apiFetch(`/trainer/subscriptions/${editClientModal.sub.id}/client-details`, {
+        method: 'POST',
+        body: JSON.stringify({
+          name: editClientModal.name.trim(),
+          phone: editClientModal.phone.trim() || null,
+          email: editClientModal.email.trim() || null,
+          notes: editClientModal.notes.trim() || null
+        })
+      });
+
+      setSubs(prev => prev.map(s => s.id === editClientModal.sub.id ? {
+        ...s,
+        billing_name: editClientModal.name.trim(),
+        billing_phone: editClientModal.phone.trim() || null,
+        billing_email: editClientModal.email.trim() || null,
+        notes: editClientModal.notes.trim() || null,
+        user: s.user ? {
+          ...s.user,
+          name: editClientModal.name.trim() || s.user.name,
+          phone: editClientModal.phone.trim() || s.user.phone,
+          email: editClientModal.email.trim() || s.user.email
+        } : s.user,
+        resolved_phone: editClientModal.phone.trim() || s.resolved_phone
+      } : s));
+
+      setSuccess('Datos del cliente actualizados exitosamente');
+      setTimeout(() => setSuccess(''), 3000);
+      setEditClientModal(null);
+    } catch (err) {
+      setError(err.message || 'Error al guardar los datos del cliente');
+      setTimeout(() => setError(''), 4000);
+      setEditClientModal(prev => ({ ...prev, saving: false }));
     }
   };
 
@@ -746,6 +801,17 @@ export default function Subscriptions() {
                                           type="button"
                                           className="actions-dropdown-item"
                                           onClick={() => {
+                                            handleOpenEditClient(s);
+                                            setActiveDropdown(null);
+                                          }}
+                                        >
+                                          <User size={14} style={{ color: 'var(--primary)' }} />
+                                          <span>Editar datos del cliente</span>
+                                        </button>
+                                        <button
+                                          type="button"
+                                          className="actions-dropdown-item"
+                                          onClick={() => {
                                             setNoteModal({ sub: s, note: s.notes || '', saving: false });
                                             setActiveDropdown(null);
                                           }}
@@ -856,6 +922,17 @@ export default function Subscriptions() {
                                   </button>
                                 );
                               })()}
+                              <button
+                                type="button"
+                                className="actions-dropdown-item"
+                                onClick={() => {
+                                  handleOpenEditClient(s);
+                                  setActiveDropdown(null);
+                                }}
+                              >
+                                <User size={14} style={{ color: 'var(--primary)' }} />
+                                <span>Editar datos del cliente</span>
+                              </button>
                               <button
                                 type="button"
                                 className="actions-dropdown-item"
@@ -1732,6 +1809,141 @@ Estamos validando tu comprobante de pago para activar tu membresía de inmediato
                 )}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: EDITAR DATOS DEL CLIENTE */}
+      {editClientModal && (
+        <div className="modal-overlay" onClick={() => setEditClientModal(null)}>
+          <div className="modal" style={{ maxWidth: 480 }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 8,
+                  background: 'rgba(37, 99, 235, 0.12)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'var(--primary)'
+                }}>
+                  <User size={18} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Editar Datos del Cliente</h3>
+                  <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--text-secondary)' }}>
+                    Membresía #{editClientModal.sub?.id} — {editClientModal.sub?.plan?.name || 'Plan'}
+                  </p>
+                </div>
+              </div>
+              <button className="btn btn--ghost" style={{ padding: 6, borderRadius: '50%' }} onClick={() => setEditClientModal(null)}>
+                <X size={16} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveClientDetails}>
+              <div className="form-group" style={{ marginBottom: 12 }}>
+                <label style={{ fontSize: 12.5, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <User size={13} style={{ color: 'var(--text-secondary)' }} />
+                  <span>Nombre Completo *</span>
+                </label>
+                <input
+                  type="text"
+                  value={editClientModal.name}
+                  onChange={e => setEditClientModal(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="Ej. Juan Pérez"
+                  required
+                  style={{ fontSize: 13 }}
+                />
+              </div>
+
+              <div className="form-grid-2" style={{ marginBottom: 12 }}>
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label style={{ fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <Phone size={13} style={{ color: 'var(--text-secondary)' }} />
+                    <span>Teléfono / WhatsApp</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={editClientModal.phone}
+                    onChange={e => setEditClientModal(prev => ({ ...prev, phone: e.target.value }))}
+                    placeholder="Ej. 0987654321"
+                    style={{ fontSize: 13 }}
+                  />
+                </div>
+
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label style={{ fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <Mail size={13} style={{ color: 'var(--text-secondary)' }} />
+                    <span>Correo Electrónico</span>
+                  </label>
+                  <input
+                    type="email"
+                    value={editClientModal.email}
+                    onChange={e => setEditClientModal(prev => ({ ...prev, email: e.target.value }))}
+                    placeholder="cliente@ejemplo.com"
+                    style={{ fontSize: 13 }}
+                  />
+                </div>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: 18 }}>
+                <label style={{ fontSize: 12.5, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <FileText size={13} style={{ color: '#d97706' }} />
+                  <span>Notas / Observaciones de Pago</span>
+                </label>
+                <textarea
+                  value={editClientModal.notes}
+                  onChange={e => setEditClientModal(prev => ({ ...prev, notes: e.target.value }))}
+                  placeholder="Ej. Abonó $10 en efectivo. Saldo $15."
+                  rows={3}
+                  style={{
+                    fontFamily: 'inherit',
+                    fontSize: 12.5,
+                    lineHeight: 1.4,
+                    resize: 'vertical',
+                    padding: 10,
+                    borderRadius: 8,
+                    border: '1px solid var(--border)',
+                    background: 'var(--bg)',
+                    color: 'var(--text)',
+                    width: '100%',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                <button
+                  type="button"
+                  className="btn btn--secondary"
+                  onClick={() => setEditClientModal(null)}
+                  disabled={editClientModal.saving}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn--primary"
+                  disabled={editClientModal.saving || !editClientModal.name.trim()}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                >
+                  {editClientModal.saving ? (
+                    <>
+                      <Loader2 className="spin" size={15} />
+                      <span>Guardando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check size={15} />
+                      <span>Guardar Datos</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

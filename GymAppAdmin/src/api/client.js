@@ -94,7 +94,10 @@ export async function apiFetch(path, options = {}) {
 
       // If mutation (POST, PUT, DELETE, PATCH), invalidate related caches
       if (!isGet) {
-        if (path.includes('subscription')) clearApiCache('/trainer/subscriptions');
+        if (path.includes('subscription')) {
+          clearApiCache('/trainer/subscriptions');
+          clearApiCache('/admin/reports');
+        }
         else if (path.includes('order')) clearApiCache('/admin/orders');
         else if (path.includes('product')) clearApiCache('/admin/products');
         else if (path.includes('categor')) clearApiCache('/admin/categories');
