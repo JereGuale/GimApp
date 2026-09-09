@@ -236,20 +236,24 @@ export default function Dashboard() {
         ? `${stats.monthly_change_percent >= 0 ? '+' : ''}${stats.monthly_change_percent}%`
         : '+0%',
       badgeType: stats?.monthly_change_percent >= 0 ? 'positive' : 'negative',
-      sub: `Proyectado: $${stats?.monthly_income ? Math.round(Number(stats.monthly_income) * 1.05).toLocaleString('es-MX') : '0'} para fin de mes`,
+      sub: stats?.daily_attendances_income > 0 
+        ? `Membresías: $${Math.round(stats.subscriptions_income || 0)} • Asistencias: $${Math.round(stats.daily_attendances_income)}`
+        : `Proyectado: $${stats?.monthly_income ? Math.round(Number(stats.monthly_income) * 1.05).toLocaleString('es-MX') : '0'} para fin de mes`,
       icon: DollarSign,
       color: '#10B981'
     },
     {
       label: 'Asistencia Diaria',
-      value: stats?.peak_users_total !== undefined && stats?.peak_users_total !== null
-        ? Math.round(Number(stats.peak_users_total) / 4)
-        : '0',
-      badge: stats?.peak_users_total ? '-2.1%' : '0%',
-      badgeType: 'negative',
-      sub: 'Accesos registrados hoy',
+      value: stats?.daily_attendance_count_today !== undefined && stats?.daily_attendance_count_today !== null
+        ? stats.daily_attendance_count_today
+        : (stats?.daily_attendance_count ?? '0'),
+      badge: stats?.daily_income_today > 0 ? `+$${Number(stats.daily_income_today).toFixed(2)}` : '$0.00',
+      badgeType: 'positive',
+      sub: stats?.daily_income_today > 0
+        ? `$${Number(stats.daily_income_today).toFixed(2)} recaudados hoy (${stats?.daily_attendance_count_today ?? 0} visitas)`
+        : 'Accesos registrados hoy',
       icon: Activity,
-      color: '#ef4444'
+      color: '#059669'
     }
   ];
 

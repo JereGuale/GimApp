@@ -75,20 +75,58 @@ export default function Subscriptions() {
     copied: false
   });
 
+  const getSubscriptionExpirationState = (sub) => {
+    if (!sub) return { eligible: false, isExpired: false, diffDays: null };
+    if (sub.status === 'expired') return { eligible: true, isExpired: true, diffDays: -1 };
+    if (sub.status === 'cancelled' || sub.status === 'rejected' || sub.status === 'pending') {
+      return { eligible: false, isExpired: false, diffDays: null };
+    }
+
+    if (sub.ends_at) {
+      const endsAt = new Date(sub.ends_at);
+      const today = new Date();
+      endsAt.setHours(0, 0, 0, 0);
+      today.setHours(0, 0, 0, 0);
+      const diffDays = Math.ceil((endsAt - today) / (1000 * 60 * 60 * 24));
+
+      if (diffDays < 0) {
+        return { eligible: true, isExpired: true, diffDays };
+      }
+      if (diffDays <= 7) {
+        return { eligible: true, isExpired: false, diffDays };
+      }
+    }
+    return { eligible: false, isExpired: false, diffDays: null };
+  };
+
   const generateWhatsAppMessage = (sub) => {
     const clientName = sub?.user?.name || sub?.billing_name || 'Estimado/a cliente';
     const planName = sub?.plan?.name || sub?.plan_id || 'Membresía del Gimnasio';
-    const endsAtDate = sub?.ends_at ? new Date(sub.ends_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' }) : 'recientemente';
+    const expState = getSubscriptionExpirationState(sub);
+    const endsAtDate = sub?.ends_at ? new Date(sub.ends_at).toLocaleDateString('es-EC', { day: 'numeric', month: 'long', year: 'numeric' }) : 'recientemente';
 
-    return `¡Hola, ${clientName}! 🏋️‍♂️ Esperamos que te encuentres con la mejor energía.\n\n` +
-      `Te saludamos cordialmente de parte del equipo de *Fitness Club Gym*. Te escribimos para recordarte que tu membresía (*${planName}*) finalizó el ${endsAtDate}.\n\n` +
-      `Sabemos lo importante que es mantener la constancia para alcanzar tus metas físicas y de salud. ¡No dejes que tu progreso se detenga! 💪🔥\n\n` +
-      `✨ *Opciones para renovar:*\n` +
-      `• Directamente en la recepción del gimnasio\n` +
-      `• A través de nuestra aplicación móvil\n` +
-      `💳 Aceptamos transferencia bancaria y efectivo.\n\n` +
-      `Si tienes alguna pregunta sobre nuestras promociones vigentes o deseas ayuda para reactivar tu plan, estamos a tu total disposición.\n\n` +
-      `¡Te esperamos en el gym para seguir entrenando fuerte! 🥊🔥`;
+    if (!expState.isExpired) {
+      const daysMsg = expState.diffDays === 0 ? '¡Vence hoy!' : (expState.diffDays === 1 ? '¡Queda solo 1 día!' : `¡Quedan solo ${expState.diffDays} días!`);
+      return `¡Hola, *${clientName}*! 🏋️‍♂️ Esperamos que te encuentres excelente.\n\n` +
+        `Te saludamos cordialmente de parte del equipo de *Fitness Club Gym*.\n` +
+        `Te recordamos atentamente que tu membresía (*${planName}*) está próxima a vencer el *${endsAtDate}* (${daysMsg}).\n\n` +
+        `Mantener la constancia y no perder tus días de entrenamiento es clave para tus metas físicas y de bienestar. ¡Tu disciplina hace la diferencia! 💪🔥\n\n` +
+        `📋 *Puedes renovar anticipadamente:* \n` +
+        `1️⃣ Directamente en recepción (Efectivo o Transferencia)\n` +
+        `2️⃣ Desde nuestra aplicación móvil\n\n` +
+        `Si tienes alguna pregunta o deseas consultar sobre promociones vigentes, escríbenos por aquí con gusto.\n\n` +
+        `¡Te esperamos en el gym para seguir entrenando con todo! 🥊✨`;
+    }
+
+    return `¡Hola, *${clientName}*! 🏋️‍♂️ Esperamos que te encuentres con la mejor energía.\n\n` +
+      `Te saludamos cordialmente de parte del equipo de *Fitness Club Gym*.\n` +
+      `Te escribimos para recordarte de forma atenta que tu plan de membresía (*${planName}*) finalizó el ${endsAtDate}.\n\n` +
+      `Sabemos lo importante que es mantener la constancia en tus entrenamientos para alcanzar tus metas físicas y de salud. ¡No dejes que tu progreso se detenga! 💪🔥\n\n` +
+      `📋 *Opciones rápidas para renovar tu membresía:*\n` +
+      `1️⃣ Directamente en recepción (Efectivo o Transferencia)\n` +
+      `2️⃣ Desde nuestra aplicación móvil\n\n` +
+      `Si deseas conocer nuestras promociones vigentes o necesitas ayuda para reactivar tu plan, estamos a tu total disposición.\n\n` +
+      `¡Te esperamos pronto en el gym para seguir entrenando fuerte! 🥊✨`;
   };
 
   const handleOpenWhatsAppReminder = (sub) => {
@@ -547,17 +585,34 @@ export default function Subscriptions() {
                         </td>
                         <td style={{ textAlign: 'right' }}>
                           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end', width: '100%' }}>
-                            {s.status === 'expired' && (
-                              <button
-                                type="button"
-                                className="btn-whatsapp-reminder"
-                                onClick={() => handleOpenWhatsAppReminder(s)}
-                                title="Enviar recordatorio de membresía vencida por WhatsApp"
-                              >
-                                <MessageCircle size={14} />
-                                <span>Recordatorio</span>
-                              </button>
-                            )}
+                            {(() => {
+                              const expState = getSubscriptionExpirationState(s);
+                              if (!expState.eligible) return null;
+                              return (
+                                <button
+                                  type="button"
+                                  className="btn-whatsapp-reminder"
+                                  onClick={() => handleOpenWhatsAppReminder(s)}
+                                  title={expState.isExpired ? "Enviar recordatorio de membresía vencida por WhatsApp" : "Enviar recordatorio de membresía por vencer por WhatsApp"}
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: 6,
+                                    background: expState.isExpired ? 'rgba(239, 68, 68, 0.1)' : 'rgba(37, 211, 102, 0.12)',
+                                    color: expState.isExpired ? '#dc2626' : '#15803d',
+                                    border: `1px solid ${expState.isExpired ? 'rgba(239, 68, 68, 0.25)' : 'rgba(37, 211, 102, 0.3)'}`,
+                                    padding: '5px 10px',
+                                    borderRadius: 8,
+                                    fontSize: 12,
+                                    fontWeight: 600,
+                                    cursor: 'pointer'
+                                  }}
+                                >
+                                  <MessageCircle size={14} style={{ color: expState.isExpired ? '#dc2626' : '#25D366' }} />
+                                  <span>Recordatorio</span>
+                                </button>
+                              );
+                            })()}
 
                             {/* Eye icon slot */}
                             <div style={{ width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -629,19 +684,25 @@ export default function Subscriptions() {
                                           <RefreshCw size={14} style={{ color: '#16a34a' }} />
                                           <span style={{ color: '#16a34a', fontWeight: 600 }}>Renovar suscripción</span>
                                         </button>
-                                        {s.status === 'expired' && (
-                                          <button
-                                            type="button"
-                                            className="actions-dropdown-item"
-                                            onClick={() => {
-                                              handleOpenWhatsAppReminder(s);
-                                              setActiveDropdown(null);
-                                            }}
-                                          >
-                                            <MessageCircle size={14} style={{ color: '#25D366' }} />
-                                            <span style={{ color: '#25D366', fontWeight: 600 }}>Recordatorio WhatsApp</span>
-                                          </button>
-                                        )}
+                                        {(() => {
+                                          const expState = getSubscriptionExpirationState(s);
+                                          if (!expState.eligible) return null;
+                                          return (
+                                            <button
+                                              type="button"
+                                              className="actions-dropdown-item"
+                                              onClick={() => {
+                                                handleOpenWhatsAppReminder(s);
+                                                setActiveDropdown(null);
+                                              }}
+                                            >
+                                              <MessageCircle size={14} style={{ color: expState.isExpired ? '#dc2626' : '#25D366' }} />
+                                              <span style={{ color: expState.isExpired ? '#dc2626' : '#16a34a', fontWeight: 600 }}>
+                                                Recordatorio ({expState.isExpired ? 'Vencida' : 'Por vencer'})
+                                              </span>
+                                            </button>
+                                          );
+                                        })()}
                                         <button
                                           type="button"
                                           className="actions-dropdown-item actions-dropdown-item--danger"
@@ -726,19 +787,25 @@ export default function Subscriptions() {
                                 <RefreshCw size={14} style={{ color: '#16a34a' }} />
                                 <span style={{ color: '#16a34a', fontWeight: 600 }}>Renovar suscripción</span>
                               </button>
-                              {s.status === 'expired' && (
-                                <button
-                                  type="button"
-                                  className="actions-dropdown-item"
-                                  onClick={() => {
-                                    handleOpenWhatsAppReminder(s);
-                                    setActiveDropdown(null);
-                                  }}
-                                >
-                                  <MessageCircle size={14} style={{ color: '#25D366' }} />
-                                  <span style={{ color: '#25D366', fontWeight: 600 }}>Recordatorio WhatsApp</span>
-                                </button>
-                              )}
+                              {(() => {
+                                const expState = getSubscriptionExpirationState(s);
+                                if (!expState.eligible) return null;
+                                return (
+                                  <button
+                                    type="button"
+                                    className="actions-dropdown-item"
+                                    onClick={() => {
+                                      handleOpenWhatsAppReminder(s);
+                                      setActiveDropdown(null);
+                                    }}
+                                  >
+                                    <MessageCircle size={14} style={{ color: expState.isExpired ? '#dc2626' : '#25D366' }} />
+                                    <span style={{ color: expState.isExpired ? '#dc2626' : '#16a34a', fontWeight: 600 }}>
+                                      Recordatorio ({expState.isExpired ? 'Vencida' : 'Por vencer'})
+                                    </span>
+                                  </button>
+                                );
+                              })()}
                               <button
                                 type="button"
                                 className="actions-dropdown-item actions-dropdown-item--danger"
@@ -824,17 +891,28 @@ export default function Subscriptions() {
 
                   {/* Receipt & Validation actions */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    {s.status === 'expired' && (
-                      <button
-                        type="button"
-                        className="btn-whatsapp-reminder"
-                        style={{ width: '100%', justifyContent: 'center', minHeight: 38 }}
-                        onClick={() => handleOpenWhatsAppReminder(s)}
-                      >
-                        <MessageCircle size={15} />
-                        <span>Recordatorio WhatsApp</span>
-                      </button>
-                    )}
+                    {(() => {
+                      const expState = getSubscriptionExpirationState(s);
+                      if (!expState.eligible) return null;
+                      return (
+                        <button
+                          type="button"
+                          className="btn-whatsapp-reminder"
+                          style={{
+                            width: '100%',
+                            justifyContent: 'center',
+                            minHeight: 38,
+                            background: expState.isExpired ? 'rgba(239, 68, 68, 0.1)' : 'rgba(37, 211, 102, 0.12)',
+                            color: expState.isExpired ? '#dc2626' : '#15803d',
+                            border: `1px solid ${expState.isExpired ? 'rgba(239, 68, 68, 0.25)' : 'rgba(37, 211, 102, 0.3)'}`
+                          }}
+                          onClick={() => handleOpenWhatsAppReminder(s)}
+                        >
+                          <MessageCircle size={15} style={{ color: expState.isExpired ? '#dc2626' : '#25D366' }} />
+                          <span>Recordatorio WhatsApp ({expState.isExpired ? 'Vencida' : 'Por vencer'})</span>
+                        </button>
+                      );
+                    })()}
 
                     {getReceiptUrl(s) && (
                       <button
@@ -1423,10 +1501,23 @@ Estamos validando tu comprobante de pago para activar tu membresía de inmediato
                   <div style={{ fontWeight: 600, fontSize: 15, color: 'var(--text)' }}>
                     {whatsappModal.sub?.user?.name || whatsappModal.sub?.billing_name || 'Cliente'}
                   </div>
-                  <span className="badge-status badge-status--expired" style={{ padding: '2px 8px', fontSize: 11 }}>
-                    <span className="badge-status-dot badge-status-dot--expired" />
-                    Membresía Expirada
-                  </span>
+                  {(() => {
+                    const expState = getSubscriptionExpirationState(whatsappModal.sub);
+                    if (expState.isExpired) {
+                      return (
+                        <span className="badge-status badge-status--expired" style={{ padding: '3px 10px', fontSize: 11, fontWeight: 700 }}>
+                          <span className="badge-status-dot badge-status-dot--expired" />
+                          Membresía Vencida
+                        </span>
+                      );
+                    }
+                    return (
+                      <span className="badge-status" style={{ padding: '3px 10px', fontSize: 11, fontWeight: 700, background: 'rgba(245, 158, 11, 0.15)', color: '#d97706', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
+                        <span className="badge-status-dot" style={{ background: '#f59e0b' }} />
+                        {expState.diffDays === 0 ? 'Vence Hoy' : `Vence en ${expState.diffDays} días`}
+                      </span>
+                    );
+                  })()}
                 </div>
 
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>

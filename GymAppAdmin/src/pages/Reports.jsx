@@ -123,8 +123,8 @@ export default function Reports() {
       if (diffDays < 0) {
         return { label: 'Vencida', type: 'expired', color: '#ef4444' };
       }
-      if (diffDays <= 5) {
-        return { label: 'Próxima a vencer', type: 'expiring', color: '#f97316' };
+      if (diffDays <= 7) {
+        return { label: diffDays === 0 ? 'Vence hoy' : `Vence en ${diffDays} días`, type: 'expiring', color: '#f97316', diffDays };
       }
     }
     
@@ -626,21 +626,35 @@ export default function Reports() {
     URL.revokeObjectURL(url);
   };
 
-  // Generador de mensaje profesional de WhatsApp para membresía vencida
+  // Generador de mensaje profesional de WhatsApp para membresía vencida o por vencer
   const generateWhatsAppMessage = (sub) => {
     const clientName = sub?.user?.name || sub?.billing_name || 'Estimado/a cliente';
     const planName = sub?.plan?.name || sub?.plan_id || 'Membresía del Gimnasio';
     const endsAtDate = sub?.ends_at ? new Date(sub.ends_at).toLocaleDateString('es-EC', { day: 'numeric', month: 'long', year: 'numeric' }) : 'recientemente';
+    const status = getMembershipStatus(sub);
 
-    return `¡Hola, *${clientName}*! 🏋️‍♂️ Esperamos que te encuentres excelente.\n\n` +
+    if (status.type === 'expiring') {
+      const daysMsg = status.diffDays === 0 ? '¡Vence hoy!' : (status.diffDays === 1 ? '¡Queda solo 1 día!' : `¡Quedan solo ${status.diffDays} días!`);
+      return `¡Hola, *${clientName}*! 🏋️‍♂️ Esperamos que te encuentres excelente.\n\n` +
+        `Te saludamos cordialmente de parte del equipo de *Fitness Club Gym*.\n` +
+        `Te recordamos atentamente que tu membresía (*${planName}*) está próxima a vencer el *${endsAtDate}* (${daysMsg}).\n\n` +
+        `Mantener la constancia y no perder tus días de entrenamiento es clave para tus metas físicas y de bienestar. ¡Tu disciplina hace la diferencia! 💪🔥\n\n` +
+        `📋 *Puedes renovar anticipadamente:*\n` +
+        `1️⃣ Directamente en recepción (Efectivo o Transferencia)\n` +
+        `2️⃣ Desde nuestra aplicación móvil\n\n` +
+        `Si tienes alguna pregunta o deseas consultar sobre promociones vigentes, escríbenos por aquí con gusto.\n\n` +
+        `¡Te esperamos en el gym para seguir entrenando con todo! 🥊✨`;
+    }
+
+    return `¡Hola, *${clientName}*! 🏋️‍♂️ Esperamos que te encuentres con la mejor energía.\n\n` +
       `Te saludamos cordialmente de parte del equipo de *Fitness Club Gym*.\n` +
       `Te escribimos para recordarte de manera atenta que tu plan de membresía (*${planName}*) finalizó el ${endsAtDate}.\n\n` +
-      `Tu esfuerzo y constancia son fundamentales para seguir alcanzando tus metas físicas y de bienestar. ¡No detengas tu progreso! 💪🔥\n\n` +
+      `Sabemos lo importante que es mantener la constancia en tus entrenamientos para alcanzar tus metas físicas y de salud. ¡No dejes que tu progreso se detenga! 💪🔥\n\n` +
       `📋 *Opciones rápidas para renovar tu membresía:*\n` +
       `1️⃣ Directamente en recepción (Efectivo o Transferencia)\n` +
       `2️⃣ Desde nuestra aplicación móvil\n\n` +
-      `Si deseas conocer nuestras promociones vigentes o tienes alguna consulta, escríbenos por aquí y con gusto te asistiremos.\n\n` +
-      `¡Te esperamos pronto en el gym para seguir entrenando con todo! 🥊✨`;
+      `Si deseas conocer nuestras promociones vigentes o necesitas ayuda para reactivar tu plan, estamos a tu total disposición.\n\n` +
+      `¡Te esperamos pronto en el gym para seguir entrenando fuerte! 🥊✨`;
   };
 
   const handleOpenWhatsAppReminder = (sub) => {
@@ -1024,7 +1038,7 @@ export default function Reports() {
                         <tbody>
                           {paginatedSubs.map((sub) => {
                             const status = getMembershipStatus(sub);
-                            const isExpired = status.type === 'expired';
+                            const isReminderEligible = status.type === 'expired' || status.type === 'expiring';
                             return (
                               <tr key={sub.id}>
                                 <td>{renderUserCell(sub.user)}</td>
@@ -1040,14 +1054,22 @@ export default function Reports() {
                                 </td>
                                 <td>
                                   <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 6 }}>
-                                    {isExpired && (
+                                    {isReminderEligible && (
                                       <button
                                         type="button"
                                         className="btn-whatsapp-reminder"
                                         onClick={() => handleOpenWhatsAppReminder(sub)}
-                                        title="Enviar recordatorio de membresía vencida por WhatsApp"
+                                        title={status.type === 'expired' ? "Enviar recordatorio de membresía vencida por WhatsApp" : "Enviar recordatorio de membresía por vencer por WhatsApp"}
+                                        style={{
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: 6,
+                                          background: status.type === 'expired' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(37, 211, 102, 0.12)',
+                                          color: status.type === 'expired' ? '#dc2626' : '#15803d',
+                                          border: `1px solid ${status.type === 'expired' ? 'rgba(239, 68, 68, 0.25)' : 'rgba(37, 211, 102, 0.3)'}`
+                                        }}
                                       >
-                                        <MessageCircle size={14} />
+                                        <MessageCircle size={14} style={{ color: status.type === 'expired' ? '#dc2626' : '#25D366' }} />
                                         <span>Recordatorio</span>
                                       </button>
                                     )}
@@ -1838,10 +1860,23 @@ export default function Reports() {
                   <div style={{ fontWeight: 600, fontSize: 15, color: 'var(--text)' }}>
                     {whatsappModal.sub?.user?.name || whatsappModal.sub?.billing_name || 'Cliente'}
                   </div>
-                  <span className="badge-status badge-status--expired" style={{ padding: '2px 8px', fontSize: 11 }}>
-                    <span className="badge-status-dot badge-status-dot--expired" />
-                    Membresía Vencida
-                  </span>
+                  {(() => {
+                    const status = getMembershipStatus(whatsappModal.sub);
+                    if (status.type === 'expired') {
+                      return (
+                        <span className="badge-status badge-status--expired" style={{ padding: '3px 10px', fontSize: 11, fontWeight: 700 }}>
+                          <span className="badge-status-dot badge-status-dot--expired" />
+                          Membresía Vencida
+                        </span>
+                      );
+                    }
+                    return (
+                      <span className="badge-status" style={{ padding: '3px 10px', fontSize: 11, fontWeight: 700, background: 'rgba(245, 158, 11, 0.15)', color: '#d97706', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
+                        <span className="badge-status-dot" style={{ background: '#f59e0b' }} />
+                        {status.diffDays === 0 ? 'Vence Hoy' : `Vence en ${status.diffDays} días`}
+                      </span>
+                    );
+                  })()}
                 </div>
 
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
