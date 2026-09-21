@@ -41,6 +41,7 @@ const STATUS_BADGE = { active: 'active', pending: 'pending', cancelled: 'cancell
 
 export default function Subscriptions() {
   const [subs, setSubs] = useState([]);
+  const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
@@ -211,15 +212,71 @@ export default function Subscriptions() {
     }
   };
 
+  const getLocalDateString = (d = new Date()) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const calculateDefaultEndDate = (startDateStr, planId, plansList = plans) => {
+    if (!startDateStr) return '';
+    try {
+      const plan = (plansList || []).find(p => String(p.id) === String(planId));
+      let duration = plan?.duration || 'monthly';
+      const parts = startDateStr.split('-');
+      if (parts.length !== 3) return '';
+      const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+      let daysToAdd = 30;
+      if (duration === 'quarterly') daysToAdd = 90;
+      else if (duration === 'semiannual') daysToAdd = 180;
+      else if (duration === 'annual' || duration === 'yearly') daysToAdd = 365;
+      else if (typeof duration === 'number') daysToAdd = duration * 30;
+      else if (!isNaN(parseInt(duration, 10))) daysToAdd = parseInt(duration, 10) * 30;
+      d.setDate(d.getDate() + daysToAdd);
+      return getLocalDateString(d);
+    } catch {
+      return '';
+    }
+  };
+
   const handleOpenEditClient = (sub) => {
+    const formatForDateInput = (val) => {
+      if (!val) return '';
+      if (typeof val === 'string') {
+        const match = val.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (match) return `${match[1]}-${match[2]}-${match[3]}`;
+      }
+      try {
+        const d = new Date(val);
+        return isNaN(d.getTime()) ? '' : getLocalDateString(d);
+      } catch {
+        return '';
+      }
+    };
+
     setEditClientModal({
       sub,
+      subscription_plan_id: sub.subscription_plan_id || sub.plan?.id || '',
       name: sub.user?.name || sub.billing_name || '',
       phone: sub.billing_phone || sub.user?.phone || sub.resolved_phone || '',
       email: sub.user?.email || sub.billing_email || '',
       notes: sub.notes || '',
+      starts_at: formatForDateInput(sub.starts_at),
+      ends_at: formatForDateInput(sub.ends_at),
       saving: false
     });
+  };
+
+  const handleEditModalDatePreset = (days) => {
+    const base = editClientModal?.starts_at 
+      ? new Date(editClientModal.starts_at + 'T00:00:00') 
+      : new Date();
+    base.setDate(base.getDate() + days);
+    setEditClientModal(prev => ({
+      ...prev,
+      ends_at: getLocalDateString(base)
+    }));
   };
 
   const handleSaveClientDetails = async (e) => {
@@ -227,15 +284,21 @@ export default function Subscriptions() {
     if (!editClientModal?.sub) return;
     setEditClientModal(prev => ({ ...prev, saving: true }));
     try {
-      await apiFetch(`/trainer/subscriptions/${editClientModal.sub.id}/client-details`, {
+      const res = await apiFetch(`/trainer/subscriptions/${editClientModal.sub.id}/client-details`, {
         method: 'POST',
         body: JSON.stringify({
           name: editClientModal.name.trim(),
           phone: editClientModal.phone.trim() || null,
           email: editClientModal.email.trim() || null,
-          notes: editClientModal.notes.trim() || null
+          subscription_plan_id: editClientModal.subscription_plan_id || null,
+          notes: editClientModal.notes.trim() || null,
+          starts_at: editClientModal.starts_at || null,
+          ends_at: editClientModal.ends_at || null
         })
       });
+
+      const updatedSub = res?.subscription;
+      const matchingPlan = plans.find(p => String(p.id) === String(editClientModal.subscription_plan_id));
 
       setSubs(prev => prev.map(s => s.id === editClientModal.sub.id ? {
         ...s,
@@ -243,6 +306,11 @@ export default function Subscriptions() {
         billing_phone: editClientModal.phone.trim() || null,
         billing_email: editClientModal.email.trim() || null,
         notes: editClientModal.notes.trim() || null,
+        subscription_plan_id: editClientModal.subscription_plan_id || s.subscription_plan_id,
+        plan: updatedSub?.plan || matchingPlan || s.plan,
+        starts_at: updatedSub?.starts_at || (editClientModal.starts_at ? `${editClientModal.starts_at}T00:00:00` : s.starts_at),
+        ends_at: updatedSub?.ends_at || (editClientModal.ends_at ? `${editClientModal.ends_at}T23:59:59` : s.ends_at),
+        status: updatedSub?.status || s.status,
         user: s.user ? {
           ...s.user,
           name: editClientModal.name.trim() || s.user.name,
@@ -252,7 +320,7 @@ export default function Subscriptions() {
         resolved_phone: editClientModal.phone.trim() || s.resolved_phone
       } : s));
 
-      setSuccess('Datos del cliente actualizados exitosamente');
+      setSuccess('Datos de la membresía actualizados exitosamente');
       setTimeout(() => setSuccess(''), 3000);
       setEditClientModal(null);
     } catch (err) {
@@ -378,7 +446,12 @@ export default function Subscriptions() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { fetchSubs(); }, []);
+  useEffect(() => { 
+    fetchSubs(); 
+    apiFetch('/admin/subscription-plans')
+      .then(d => setPlans(Array.isArray(d) ? d : (d?.data || [])))
+      .catch(() => {});
+  }, []);
 
   // Reset pagination when searching or filtering
   useEffect(() => {
@@ -1886,6 +1959,129 @@ Estamos validando tu comprobante de pago para activar tu membresía de inmediato
                     placeholder="cliente@ejemplo.com"
                     style={{ fontSize: 13 }}
                   />
+                </div>
+              </div>
+
+              {/* Plan de Suscripción (Opcional si se desea cambiar) */}
+              {plans.length > 0 && (
+                <div className="form-group" style={{ marginBottom: 12 }}>
+                  <label style={{ fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <Layers size={13} style={{ color: 'var(--primary)' }} />
+                    <span>Plan de Suscripción</span>
+                  </label>
+                  <select
+                    value={editClientModal.subscription_plan_id || ''}
+                    onChange={e => {
+                      const newPlanId = e.target.value;
+                      const selPlan = plans.find(p => String(p.id) === String(newPlanId));
+                      setEditClientModal(prev => {
+                        let newEnd = prev.ends_at;
+                        if (prev.starts_at && selPlan) {
+                          newEnd = calculateDefaultEndDate(prev.starts_at, newPlanId, plans);
+                        }
+                        return {
+                          ...prev,
+                          subscription_plan_id: newPlanId,
+                          ends_at: newEnd
+                        };
+                      });
+                    }}
+                    style={{ fontSize: 13 }}
+                  >
+                    <option value="">Mantener plan actual ({editClientModal.sub?.plan?.name || 'Plan'})</option>
+                    {plans.map(p => (
+                      <option key={p.id} value={p.id}>{p.name} - ${Number(p.price).toFixed(2)}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Fechas de vigencia de la membresía */}
+              <div style={{
+                background: 'var(--bg)',
+                border: '1px solid var(--border)',
+                borderRadius: 8,
+                padding: '12px 14px',
+                marginBottom: 14
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                  <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Calendar size={14} style={{ color: 'var(--primary)' }} />
+                    <span>Fechas de la Membresía</span>
+                  </span>
+                  {(() => {
+                    if (!editClientModal.starts_at || !editClientModal.ends_at) return null;
+                    const d1 = new Date(editClientModal.starts_at + 'T00:00:00');
+                    const d2 = new Date(editClientModal.ends_at + 'T00:00:00');
+                    const diffDays = Math.round((d2 - d1) / (1000 * 60 * 60 * 24));
+                    if (diffDays < 0) return <span style={{ fontSize: 11, color: '#dc2626', fontWeight: 600 }}>⚠️ Fecha inválida</span>;
+                    return (
+                      <span style={{ fontSize: 11.5, color: 'var(--primary)', fontWeight: 600, background: 'rgba(37,99,235,0.08)', border: '1px solid rgba(37,99,235,0.2)', padding: '2px 8px', borderRadius: 6 }}>
+                        {diffDays} días de vigencia
+                      </span>
+                    );
+                  })()}
+                </div>
+
+                <div className="form-grid-2" style={{ marginBottom: 10 }}>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>
+                      Fecha de Inicio *
+                    </label>
+                    <input
+                      type="date"
+                      value={editClientModal.starts_at || ''}
+                      onChange={e => setEditClientModal(prev => ({ ...prev, starts_at: e.target.value }))}
+                      required
+                      style={{ fontSize: 12.5, padding: '7px 10px', width: '100%', borderRadius: 7 }}
+                    />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>
+                      Fecha de Vencimiento *
+                    </label>
+                    <input
+                      type="date"
+                      value={editClientModal.ends_at || ''}
+                      min={editClientModal.starts_at || undefined}
+                      onChange={e => setEditClientModal(prev => ({ ...prev, ends_at: e.target.value }))}
+                      required
+                      style={{ fontSize: 12.5, padding: '7px 10px', width: '100%', borderRadius: 7 }}
+                    />
+                  </div>
+                </div>
+
+                {/* Accesos rápidos de duración */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 11, color: 'var(--text-secondary)', marginRight: 2 }}>Ajustar fin a:</span>
+                  {[
+                    { label: '15 días', days: 15 },
+                    { label: '1 mes (30d)', days: 30 },
+                    { label: '2 meses', days: 60 },
+                    { label: '3 meses', days: 90 },
+                    { label: '6 meses', days: 180 },
+                    { label: '1 año', days: 365 }
+                  ].map(preset => (
+                    <button
+                      key={preset.days}
+                      type="button"
+                      onClick={() => handleEditModalDatePreset(preset.days)}
+                      style={{
+                        padding: '3px 8px',
+                        fontSize: 11,
+                        borderRadius: 6,
+                        border: '1px solid var(--border)',
+                        background: 'var(--card)',
+                        color: 'var(--text)',
+                        cursor: 'pointer',
+                        fontWeight: 500,
+                        transition: 'all 0.15s ease'
+                      }}
+                      title={`Fijar vencimiento a ${preset.label} desde la fecha de inicio`}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
                 </div>
               </div>
 

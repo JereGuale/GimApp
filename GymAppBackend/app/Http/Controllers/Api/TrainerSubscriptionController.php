@@ -128,16 +128,22 @@ class TrainerSubscriptionController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'user_id' => 'required|exists:users,id',
-            'subscription_plan_id' => 'required|exists:subscription_plans,id'
+            'subscription_plan_id' => 'required|exists:subscription_plans,id',
+            'starts_at' => 'nullable|date',
+            'ends_at' => 'nullable|date',
+            'notes' => 'nullable|string'
         ]);
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        // Verificar si el usuario ya tiene una suscripción activa
+        // Verificar si el usuario ya tiene una suscripción activa vigente
         $existingSubscription = Subscription::where('user_id', $request->user_id)
             ->where('status', 'active')
+            ->where(function ($q) {
+                $q->whereNull('ends_at')->orWhere('ends_at', '>', now());
+            })
             ->first();
 
         if ($existingSubscription) {
@@ -160,6 +166,17 @@ class TrainerSubscriptionController extends Controller
 
         $note = trim($request->input('notes', ''));
 
+        $startsAt = now();
+        if ($request->filled('starts_at')) {
+            $parsedStart = \Carbon\Carbon::parse($request->input('starts_at'));
+            $startsAt = $parsedStart->isToday() ? now() : $parsedStart->startOfDay();
+        }
+
+        $endsAt = $startsAt->copy()->addDays($months * 30);
+        if ($request->filled('ends_at')) {
+            $endsAt = \Carbon\Carbon::parse($request->input('ends_at'))->endOfDay();
+        }
+
         $subData = [
             'user_id' => $request->user_id,
             'subscription_plan_id' => $plan->id,
@@ -168,8 +185,8 @@ class TrainerSubscriptionController extends Controller
             'price' => $plan->price,
             'approved_by' => $request->user()->id,
             'approved_at' => now(),
-            'starts_at' => now(),
-            'ends_at' => now()->addDays($months * 30),
+            'starts_at' => $startsAt,
+            'ends_at' => $endsAt,
             'billing_name' => $user?->name,
             'billing_email' => $user?->email,
             'billing_phone' => $userPhone,
@@ -295,6 +312,26 @@ class TrainerSubscriptionController extends Controller
         if (!empty($name)) $subUpdates['billing_name'] = $name;
         if (!empty($phone)) $subUpdates['billing_phone'] = $phone;
         if (!empty($email)) $subUpdates['billing_email'] = $email;
+
+        if ($request->filled('starts_at')) {
+            $parsedStart = \Carbon\Carbon::parse($request->input('starts_at'));
+            $subUpdates['starts_at'] = $parsedStart->isToday() ? now() : $parsedStart->startOfDay();
+        }
+        if ($request->filled('ends_at')) {
+            $parsedEnd = \Carbon\Carbon::parse($request->input('ends_at'))->endOfDay();
+            $subUpdates['ends_at'] = $parsedEnd;
+            if ($parsedEnd->isFuture() && $subscription->status === 'expired') {
+                $subUpdates['status'] = 'active';
+            }
+        }
+
+        if ($request->filled('subscription_plan_id')) {
+            $plan = \App\Models\SubscriptionPlan::find($request->input('subscription_plan_id'));
+            if ($plan) {
+                $subUpdates['subscription_plan_id'] = $plan->id;
+                $subUpdates['price'] = $plan->price;
+            }
+        }
 
         if ($request->has('notes')) {
             if (\Illuminate\Support\Facades\Schema::hasColumn('subscriptions', 'notes')) {
