@@ -235,6 +235,40 @@ export default function Reports() {
     }
   };
 
+  // Automatically link and update expiration date when start date is edited
+  const handleManualSubStartDateChange = (newStart) => {
+    setManualSubStartDate(newStart);
+    if (!newStart) return;
+
+    // If there is an existing valid duration between start and end, maintain it
+    if (manualSubStartDate && manualSubEndDate) {
+      const d1 = new Date(manualSubStartDate + 'T00:00:00');
+      const d2 = new Date(manualSubEndDate + 'T00:00:00');
+      const diffDays = Math.round((d2 - d1) / (1000 * 60 * 60 * 24));
+      if (diffDays > 0) {
+        const parts = newStart.split('-');
+        if (parts.length === 3 && parts[0].length === 4) {
+          const nextEnd = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+          nextEnd.setDate(nextEnd.getDate() + diffDays);
+          setManualSubEndDate(getLocalDateString(nextEnd));
+          return;
+        }
+      }
+    }
+
+    // Default to plan duration or 30 days
+    if (selectedPlanId) {
+      setManualSubEndDate(calculateDefaultEndDate(newStart, selectedPlanId, plans));
+    } else {
+      const parts = newStart.split('-');
+      if (parts.length === 3 && parts[0].length === 4) {
+        const nextEnd = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+        nextEnd.setDate(nextEnd.getDate() + 30);
+        setManualSubEndDate(getLocalDateString(nextEnd));
+      }
+    }
+  };
+
   // Preset shortcut to quickly adjust expiration date
   const handleApplyDatePreset = (days) => {
     const base = manualSubStartDate ? new Date(manualSubStartDate + 'T00:00:00') : new Date();
@@ -782,6 +816,34 @@ export default function Reports() {
       starts_at: formatForDateInput(sub.starts_at),
       ends_at: formatForDateInput(sub.ends_at),
       saving: false
+    });
+  };
+
+  const handleEditClientStartDateChange = (newStart) => {
+    setEditClientModal(prev => {
+      if (!prev) return prev;
+      let newEnd = prev.ends_at;
+      if (newStart && prev.starts_at && prev.ends_at) {
+        const d1 = new Date(prev.starts_at + 'T00:00:00');
+        const d2 = new Date(prev.ends_at + 'T00:00:00');
+        const diffDays = Math.round((d2 - d1) / (1000 * 60 * 60 * 24));
+        if (diffDays > 0) {
+          const parts = newStart.split('-');
+          if (parts.length === 3 && parts[0].length === 4) {
+            const nextEnd = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+            nextEnd.setDate(nextEnd.getDate() + diffDays);
+            newEnd = getLocalDateString(nextEnd);
+          }
+        }
+      } else if (newStart) {
+        const planId = prev.subscription_plan_id || prev.sub?.subscription_plan_id;
+        newEnd = calculateDefaultEndDate(newStart, planId, plans);
+      }
+      return {
+        ...prev,
+        starts_at: newStart,
+        ends_at: newEnd
+      };
     });
   };
 
@@ -1981,13 +2043,7 @@ export default function Reports() {
                     <input
                       type="date"
                       value={manualSubStartDate}
-                      onChange={(e) => {
-                        const newStart = e.target.value;
-                        setManualSubStartDate(newStart);
-                        if (newStart && (!manualSubEndDate || manualSubEndDate < newStart)) {
-                          setManualSubEndDate(calculateDefaultEndDate(newStart, selectedPlanId));
-                        }
-                      }}
+                      onChange={(e) => handleManualSubStartDateChange(e.target.value)}
                       required
                       style={{ fontSize: 12.5, padding: '7px 10px', width: '100%', borderRadius: 7 }}
                     />
@@ -2516,7 +2572,7 @@ export default function Reports() {
                     <input
                       type="date"
                       value={editClientModal.starts_at || ''}
-                      onChange={e => setEditClientModal(prev => ({ ...prev, starts_at: e.target.value }))}
+                      onChange={e => handleEditClientStartDateChange(e.target.value)}
                       required
                       style={{ fontSize: 12.5, padding: '7px 10px', width: '100%', borderRadius: 7 }}
                     />
