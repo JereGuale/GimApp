@@ -1514,196 +1514,286 @@ export default function Reports() {
 
       {/* MODAL 1: REGISTRAR MEMBRESÍA MANUAL */}
       {manualSubModalOpen && (
-        <div className="modal-overlay" onClick={() => setManualSubModalOpen(false)}>
-          <div className="modal" style={{ maxWidth: 520 }} onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <div>
-                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Registrar Membresía Manual</h3>
-                <p style={{ margin: '3px 0 0', fontSize: 12.5, color: 'var(--text-secondary)' }}>
-                  Asigna una membresía directa con pago en efectivo o caja
-                </p>
-              </div>
-              <button className="btn btn--ghost" style={{ padding: 6, borderRadius: '50%' }} onClick={() => setManualSubModalOpen(false)}>
-                <X size={16} />
-              </button>
-            </div>
-
-            {/* Selector de dos secciones: Usuario Registrado vs Nuevo Cliente */}
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: '1fr 1fr', 
-              gap: 6, 
-              padding: 4, 
-              background: 'var(--bg)', 
-              border: '1px solid var(--border)', 
-              borderRadius: 10, 
-              marginBottom: 16 
+        <div 
+          className="modal-overlay" 
+          style={{ alignItems: 'flex-start', overflowY: 'auto', padding: '20px 16px' }} 
+          onClick={() => setManualSubModalOpen(false)}
+        >
+          <div 
+            className="modal" 
+            style={{ 
+              maxWidth: 540, 
+              width: '100%',
+              margin: 'auto',
+              maxHeight: 'min(92vh, 880px)',
+              display: 'flex',
+              flexDirection: 'column',
+              padding: 0,
+              overflow: 'hidden'
+            }} 
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header y Selector de Pestañas FIJO en la parte superior */}
+            <div style={{
+              padding: '18px 22px 14px',
+              borderBottom: '1px solid var(--border)',
+              background: 'var(--card)',
+              flexShrink: 0
             }}>
-              <button
-                type="button"
-                onClick={() => { setManualSubTab('registrado'); setManualSubError(''); }}
-                style={{
-                  padding: '9px 12px',
-                  borderRadius: 7,
-                  border: 'none',
-                  fontWeight: 600,
-                  fontSize: 13,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                  background: manualSubTab === 'registrado' ? 'var(--primary)' : 'transparent',
-                  color: manualSubTab === 'registrado' ? '#ffffff' : 'var(--text-secondary)',
-                  boxShadow: manualSubTab === 'registrado' ? '0 2px 8px rgba(37,99,235,0.25)' : 'none',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                <UserCheck size={16} />
-                <span>Usuario Registrado</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => { setManualSubTab('nuevo'); setManualSubError(''); }}
-                style={{
-                  padding: '9px 12px',
-                  borderRadius: 7,
-                  border: 'none',
-                  fontWeight: 600,
-                  fontSize: 13,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                  background: manualSubTab === 'nuevo' ? 'var(--primary)' : 'transparent',
-                  color: manualSubTab === 'nuevo' ? '#ffffff' : 'var(--text-secondary)',
-                  boxShadow: manualSubTab === 'nuevo' ? '0 2px 8px rgba(37,99,235,0.25)' : 'none',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                <UserPlus size={16} />
-                <span>Nuevo Cliente (Sin App)</span>
-              </button>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Registrar Membresía Manual</h3>
+                  <p style={{ margin: '3px 0 0', fontSize: 12.5, color: 'var(--text-secondary)' }}>
+                    Asigna una membresía directa con cobro en caja o efectivo
+                  </p>
+                </div>
+                <button className="btn btn--ghost" style={{ padding: 6, borderRadius: '50%' }} onClick={() => setManualSubModalOpen(false)} title="Cerrar ventana">
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* Selector de dos secciones: Usuario Registrado vs Nuevo Cliente */}
+              <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: '1fr 1fr', 
+                gap: 6, 
+                padding: 4, 
+                background: 'var(--bg)', 
+                border: '1px solid var(--border)', 
+                borderRadius: 10
+              }}>
+                <button
+                  type="button"
+                  onClick={() => { setManualSubTab('registrado'); setManualSubError(''); }}
+                  style={{
+                    padding: '9px 12px',
+                    borderRadius: 7,
+                    border: 'none',
+                    fontWeight: 600,
+                    fontSize: 13,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    background: manualSubTab === 'registrado' ? 'var(--primary)' : 'transparent',
+                    color: manualSubTab === 'registrado' ? '#ffffff' : 'var(--text-secondary)',
+                    boxShadow: manualSubTab === 'registrado' ? '0 2px 8px rgba(37,99,235,0.25)' : 'none',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <UserCheck size={16} />
+                  <span>Usuario Registrado</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setManualSubTab('nuevo'); setManualSubError(''); }}
+                  style={{
+                    padding: '9px 12px',
+                    borderRadius: 7,
+                    border: 'none',
+                    fontWeight: 600,
+                    fontSize: 13,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    background: manualSubTab === 'nuevo' ? 'var(--primary)' : 'transparent',
+                    color: manualSubTab === 'nuevo' ? '#ffffff' : 'var(--text-secondary)',
+                    boxShadow: manualSubTab === 'nuevo' ? '0 2px 8px rgba(37,99,235,0.25)' : 'none',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <UserPlus size={16} />
+                  <span>Nuevo Cliente (Sin App)</span>
+                </button>
+              </div>
             </div>
 
-            {manualSubError && (
-              <div className="alert alert--error" style={{ marginBottom: 14 }}>
-                <AlertTriangle size={15} /> 
-                <span style={{ fontSize: 13 }}>{manualSubError}</span>
-              </div>
-            )}
-            {manualSubSuccess && (
-              <div className="alert alert--success" style={{ marginBottom: 14 }}>
-                <CheckCircle2 size={15} /> 
-                <span style={{ fontSize: 13 }}>{manualSubSuccess}</span>
-              </div>
-            )}
+            {/* Contenido con scroll independiente */}
+            <div style={{
+              padding: '18px 22px 22px',
+              overflowY: 'auto',
+              flex: 1
+            }}>
+              {manualSubError && (
+                <div className="alert alert--error" style={{ marginBottom: 14 }}>
+                  <AlertTriangle size={15} /> 
+                  <span style={{ fontSize: 13 }}>{manualSubError}</span>
+                </div>
+              )}
+              {manualSubSuccess && (
+                <div className="alert alert--success" style={{ marginBottom: 14 }}>
+                  <CheckCircle2 size={15} /> 
+                  <span style={{ fontSize: 13 }}>{manualSubSuccess}</span>
+                </div>
+              )}
 
-            <form onSubmit={handleSaveManualSub} className="modal-form">
-              {/* SECCIÓN 1: USUARIO REGISTRADO */}
-              {manualSubTab === 'registrado' && (
-                <div style={{ marginBottom: 16 }}>
-                  {selectedUser ? (
-                    // Ficha del usuario registrado seleccionado
-                    <div style={{
-                      padding: '12px 14px',
-                      background: 'rgba(34, 197, 94, 0.08)',
-                      border: '1.5px solid #22c55e',
-                      borderRadius: 10,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: 12
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <div className="avatar-circle" style={!getUserAvatarUrl(selectedUser) ? { backgroundColor: getAvatarBgColor(selectedUser.name), width: 36, height: 36, fontSize: 13 } : { width: 36, height: 36 }}>
-                          {getUserAvatarUrl(selectedUser) ? (
-                            <img src={getUserAvatarUrl(selectedUser)} alt={selectedUser.name} className="avatar-img" />
-                          ) : (
-                            <span>{getUserInitials(selectedUser.name)}</span>
-                          )}
+              <form onSubmit={handleSaveManualSub} className="modal-form">
+                {/* SECCIÓN 1: USUARIO REGISTRADO */}
+                {manualSubTab === 'registrado' && (
+                  <div style={{ marginBottom: 16 }}>
+                    {selectedUser ? (
+                      // Ficha del usuario registrado seleccionado
+                      <div style={{
+                        padding: '12px 14px',
+                        background: 'rgba(34, 197, 94, 0.08)',
+                        border: '1.5px solid #22c55e',
+                        borderRadius: 10,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 12
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <div className="avatar-circle" style={!getUserAvatarUrl(selectedUser) ? { backgroundColor: getAvatarBgColor(selectedUser.name), width: 36, height: 36, fontSize: 13 } : { width: 36, height: 36 }}>
+                            {getUserAvatarUrl(selectedUser) ? (
+                              <img src={getUserAvatarUrl(selectedUser)} alt={selectedUser.name} className="avatar-img" />
+                            ) : (
+                              <span>{getUserInitials(selectedUser.name)}</span>
+                            )}
+                          </div>
+                          <div>
+                            <div style={{ fontWeight: 700, fontSize: 13.5, color: 'var(--text)' }}>
+                              {selectedUser.name}
+                            </div>
+                            <div style={{ fontSize: 11.5, color: 'var(--text-secondary)' }}>
+                              {selectedUser.email || 'Sin correo'} {selectedUser.phone ? `• 📞 ${selectedUser.phone}` : ''}
+                            </div>
+                            <div style={{ fontSize: 11, color: '#16a34a', fontWeight: 600, marginTop: 2, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                              <Check size={12} /> Usuario Seleccionado (Listo para asignar membresía)
+                            </div>
+                          </div>
                         </div>
-                        <div>
-                          <div style={{ fontWeight: 700, fontSize: 13.5, color: 'var(--text)' }}>
-                            {selectedUser.name}
-                          </div>
-                          <div style={{ fontSize: 11.5, color: 'var(--text-secondary)' }}>
-                            {selectedUser.email || 'Sin correo'} {selectedUser.phone ? `• 📞 ${selectedUser.phone}` : ''}
-                          </div>
-                          <div style={{ fontSize: 11, color: '#16a34a', fontWeight: 600, marginTop: 2, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                            <Check size={12} /> Usuario Seleccionado (Listo para asignar membresía)
-                          </div>
-                        </div>
+                        <button
+                          type="button"
+                          onClick={handleClearSelectedUser}
+                          className="btn btn--secondary btn--sm"
+                          style={{ fontSize: 12, padding: '4px 10px' }}
+                        >
+                          Cambiar
+                        </button>
                       </div>
-                      <button
-                        type="button"
-                        onClick={handleClearSelectedUser}
-                        className="btn btn--secondary btn--sm"
-                        style={{ fontSize: 12, padding: '4px 10px' }}
-                      >
-                        Cambiar
-                      </button>
-                    </div>
-                  ) : (
-                    // Buscador y lista de usuarios registrados
-                    <div>
-                      <div className="form-group" style={{ marginBottom: 10 }}>
-                        <label style={{ fontSize: 12.5, fontWeight: 600, display: 'block', marginBottom: 5 }}>
-                          Buscar Usuario Registrado *
-                        </label>
-                        <div style={{ position: 'relative' }}>
-                          <Search size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
-                          <input
-                            type="text"
-                            value={userSearchQuery}
-                            onChange={(e) => setUserSearchQuery(e.target.value)}
-                            placeholder="Escribe el nombre, correo o teléfono (ej. Liliana)..."
-                            style={{ paddingLeft: 34, width: '100%', fontSize: 13 }}
-                            autoFocus
-                          />
-                          {userSearchQuery && (
+                    ) : (
+                      // Buscador y lista de usuarios registrados
+                      <div>
+                        <div className="form-group" style={{ marginBottom: 10 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                            <label style={{ fontSize: 12.5, fontWeight: 600, margin: 0 }}>
+                              Buscar Usuario Registrado *
+                            </label>
                             <button
                               type="button"
-                              onClick={() => setUserSearchQuery('')}
-                              style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: 4 }}
+                              onClick={() => {
+                                setManualSubTab('nuevo');
+                                setNewClientName(userSearchQuery.trim());
+                                setManualSubError('');
+                              }}
+                              style={{
+                                background: 'transparent',
+                                border: 'none',
+                                color: 'var(--primary)',
+                                fontSize: 11.5,
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 4,
+                                padding: 0
+                              }}
                             >
-                              <X size={14} />
+                              <UserPlus size={13} />
+                              <span>¿No tiene cuenta? Crear nuevo cliente</span>
                             </button>
-                          )}
+                          </div>
+                          <div style={{ position: 'relative' }}>
+                            <Search size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+                            <input
+                              type="text"
+                              value={userSearchQuery}
+                              onChange={(e) => setUserSearchQuery(e.target.value)}
+                              placeholder="Escribe el nombre, correo o teléfono (ej. Liliana)..."
+                              style={{ paddingLeft: 34, width: '100%', fontSize: 13 }}
+                              autoFocus
+                            />
+                            {userSearchQuery && (
+                              <button
+                                type="button"
+                                onClick={() => setUserSearchQuery('')}
+                                style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: 4 }}
+                              >
+                                <X size={14} />
+                              </button>
+                            )}
+                          </div>
                         </div>
-                      </div>
 
-                      {/* Lista de resultados */}
-                      <div style={{
-                        border: '1px solid var(--border)',
-                        borderRadius: 8,
-                        background: 'var(--card)',
-                        maxHeight: 230,
-                        overflowY: 'auto',
-                        padding: 2
-                      }}>
-                        {!userSearchQuery.trim() ? (
-                          <div style={{ padding: '28px 16px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                            <Search size={26} style={{ opacity: 0.35, margin: '0 auto 8px', display: 'block' }} />
-                            <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)' }}>
-                              Escribe el nombre del usuario
+                        {/* Lista de resultados */}
+                        <div style={{
+                          border: '1px solid var(--border)',
+                          borderRadius: 8,
+                          background: 'var(--card)',
+                          maxHeight: 200,
+                          overflowY: 'auto',
+                          padding: 2
+                        }}>
+                          {!userSearchQuery.trim() ? (
+                            <div style={{ padding: '22px 16px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                              <Search size={24} style={{ opacity: 0.35, margin: '0 auto 6px', display: 'block' }} />
+                              <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)' }}>
+                                Escribe el nombre del usuario
+                              </div>
+                              <div style={{ fontSize: 11.5, marginTop: 4, color: 'var(--text-secondary)', marginBottom: 12 }}>
+                                Escribe el nombre, correo o teléfono para buscar en la base de datos.
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => { setManualSubTab('nuevo'); setManualSubError(''); }}
+                                style={{
+                                  padding: '6px 14px',
+                                  background: 'rgba(37, 99, 235, 0.08)',
+                                  border: '1px solid rgba(37, 99, 235, 0.25)',
+                                  borderRadius: 7,
+                                  color: 'var(--primary)',
+                                  fontSize: 12,
+                                  fontWeight: 600,
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 6
+                                }}
+                              >
+                                <UserPlus size={13} />
+                                <span>¿El cliente no está registrado? Registrar aquí sin app</span>
+                              </button>
                             </div>
-                            <div style={{ fontSize: 11.5, marginTop: 4, color: 'var(--text-secondary)' }}>
-                              Escribe el nombre, correo o teléfono para buscar en la base de datos en tiempo real.
+                          ) : loadingUsers ? (
+                            <div style={{ padding: '24px 16px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: 12.5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                              <Loader2 className="spin" size={16} />
+                              <span>Buscando "{userSearchQuery}" en la base de datos...</span>
                             </div>
-                          </div>
-                        ) : loadingUsers ? (
-                          <div style={{ padding: '24px 16px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: 12.5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                            <Loader2 className="spin" size={16} />
-                            <span>Buscando "{userSearchQuery}" en la base de datos...</span>
-                          </div>
-                        ) : filteredUsers.length === 0 ? (
-                          <div style={{ padding: '24px 16px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: 12.5 }}>
-                            <p style={{ margin: 0, fontWeight: 600, color: 'var(--text)' }}>No se encontraron usuarios registrados con "{userSearchQuery}".</p>
-                            <p style={{ margin: '6px 0 0', fontSize: 11.5 }}>Si es un cliente nuevo sin cuenta, usa la pestaña superior "Nuevo Cliente (Sin App)".</p>
-                          </div>
-                        ) : (
+                          ) : filteredUsers.length === 0 ? (
+                            <div style={{ padding: '22px 16px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: 12.5 }}>
+                              <p style={{ margin: 0, fontWeight: 600, color: 'var(--text)' }}>No se encontraron usuarios registrados con "{userSearchQuery}".</p>
+                              <p style={{ margin: '6px 0 12px', fontSize: 11.5 }}>
+                                ¿Es un cliente nuevo que aún no está registrado en el gimnasio?
+                              </p>
+                              <button
+                                type="button"
+                                className="btn btn--primary btn--sm"
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, margin: '0 auto' }}
+                                onClick={() => {
+                                  setManualSubTab('nuevo');
+                                  setNewClientName(userSearchQuery.trim());
+                                  setManualSubError('');
+                                }}
+                              >
+                                <UserPlus size={14} />
+                                <span>Registrar a "{userSearchQuery.trim()}" como Nuevo Cliente</span>
+                              </button>
+                            </div>
+                          ) : (
                           filteredUsers.map((u) => {
                             const avatarUrl = getUserAvatarUrl(u);
                             const initials = getUserInitials(u.name);
@@ -2022,6 +2112,7 @@ export default function Reports() {
                 </button>
               </div>
             </form>
+            </div>
           </div>
         </div>
       )}

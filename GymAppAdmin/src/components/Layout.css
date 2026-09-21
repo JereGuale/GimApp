@@ -684,10 +684,12 @@ select option {
   background: var(--modal-overlay);
   backdrop-filter: blur(8px);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   z-index: 1000;
-  padding: 20px;
+  padding: 24px 16px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   transition: all 0.3s ease;
 }
 
@@ -698,6 +700,8 @@ select option {
   padding: 32px;
   width: 100%;
   max-width: 480px;
+  margin: auto;
+  max-height: calc(100vh - 48px);
   box-shadow: var(--shadow-lg), 0 20px 25px -5px rgba(0,0,0,0.1);
   transform: scale(0.98);
   animation: modalEnter 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
