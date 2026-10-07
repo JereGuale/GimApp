@@ -1,33 +1,54 @@
-name: Supabase Keep Alive
+name: Supabase & Backend Keep Alive
 
 on:
   schedule:
-    # Se ejecuta cada 3 días a las 12:00 UTC
-    - cron: '0 12 */3 * *'
-  workflow_dispatch: # Permite ejecutarlo manualmente con un clic en GitHub Actions
+    # Se ejecuta cada 12 horas (00:00 y 12:00 UTC) para que la base de datos nunca cumpla el limite de inactividad
+    - cron: '0 0,12 * * *'
+  workflow_dispatch: # Permite ejecutarlo manualmente con un clic en la pestaña Actions
+  push:
+    branches: [ main ]
 
 jobs:
   keep-alive:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping y Consulta SQL Real a Supabase
+      - name: Consulta SQL Real a la Base de Datos (via Backend API)
         run: |
-          echo "Realizando consulta SELECT a Supabase para mantener la BD activa..."
+          echo "1. Ejecutando ping con consulta SQL real (SELECT 1 y actualizacion de suscripciones)..."
           
-          RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" -X GET "${{ secrets.SUPABASE_URL }}/rest/v1/users?select=id&limit=1" \
-            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
-            -H "Content-Type: application/json")
-
+          # Render puede requerir hasta 45s si esta en cold start
+          RESPONSE=$(curl -s --max-time 60 --retry 2 -w "\nHTTP_STATUS:%{http_code}" -X GET "https://gimapp.onrender.com/api/ping" \
+            -H "Accept: application/json")
+          
           BODY=$(echo "$RESPONSE" | sed -e '$d')
           STATUS=$(echo "$RESPONSE" | tail -n1 | cut -d':' -f2)
 
-          echo "Código HTTP recibido: $STATUS"
+          echo "Código HTTP recibido de /api/ping: $STATUS"
           echo "Respuesta: $BODY"
 
           if [ "$STATUS" -ge 200 ] && [ "$STATUS" -lt 300 ]; then
-            echo "✅ Base de datos consultada exitosamente. Actividad registrada en Supabase."
+            echo "✅ Base de datos Supabase consultada con éxito vía Backend."
           else
-            echo "❌ Error al consultar la base de datos."
-            exit 1
+            echo "⚠️ /api/ping no devolvió 200, probando endpoint de respaldo /api/categories..."
+            BACKUP_STATUS=$(curl -s --max-time 60 -o /dev/null -w "%{http_code}" "https://gimapp.onrender.com/api/categories")
+            echo "Código de respaldo: $BACKUP_STATUS"
+            if [ "$BACKUP_STATUS" -ge 200 ] && [ "$BACKUP_STATUS" -lt 300 ]; then
+              echo "✅ Base de datos consultada exitosamente mediante /api/categories."
+            else
+              echo "❌ Error al contactar la base de datos."
+              exit 1
+            fi
           fi
+
+      - name: Ping Directo a Supabase REST API (Opcional si existen secrets)
+        if: ${{ env.SUPABASE_URL != '' && env.SUPABASE_ANON_KEY != '' }}
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          echo "2. Realizando consulta directa a Supabase PostgREST..."
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X GET "${{ secrets.SUPABASE_URL }}/rest/v1/subscription_plans?select=id&limit=1" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}")
+          echo "Código HTTP directo Supabase: $STATUS"
+

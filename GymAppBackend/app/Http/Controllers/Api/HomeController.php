@@ -10,6 +10,8 @@ class HomeController extends Controller
 {
     public function index(Request $request)
     {
+        Subscription::updateExpiredStatus();
+
         $subscription = Subscription::with('plan')
             ->where('user_id', $request->user()->id)
             ->where('status', 'active')

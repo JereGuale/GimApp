@@ -15,10 +15,16 @@ class TrainerSubscriptionController extends Controller
      */
     public function index(Request $request)
     {
+        // Actualizar automáticamente suscripciones que hayan rebasado su fecha de fin
+        Subscription::updateExpiredStatus();
+
         $query = Subscription::with(['user', 'plan', 'approvedBy']);
 
         // Filtrar por estado
-        if ($request->has('status')) {
+        if ($request->status === 'expiring') {
+            $days = (int)$request->input('days', 7);
+            $query->expiringSoon($days);
+        } elseif ($request->has('status') && $request->status !== 'all') {
             $query->where('status', $request->status);
         }
 
@@ -59,6 +65,7 @@ class TrainerSubscriptionController extends Controller
      */
     public function pendingCount()
     {
+        Subscription::updateExpiredStatus();
         $count = Subscription::where('status', 'pending')->count();
         return response()->json(['count' => $count]);
     }
@@ -322,6 +329,8 @@ class TrainerSubscriptionController extends Controller
             $subUpdates['ends_at'] = $parsedEnd;
             if ($parsedEnd->isFuture() && $subscription->status === 'expired') {
                 $subUpdates['status'] = 'active';
+            } elseif ($parsedEnd->isPast() && $subscription->status === 'active') {
+                $subUpdates['status'] = 'expired';
             }
         }
 

@@ -1578,121 +1578,144 @@ export default function Reports() {
       {manualSubModalOpen && (
         <div 
           className="modal-overlay" 
-          style={{ alignItems: 'flex-start', overflowY: 'auto', padding: '20px 16px' }} 
+          style={{ 
+            display: 'flex', 
+            alignItems: 'flex-start', 
+            justifyContent: 'center', 
+            overflowY: 'auto', 
+            padding: '16px' 
+          }} 
           onClick={() => setManualSubModalOpen(false)}
         >
           <div 
             className="modal" 
             style={{ 
               maxWidth: 540, 
-              width: '100%',
-              margin: 'auto',
-              maxHeight: 'min(92vh, 880px)',
-              display: 'flex',
-              flexDirection: 'column',
-              padding: 0,
-              overflow: 'hidden'
+              width: '100%', 
+              margin: '16px auto', 
+              maxHeight: 'calc(100vh - 32px)', 
+              display: 'flex', 
+              flexDirection: 'column', 
+              padding: 0, 
+              overflow: 'hidden',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)'
             }} 
             onClick={e => e.stopPropagation()}
           >
-            {/* Header y Selector de Pestañas FIJO en la parte superior */}
-            <div style={{
-              padding: '18px 22px 14px',
-              borderBottom: '1px solid var(--border)',
-              background: 'var(--card)',
-              flexShrink: 0
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-                <div>
-                  <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Registrar Membresía Manual</h3>
-                  <p style={{ margin: '3px 0 0', fontSize: 12.5, color: 'var(--text-secondary)' }}>
-                    Asigna una membresía directa con cobro en caja o efectivo
-                  </p>
-                </div>
-                <button className="btn btn--ghost" style={{ padding: 6, borderRadius: '50%' }} onClick={() => setManualSubModalOpen(false)} title="Cerrar ventana">
-                  <X size={16} />
-                </button>
-              </div>
-
-              {/* Selector de dos secciones: Usuario Registrado vs Nuevo Cliente */}
-              <div style={{ 
-                display: 'grid', 
-                gridTemplateColumns: '1fr 1fr', 
-                gap: 6, 
-                padding: 4, 
-                background: 'var(--bg)', 
-                border: '1px solid var(--border)', 
-                borderRadius: 10
+            <form 
+              onSubmit={handleSaveManualSub}
+              style={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                height: '100%', 
+                maxHeight: 'calc(100vh - 32px)', 
+                minHeight: 0, 
+                margin: 0, 
+                overflow: 'hidden' 
+              }}
+            >
+              {/* Header y Selector de Pestañas FIJO en la parte superior */}
+              <div style={{
+                padding: '16px 20px 12px',
+                borderBottom: '1px solid var(--border)',
+                background: 'var(--card)',
+                flexShrink: 0
               }}>
-                <button
-                  type="button"
-                  onClick={() => { setManualSubTab('registrado'); setManualSubError(''); }}
-                  style={{
-                    padding: '9px 12px',
-                    borderRadius: 7,
-                    border: 'none',
-                    fontWeight: 600,
-                    fontSize: 13,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 8,
-                    background: manualSubTab === 'registrado' ? 'var(--primary)' : 'transparent',
-                    color: manualSubTab === 'registrado' ? '#ffffff' : 'var(--text-secondary)',
-                    boxShadow: manualSubTab === 'registrado' ? '0 2px 8px rgba(37,99,235,0.25)' : 'none',
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  <UserCheck size={16} />
-                  <span>Usuario Registrado</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setManualSubTab('nuevo'); setManualSubError(''); }}
-                  style={{
-                    padding: '9px 12px',
-                    borderRadius: 7,
-                    border: 'none',
-                    fontWeight: 600,
-                    fontSize: 13,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 8,
-                    background: manualSubTab === 'nuevo' ? 'var(--primary)' : 'transparent',
-                    color: manualSubTab === 'nuevo' ? '#ffffff' : 'var(--text-secondary)',
-                    boxShadow: manualSubTab === 'nuevo' ? '0 2px 8px rgba(37,99,235,0.25)' : 'none',
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  <UserPlus size={16} />
-                  <span>Nuevo Cliente (Sin App)</span>
-                </button>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>Registrar Membresía Manual</h3>
+                    <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--text-secondary)' }}>
+                      Asigna una membresía directa con cobro en caja o efectivo
+                    </p>
+                  </div>
+                  <button className="btn btn--ghost" type="button" style={{ padding: 6, borderRadius: '50%' }} onClick={() => setManualSubModalOpen(false)} title="Cerrar ventana">
+                    <X size={16} />
+                  </button>
+                </div>
+
+                {/* Selector de dos secciones: Usuario Registrado vs Nuevo Cliente */}
+                <div style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: '1fr 1fr', 
+                  gap: 6, 
+                  padding: 4, 
+                  background: 'var(--bg)', 
+                  border: '1px solid var(--border)', 
+                  borderRadius: 10
+                }}>
+                  <button
+                    type="button"
+                    onClick={() => { setManualSubTab('registrado'); setManualSubError(''); }}
+                    style={{
+                      padding: '8px 12px',
+                      borderRadius: 7,
+                      border: 'none',
+                      fontWeight: 600,
+                      fontSize: 12.5,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 8,
+                      background: manualSubTab === 'registrado' ? 'var(--primary)' : 'transparent',
+                      color: manualSubTab === 'registrado' ? '#ffffff' : 'var(--text-secondary)',
+                      boxShadow: manualSubTab === 'registrado' ? '0 2px 8px rgba(37,99,235,0.25)' : 'none',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <UserCheck size={15} />
+                    <span>Usuario Registrado</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setManualSubTab('nuevo'); setManualSubError(''); }}
+                    style={{
+                      padding: '8px 12px',
+                      borderRadius: 7,
+                      border: 'none',
+                      fontWeight: 600,
+                      fontSize: 12.5,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 8,
+                      background: manualSubTab === 'nuevo' ? 'var(--primary)' : 'transparent',
+                      color: manualSubTab === 'nuevo' ? '#ffffff' : 'var(--text-secondary)',
+                      boxShadow: manualSubTab === 'nuevo' ? '0 2px 8px rgba(37,99,235,0.25)' : 'none',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <UserPlus size={15} />
+                    <span>Nuevo Cliente (Sin App)</span>
+                  </button>
+                </div>
               </div>
-            </div>
 
-            {/* Contenido con scroll independiente */}
-            <div style={{
-              padding: '18px 22px 22px',
-              overflowY: 'auto',
-              flex: 1
-            }}>
-              {manualSubError && (
-                <div className="alert alert--error" style={{ marginBottom: 14 }}>
-                  <AlertTriangle size={15} /> 
-                  <span style={{ fontSize: 13 }}>{manualSubError}</span>
-                </div>
-              )}
-              {manualSubSuccess && (
-                <div className="alert alert--success" style={{ marginBottom: 14 }}>
-                  <CheckCircle2 size={15} /> 
-                  <span style={{ fontSize: 13 }}>{manualSubSuccess}</span>
-                </div>
-              )}
+              {/* Contenido scrolleable garantizado con minHeight 0 */}
+              <div 
+                className="modal-scroll-body"
+                style={{
+                  padding: '16px 20px',
+                  overflowY: 'auto',
+                  flex: '1 1 auto',
+                  minHeight: 0,
+                  WebkitOverflowScrolling: 'touch'
+                }}
+              >
+                {manualSubError && (
+                  <div className="alert alert--error" style={{ marginBottom: 14 }}>
+                    <AlertTriangle size={15} /> 
+                    <span style={{ fontSize: 13 }}>{manualSubError}</span>
+                  </div>
+                )}
+                {manualSubSuccess && (
+                  <div className="alert alert--success" style={{ marginBottom: 14 }}>
+                    <CheckCircle2 size={15} /> 
+                    <span style={{ fontSize: 13 }}>{manualSubSuccess}</span>
+                  </div>
+                )}
 
-              <form onSubmit={handleSaveManualSub} className="modal-form">
                 {/* SECCIÓN 1: USUARIO REGISTRADO */}
                 {manualSubTab === 'registrado' && (
                   <div style={{ marginBottom: 16 }}>
@@ -1742,7 +1765,7 @@ export default function Reports() {
                       <div>
                         <div className="form-group" style={{ marginBottom: 10 }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                            <label style={{ fontSize: 12.5, fontWeight: 600, margin: 0 }}>
+                            <label style={{ fontSize: 12, fontWeight: 600, margin: 0, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                               Buscar Usuario Registrado *
                             </label>
                             <button
@@ -1796,34 +1819,34 @@ export default function Reports() {
                           border: '1px solid var(--border)',
                           borderRadius: 8,
                           background: 'var(--card)',
-                          maxHeight: 200,
+                          maxHeight: 180,
                           overflowY: 'auto',
                           padding: 2
                         }}>
                           {!userSearchQuery.trim() ? (
-                            <div style={{ padding: '22px 16px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                              <Search size={24} style={{ opacity: 0.35, margin: '0 auto 6px', display: 'block' }} />
-                              <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)' }}>
+                            <div style={{ padding: '18px 14px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                              <Search size={22} style={{ opacity: 0.35, margin: '0 auto 6px', display: 'block' }} />
+                              <div style={{ fontWeight: 600, fontSize: 12.5, color: 'var(--text)' }}>
                                 Escribe el nombre del usuario
                               </div>
-                              <div style={{ fontSize: 11.5, marginTop: 4, color: 'var(--text-secondary)', marginBottom: 12 }}>
-                                Escribe el nombre, correo o teléfono para buscar en la base de datos.
+                              <div style={{ fontSize: 11, marginTop: 4, color: 'var(--text-secondary)', marginBottom: 10 }}>
+                                Escribe el nombre, correo o teléfono para buscar en tiempo real.
                               </div>
                               <button
                                 type="button"
                                 onClick={() => { setManualSubTab('nuevo'); setManualSubError(''); }}
                                 style={{
-                                  padding: '6px 14px',
+                                  padding: '5px 12px',
                                   background: 'rgba(37, 99, 235, 0.08)',
                                   border: '1px solid rgba(37, 99, 235, 0.25)',
                                   borderRadius: 7,
                                   color: 'var(--primary)',
-                                  fontSize: 12,
+                                  fontSize: 11.5,
                                   fontWeight: 600,
                                   cursor: 'pointer',
                                   display: 'inline-flex',
                                   alignItems: 'center',
-                                  gap: 6
+                                  gap: 5
                                 }}
                               >
                                 <UserPlus size={13} />
@@ -1831,315 +1854,336 @@ export default function Reports() {
                               </button>
                             </div>
                           ) : loadingUsers ? (
-                            <div style={{ padding: '24px 16px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: 12.5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                              <Loader2 className="spin" size={16} />
-                              <span>Buscando "{userSearchQuery}" en la base de datos...</span>
+                            <div style={{ padding: '20px 14px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                              <Loader2 className="spin" size={15} />
+                              <span>Buscando "{userSearchQuery}"...</span>
                             </div>
                           ) : filteredUsers.length === 0 ? (
-                            <div style={{ padding: '22px 16px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: 12.5 }}>
+                            <div style={{ padding: '20px 14px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: 12 }}>
                               <p style={{ margin: 0, fontWeight: 600, color: 'var(--text)' }}>No se encontraron usuarios registrados con "{userSearchQuery}".</p>
-                              <p style={{ margin: '6px 0 12px', fontSize: 11.5 }}>
+                              <p style={{ margin: '4px 0 10px', fontSize: 11 }}>
                                 ¿Es un cliente nuevo que aún no está registrado en el gimnasio?
                               </p>
                               <button
                                 type="button"
                                 className="btn btn--primary btn--sm"
-                                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, margin: '0 auto' }}
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, margin: '0 auto', fontSize: 11.5 }}
                                 onClick={() => {
                                   setManualSubTab('nuevo');
                                   setNewClientName(userSearchQuery.trim());
                                   setManualSubError('');
                                 }}
                               >
-                                <UserPlus size={14} />
+                                <UserPlus size={13} />
                                 <span>Registrar a "{userSearchQuery.trim()}" como Nuevo Cliente</span>
                               </button>
                             </div>
                           ) : (
-                          filteredUsers.map((u) => {
-                            const avatarUrl = getUserAvatarUrl(u);
-                            const initials = getUserInitials(u.name);
-                            const bgColor = getAvatarBgColor(u.name);
-                            const hasActive = Boolean(u.has_active_subscription);
+                            filteredUsers.map((u) => {
+                              const avatarUrl = getUserAvatarUrl(u);
+                              const initials = getUserInitials(u.name);
+                              const bgColor = getAvatarBgColor(u.name);
+                              const hasActive = Boolean(u.has_active_subscription);
 
-                            return (
-                              <div
-                                key={u.id}
-                                style={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'space-between',
-                                  gap: 10,
-                                  padding: '8px 12px',
-                                  borderBottom: '1px solid var(--border)',
-                                  background: hasActive ? 'rgba(239, 68, 68, 0.04)' : 'transparent',
-                                  opacity: hasActive ? 0.78 : 1,
-                                  transition: 'background 0.15s ease'
-                                }}
-                              >
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
-                                  <div className="avatar-circle" style={!avatarUrl ? { backgroundColor: bgColor, width: 32, height: 32, fontSize: 11 } : { width: 32, height: 32 }}>
-                                    {avatarUrl ? (
-                                      <img src={avatarUrl} alt={u.name} className="avatar-img" />
-                                    ) : (
-                                      <span>{initials}</span>
-                                    )}
+                              return (
+                                <div
+                                  key={u.id}
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    gap: 10,
+                                    padding: '8px 12px',
+                                    borderBottom: '1px solid var(--border)',
+                                    background: hasActive ? 'rgba(239, 68, 68, 0.04)' : 'transparent',
+                                    opacity: hasActive ? 0.78 : 1,
+                                    transition: 'background 0.15s ease'
+                                  }}
+                                >
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
+                                    <div className="avatar-circle" style={!avatarUrl ? { backgroundColor: bgColor, width: 30, height: 30, fontSize: 11 } : { width: 30, height: 30 }}>
+                                      {avatarUrl ? (
+                                        <img src={avatarUrl} alt={u.name} className="avatar-img" />
+                                      ) : (
+                                        <span>{initials}</span>
+                                      )}
+                                    </div>
+                                    <div style={{ minWidth: 0, flex: 1 }}>
+                                      <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                        {u.name}
+                                      </div>
+                                      <div style={{ fontSize: 11, color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                        {u.email} {u.phone ? `• 📞 ${u.phone}` : ''}
+                                      </div>
+                                      {hasActive ? (
+                                        <div style={{ marginTop: 2, fontSize: 10.5, color: '#dc2626', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                          <span>⛔ Membresía Activa: <strong>{u.active_subscription_plan || 'Plan Activo'}</strong></span>
+                                          {u.active_subscription_ends_at && <span>(Vence {formatEndDate(u.active_subscription_ends_at)})</span>}
+                                        </div>
+                                      ) : (
+                                        <div style={{ marginTop: 2, fontSize: 10.5, color: '#16a34a', fontWeight: 600 }}>
+                                          🟢 Sin membresía activa (Disponible)
+                                        </div>
+                                      )}
+                                    </div>
                                   </div>
-                                  <div style={{ minWidth: 0, flex: 1 }}>
-                                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                      {u.name}
-                                    </div>
-                                    <div style={{ fontSize: 11, color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                      {u.email} {u.phone ? `• 📞 ${u.phone}` : ''}
-                                    </div>
+
+                                  <div>
                                     {hasActive ? (
-                                      <div style={{ marginTop: 2, fontSize: 10.5, color: '#dc2626', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                                        <span>⛔ Membresía Activa: <strong>{u.active_subscription_plan || 'Plan Activo'}</strong></span>
-                                        {u.active_subscription_ends_at && <span>(Vence {formatEndDate(u.active_subscription_ends_at)})</span>}
-                                      </div>
+                                      <button
+                                        type="button"
+                                        disabled
+                                        title="Este usuario ya cuenta con una suscripción activa y no puede tener otra."
+                                        style={{
+                                          fontSize: 11,
+                                          padding: '4px 8px',
+                                          borderRadius: 6,
+                                          background: 'rgba(239, 68, 68, 0.1)',
+                                          color: '#dc2626',
+                                          border: '1px solid rgba(239, 68, 68, 0.25)',
+                                          cursor: 'not-allowed',
+                                          fontWeight: 600
+                                        }}
+                                      >
+                                        Ya suscrito
+                                      </button>
                                     ) : (
-                                      <div style={{ marginTop: 2, fontSize: 10.5, color: '#16a34a', fontWeight: 600 }}>
-                                        🟢 Sin membresía activa (Disponible)
-                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleSelectUser(u)}
+                                        className="btn btn--primary btn--sm"
+                                        style={{ fontSize: 11, padding: '4px 10px' }}
+                                      >
+                                        Seleccionar
+                                      </button>
                                     )}
                                   </div>
                                 </div>
+                              );
+                            })
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
 
-                                <div>
-                                  {hasActive ? (
-                                    <button
-                                      type="button"
-                                      disabled
-                                      title="Este usuario ya cuenta con una suscripción activa y no puede tener otra."
-                                      style={{
-                                        fontSize: 11,
-                                        padding: '4px 8px',
-                                        borderRadius: 6,
-                                        background: 'rgba(239, 68, 68, 0.1)',
-                                        color: '#dc2626',
-                                        border: '1px solid rgba(239, 68, 68, 0.25)',
-                                        cursor: 'not-allowed',
-                                        fontWeight: 600
-                                      }}
-                                    >
-                                      Ya suscrito
-                                    </button>
-                                  ) : (
-                                    <button
-                                      type="button"
-                                      onClick={() => handleSelectUser(u)}
-                                      className="btn btn--primary btn--sm"
-                                      style={{ fontSize: 11, padding: '4px 10px' }}
-                                    >
-                                      Seleccionar
-                                    </button>
-                                  )}
-                                </div>
-                              </div>
-                            );
-                          })
-                        )}
+                {/* SECCIÓN 2: NUEVO CLIENTE (SIN APP) */}
+                {manualSubTab === 'nuevo' && (
+                  <div style={{ marginBottom: 14 }}>
+                    <div style={{
+                      padding: '8px 12px',
+                      background: 'rgba(37, 99, 235, 0.06)',
+                      border: '1px solid rgba(37, 99, 235, 0.18)',
+                      borderRadius: 8,
+                      fontSize: 12,
+                      color: 'var(--text)',
+                      marginBottom: 12,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6
+                    }}>
+                      <span>💡 <strong>Cliente Nuevo:</strong> Se creará el perfil del cliente en el sistema y se le activará su membresía en el acto.</span>
+                    </div>
+
+                    <div className="form-group" style={{ marginBottom: 10 }}>
+                      <label style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: 4 }}>
+                        Nombre Completo del Cliente *
+                      </label>
+                      <input
+                        type="text"
+                        value={newClientName}
+                        onChange={(e) => setNewClientName(e.target.value)}
+                        placeholder="Ej. Emily Vinces"
+                        required
+                        style={{ fontSize: 13 }}
+                      />
+                    </div>
+
+                    <div className="form-grid-2" style={{ marginBottom: 0 }}>
+                      <div className="form-group" style={{ margin: 0 }}>
+                        <label style={{ fontSize: 11.5, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: 4 }}>
+                          Teléfono / WhatsApp (Opcional)
+                        </label>
+                        <input 
+                          type="text" 
+                          value={newClientPhone} 
+                          onChange={e => setNewClientPhone(e.target.value)} 
+                          placeholder="Ej. 0987654321" 
+                          style={{ fontSize: 13 }}
+                        />
+                      </div>
+                      <div className="form-group" style={{ margin: 0 }}>
+                        <label style={{ fontSize: 11.5, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: 4 }}>
+                          Correo Electrónico (Opcional)
+                        </label>
+                        <input 
+                          type="email" 
+                          value={newClientEmail} 
+                          onChange={e => setNewClientEmail(e.target.value)} 
+                          placeholder="Ej. cliente@gmail.com" 
+                          style={{ fontSize: 13 }}
+                        />
                       </div>
                     </div>
-                  )}
+                  </div>
+                )}
+
+                {/* SELECCIÓN DEL PLAN (COMÚN A AMBAS SECCIONES) */}
+                <div className="form-group" style={{ marginBottom: 12 }}>
+                  <label style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: 4 }}>
+                    Plan de Suscripción *
+                  </label>
+                  <select value={selectedPlanId} onChange={e => handlePlanChange(e.target.value)} required style={{ fontSize: 13 }}>
+                    <option value="">Selecciona un plan...</option>
+                    {plans.map(p => (
+                      <option key={p.id} value={p.id}>{p.name} - ${Number(p.price).toFixed(2)}</option>
+                    ))}
+                  </select>
                 </div>
-              )}
 
-              {/* SECCIÓN 2: NUEVO CLIENTE (SIN APP) */}
-              {manualSubTab === 'nuevo' && (
-                <div style={{ marginBottom: 16 }}>
-                  <div style={{
-                    padding: '8px 12px',
-                    background: 'var(--bg)',
-                    border: '1px solid var(--border)',
-                    borderRadius: 8,
-                    fontSize: 12,
-                    color: 'var(--text-secondary)',
-                    marginBottom: 14,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6
-                  }}>
-                    <span>💡 <strong>Cliente Nuevo:</strong> Se creará el perfil del cliente en el sistema y se le activará su membresía en el acto.</span>
+                {/* CONFIGURACIÓN DE FECHAS DE LA MEMBRESÍA */}
+                <div style={{
+                  background: 'var(--bg)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 10,
+                  padding: '12px 14px',
+                  marginBottom: 12
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                    <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <Calendar size={14} style={{ color: 'var(--primary)' }} />
+                      <span>Fechas de Vigencia</span>
+                    </span>
+                    {(() => {
+                      if (!manualSubStartDate || !manualSubEndDate) return null;
+                      const d1 = new Date(manualSubStartDate + 'T00:00:00');
+                      const d2 = new Date(manualSubEndDate + 'T00:00:00');
+                      const diffDays = Math.round((d2 - d1) / (1000 * 60 * 60 * 24));
+                      if (diffDays < 0) return <span style={{ fontSize: 11, color: '#dc2626', fontWeight: 600 }}>⚠️ Fecha inválida</span>;
+                      return (
+                        <span style={{ fontSize: 11, color: 'var(--primary)', fontWeight: 600, background: 'rgba(37,99,235,0.08)', border: '1px solid rgba(37,99,235,0.2)', padding: '2px 8px', borderRadius: 6 }}>
+                          {diffDays} días de cobertura
+                        </span>
+                      );
+                    })()}
                   </div>
 
-                  <div className="form-group" style={{ marginBottom: 12 }}>
-                    <label style={{ fontSize: 12.5, fontWeight: 600 }}>Nombre Completo del Cliente *</label>
-                    <input
-                      type="text"
-                      value={newClientName}
-                      onChange={(e) => setNewClientName(e.target.value)}
-                      placeholder="Ej. Liliana Anchundia"
-                      required
-                    />
-                  </div>
-
-                  <div className="form-grid-2" style={{ marginBottom: 0 }}>
+                  <div className="form-grid-2" style={{ marginBottom: 8 }}>
                     <div className="form-group" style={{ margin: 0 }}>
-                      <label style={{ fontSize: 12 }}>Teléfono / WhatsApp (Opcional)</label>
-                      <input 
-                        type="text" 
-                        value={newClientPhone} 
-                        onChange={e => setNewClientPhone(e.target.value)} 
-                        placeholder="Ej. 0987654321" 
+                      <label style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4, display: 'block' }}>
+                        Fecha de Inicio *
+                      </label>
+                      <input
+                        type="date"
+                        value={manualSubStartDate}
+                        onChange={(e) => handleManualSubStartDateChange(e.target.value)}
+                        required
+                        style={{ fontSize: 12.5, padding: '7px 10px', width: '100%', borderRadius: 7 }}
                       />
                     </div>
                     <div className="form-group" style={{ margin: 0 }}>
-                      <label style={{ fontSize: 12 }}>Correo Electrónico (Opcional)</label>
-                      <input 
-                        type="email" 
-                        value={newClientEmail} 
-                        onChange={e => setNewClientEmail(e.target.value)} 
-                        placeholder="Ej. cliente@gmail.com" 
+                      <label style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4, display: 'block' }}>
+                        Fecha de Vencimiento *
+                      </label>
+                      <input
+                        type="date"
+                        value={manualSubEndDate}
+                        min={manualSubStartDate || undefined}
+                        onChange={(e) => setManualSubEndDate(e.target.value)}
+                        required
+                        style={{ fontSize: 12.5, padding: '7px 10px', width: '100%', borderRadius: 7 }}
                       />
                     </div>
                   </div>
+
+                  {/* Accesos rápidos de duración */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 11, color: 'var(--text-secondary)', marginRight: 2 }}>Accesos rápidos:</span>
+                    {[
+                      { label: '15 días', days: 15 },
+                      { label: '1 mes (30d)', days: 30 },
+                      { label: '2 meses', days: 60 },
+                      { label: '3 meses', days: 90 },
+                      { label: '6 meses', days: 180 },
+                      { label: '1 año', days: 365 }
+                    ].map(preset => (
+                      <button
+                        key={preset.days}
+                        type="button"
+                        onClick={() => handleApplyDatePreset(preset.days)}
+                        style={{
+                          padding: '3px 8px',
+                          fontSize: 11,
+                          borderRadius: 6,
+                          border: '1px solid var(--border)',
+                          background: 'var(--card)',
+                          color: 'var(--text)',
+                          cursor: 'pointer',
+                          fontWeight: 500,
+                          transition: 'all 0.15s ease'
+                        }}
+                        title={`Ajustar a ${preset.label} a partir de la fecha de inicio`}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              )}
 
-              {/* SELECCIÓN DEL PLAN (COMÚN A AMBAS SECCIONES) */}
-              <div className="form-group" style={{ marginBottom: 14 }}>
-                <label style={{ fontSize: 12.5, fontWeight: 600 }}>Plan de Suscripción *</label>
-                <select value={selectedPlanId} onChange={e => handlePlanChange(e.target.value)} required style={{ fontSize: 13 }}>
-                  <option value="">Selecciona un plan...</option>
-                  {plans.map(p => (
-                    <option key={p.id} value={p.id}>{p.name} - ${Number(p.price).toFixed(2)}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* CONFIGURACIÓN DE FECHAS DE LA MEMBRESÍA */}
-              <div style={{
-                background: 'var(--bg)',
-                border: '1px solid var(--border)',
-                borderRadius: 10,
-                padding: '12px 14px',
-                marginBottom: 14
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                  <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <Calendar size={14} style={{ color: 'var(--primary)' }} />
-                    <span>Fechas de Vigencia</span>
+                {/* NOTA / OBSERVACIONES DE PAGO */}
+                <div className="form-group" style={{ marginBottom: 12 }}>
+                  <label style={{ fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 }}>
+                    <FileText size={13} style={{ color: 'var(--primary)' }} />
+                    <span>Notas / Observaciones de Pago (Opcional)</span>
+                  </label>
+                  <textarea
+                    value={manualSubNotes}
+                    onChange={e => setManualSubNotes(e.target.value)}
+                    placeholder="Ej. Abonó $10 de $20 en efectivo. Queda debiendo $10 hasta el 15."
+                    rows={2}
+                    style={{
+                      fontSize: 12.5,
+                      resize: 'vertical',
+                      minHeight: 48,
+                      padding: '8px 12px',
+                      borderRadius: 8,
+                      border: '1px solid var(--border)',
+                      background: 'var(--bg)',
+                      color: 'var(--text)',
+                      width: '100%',
+                      boxSizing: 'border-box',
+                      fontFamily: 'inherit'
+                    }}
+                  />
+                  <span style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2, display: 'block' }}>
+                    Útil para registrar pagos parciales, saldos pendientes o acuerdos con el cliente.
                   </span>
-                  {(() => {
-                    if (!manualSubStartDate || !manualSubEndDate) return null;
-                    const d1 = new Date(manualSubStartDate + 'T00:00:00');
-                    const d2 = new Date(manualSubEndDate + 'T00:00:00');
-                    const diffDays = Math.round((d2 - d1) / (1000 * 60 * 60 * 24));
-                    if (diffDays < 0) return <span style={{ fontSize: 11, color: '#dc2626', fontWeight: 600 }}>⚠️ Fecha inválida</span>;
-                    return (
-                      <span style={{ fontSize: 11, color: 'var(--primary)', fontWeight: 600, background: 'rgba(37,99,235,0.08)', border: '1px solid rgba(37,99,235,0.2)', padding: '2px 8px', borderRadius: 6 }}>
-                        {diffDays} días de cobertura
-                      </span>
-                    );
-                  })()}
                 </div>
 
-                <div className="form-grid-2" style={{ marginBottom: 10 }}>
-                  <div className="form-group" style={{ margin: 0 }}>
-                    <label style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4, display: 'block' }}>
-                      Fecha de Inicio *
-                    </label>
-                    <input
-                      type="date"
-                      value={manualSubStartDate}
-                      onChange={(e) => handleManualSubStartDateChange(e.target.value)}
-                      required
-                      style={{ fontSize: 12.5, padding: '7px 10px', width: '100%', borderRadius: 7 }}
-                    />
-                  </div>
-                  <div className="form-group" style={{ margin: 0 }}>
-                    <label style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4, display: 'block' }}>
-                      Fecha de Vencimiento *
-                    </label>
-                    <input
-                      type="date"
-                      value={manualSubEndDate}
-                      min={manualSubStartDate || undefined}
-                      onChange={(e) => setManualSubEndDate(e.target.value)}
-                      required
-                      style={{ fontSize: 12.5, padding: '7px 10px', width: '100%', borderRadius: 7 }}
-                    />
-                  </div>
-                </div>
-
-                {/* Accesos rápidos de duración */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 11, color: 'var(--text-secondary)', marginRight: 2 }}>Accesos rápidos:</span>
-                  {[
-                    { label: '15 días', days: 15 },
-                    { label: '1 mes (30d)', days: 30 },
-                    { label: '2 meses', days: 60 },
-                    { label: '3 meses', days: 90 },
-                    { label: '6 meses', days: 180 },
-                    { label: '1 año', days: 365 }
-                  ].map(preset => (
-                    <button
-                      key={preset.days}
-                      type="button"
-                      onClick={() => handleApplyDatePreset(preset.days)}
-                      style={{
-                        padding: '3px 8px',
-                        fontSize: 11,
-                        borderRadius: 6,
-                        border: '1px solid var(--border)',
-                        background: 'var(--card)',
-                        color: 'var(--text)',
-                        cursor: 'pointer',
-                        fontWeight: 500,
-                        transition: 'all 0.15s ease'
-                      }}
-                      title={`Ajustar a ${preset.label} a partir de la fecha de inicio`}
-                    >
-                      {preset.label}
-                    </button>
-                  ))}
+                <div style={{
+                  padding: '8px 12px',
+                  background: 'var(--bg)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 8,
+                  fontSize: 11.5,
+                  color: 'var(--text-secondary)',
+                  marginBottom: 6
+                }}>
+                  💡 <strong>Nota:</strong> Al registrar la membresía manualmente, se creará inmediatamente en estado <strong>Activo</strong> con vigencia del <strong>{manualSubStartDate || 'hoy'}</strong> al <strong>{manualSubEndDate || '—'}</strong>, simulando el cobro en efectivo o directo.
                 </div>
               </div>
 
-              {/* NOTA / OBSERVACIONES DE PAGO */}
-              <div className="form-group" style={{ marginBottom: 14 }}>
-                <label style={{ fontSize: 12.5, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <FileText size={14} style={{ color: 'var(--primary)' }} />
-                  <span>Notas / Observaciones de Pago (Opcional)</span>
-                </label>
-                <textarea
-                  value={manualSubNotes}
-                  onChange={e => setManualSubNotes(e.target.value)}
-                  placeholder="Ej. Abonó $10 de $20 en efectivo. Queda debiendo $10 hasta el 15."
-                  rows={2}
-                  style={{
-                    fontSize: 12.5,
-                    resize: 'vertical',
-                    minHeight: 52,
-                    padding: '8px 12px',
-                    borderRadius: 8,
-                    border: '1px solid var(--border)',
-                    background: 'var(--bg)',
-                    color: 'var(--text)',
-                    width: '100%',
-                    boxSizing: 'border-box',
-                    fontFamily: 'inherit'
-                  }}
-                />
-                <span style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2, display: 'block' }}>
-                  Útil para registrar pagos parciales, saldos pendientes o acuerdos con el cliente.
-                </span>
-              </div>
-
+              {/* Footer con Botones FIJO en la parte inferior (Siempre visible) */}
               <div style={{
-                padding: '8px 12px',
-                background: 'var(--bg)',
-                border: '1px solid var(--border)',
-                borderRadius: 8,
-                fontSize: 11.5,
-                color: 'var(--text-secondary)',
-                marginBottom: 16
+                padding: '12px 20px',
+                borderTop: '1px solid var(--border)',
+                background: 'var(--card)',
+                display: 'flex',
+                justifyContent: 'flex-end',
+                gap: 8,
+                flexShrink: 0
               }}>
-                💡 <strong>Nota:</strong> Al registrar la membresía manualmente, se creará inmediatamente en estado <strong>Activo</strong> con vigencia del <strong>{manualSubStartDate || 'hoy'}</strong> al <strong>{manualSubEndDate || '—'}</strong>, simulando el cobro en efectivo o directo.
-              </div>
-
-              <div className="modal-actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
                 <button
                   type="button"
                   className="btn btn--secondary"
@@ -2168,7 +2212,6 @@ export default function Reports() {
                 </button>
               </div>
             </form>
-            </div>
           </div>
         </div>
       )}

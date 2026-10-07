@@ -19,6 +19,8 @@ class SubscriptionController extends Controller
      */
     public function my(Request $request)
     {
+        Subscription::updateExpiredStatus();
+
         $subscription = Subscription::with(['plan', 'approvedBy'])
             ->where('user_id', $request->user()->id)
             ->orderByDesc('created_at')
@@ -52,6 +54,9 @@ class SubscriptionController extends Controller
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
+
+        // Actualizar suscripciones expiradas antes de verificar
+        Subscription::updateExpiredStatus();
 
         // Verificar si el usuario ya tiene una suscripción activa o pendiente
         $existing = Subscription::where('user_id', $request->user()->id)

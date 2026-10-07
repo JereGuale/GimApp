@@ -18,6 +18,7 @@ import {
   Search,
   Users,
   Clock,
+  CalendarClock,
   ZoomIn,
   ZoomOut,
   RotateCw,
@@ -83,20 +84,50 @@ export default function Subscriptions() {
     copied: false
   });
 
+  const isSubscriptionExpired = (sub) => {
+    if (!sub) return false;
+    if (sub.status === 'expired') return true;
+    if (sub.status === 'active' && sub.ends_at) {
+      const endsAt = new Date(sub.ends_at);
+      const today = new Date();
+      endsAt.setHours(23, 59, 59, 999);
+      return endsAt < today;
+    }
+    return false;
+  };
+
+  const isSubscriptionExpiringSoon = (sub) => {
+    if (!sub || isSubscriptionExpired(sub)) return false;
+    if (sub.status !== 'active' || !sub.ends_at) return false;
+    const endsAt = new Date(sub.ends_at);
+    const today = new Date();
+    endsAt.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+    const diffDays = Math.ceil((endsAt - today) / (1000 * 60 * 60 * 24));
+    return diffDays >= 0 && diffDays <= 7;
+  };
+
+  const getDaysRemainingNumber = (endsAtStr) => {
+    if (!endsAtStr) return null;
+    const endsAt = new Date(endsAtStr);
+    const today = new Date();
+    endsAt.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+    return Math.ceil((endsAt - today) / (1000 * 60 * 60 * 24));
+  };
+
   const getSubscriptionExpirationState = (sub) => {
     if (!sub) return { eligible: false, isExpired: false, diffDays: null, label: 'Recordatorio WhatsApp' };
-    if (sub.status === 'expired') return { eligible: true, isExpired: true, diffDays: -1, label: 'Recordatorio (Vencida)' };
+    if (isSubscriptionExpired(sub)) {
+      const diffDays = getDaysRemainingNumber(sub.ends_at);
+      return { eligible: true, isExpired: true, diffDays: diffDays !== null ? diffDays : -1, label: 'Recordatorio (Vencida)' };
+    }
     if (sub.status === 'cancelled' || sub.status === 'rejected' || sub.status === 'pending') {
       return { eligible: false, isExpired: false, diffDays: null, label: 'Recordatorio WhatsApp' };
     }
 
     if (sub.ends_at) {
-      const endsAt = new Date(sub.ends_at);
-      const today = new Date();
-      endsAt.setHours(0, 0, 0, 0);
-      today.setHours(0, 0, 0, 0);
-      const diffDays = Math.ceil((endsAt - today) / (1000 * 60 * 60 * 24));
-
+      const diffDays = getDaysRemainingNumber(sub.ends_at);
       if (diffDays < 0) {
         return { eligible: true, isExpired: true, diffDays, label: 'Recordatorio (Vencida)' };
       }
@@ -366,16 +397,12 @@ export default function Subscriptions() {
 
   const getRemainingDaysText = (endsAtStr) => {
     if (!endsAtStr) return '';
-    const endsAt = new Date(endsAtStr);
-    const today = new Date();
-    endsAt.setHours(0, 0, 0, 0);
-    today.setHours(0, 0, 0, 0);
-    const diffTime = endsAt - today;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const diffDays = getDaysRemainingNumber(endsAtStr);
+    if (diffDays === null) return '';
 
-    if (diffDays < 0) return 'Expirado';
-    if (diffDays === 0) return 'Vence hoy';
-    if (diffDays === 1) return 'Queda 1 día';
+    if (diffDays < 0) return Math.abs(diffDays) === 1 ? 'Expiró ayer' : `Expiró hace ${Math.abs(diffDays)} días`;
+    if (diffDays === 0) return '¡Vence hoy!';
+    if (diffDays === 1) return '¡Queda 1 día!';
     return `${diffDays} días restantes`;
   };
 
@@ -438,20 +465,29 @@ export default function Subscriptions() {
   };
 
   const renderStatusCell = (s) => {
+    const isExpired = isSubscriptionExpired(s);
+    const isExpiring = isSubscriptionExpiringSoon(s);
+    const effectiveStatus = isExpired ? 'expired' : s.status;
+
     let IconComponent = Clock;
-    if (s.status === 'active') {
+    if (effectiveStatus === 'active') {
       IconComponent = CheckCircle2;
-    } else if (s.status === 'cancelled' || s.status === 'expired') {
+    } else if (effectiveStatus === 'cancelled' || effectiveStatus === 'expired') {
       IconComponent = XCircle;
     }
 
     return (
       <div className="status-pill-container">
-        <span className={`status-pill status-pill--${STATUS_BADGE[s.status] || 'expired'}`}>
+        <span className={`status-pill status-pill--${STATUS_BADGE[effectiveStatus] || 'expired'}`}>
           <IconComponent size={14} className="status-pill-icon" />
-          <span>{STATUS_LABELS[s.status] || s.status}</span>
+          <span>{STATUS_LABELS[effectiveStatus] || effectiveStatus}</span>
         </span>
-        {s.status === 'rejected' && s.rejection_reason && (
+        {isExpiring && effectiveStatus === 'active' && (
+          <span className="status-sub-tag status-sub-tag--expiring" title="Vence dentro de los próximos 7 días">
+            ⚠️ Por vencer
+          </span>
+        )}
+        {effectiveStatus === 'rejected' && s.rejection_reason && (
           <div className="status-rejection-info">
             <AlertCircle size={12} className="status-rejection-info-icon" />
             <span className="rejection-text-truncated">Motivo: {s.rejection_reason}</span>
@@ -500,11 +536,38 @@ export default function Subscriptions() {
     };
   }, [activeDropdown]);
 
+  const pendingCount = subs.filter(s => s.status === 'pending').length;
+  const expiredCount = subs.filter(s => isSubscriptionExpired(s)).length;
+  const expiringCount = subs.filter(s => isSubscriptionExpiringSoon(s)).length;
+  const activeCount = subs.filter(s => s.status === 'active' && !isSubscriptionExpired(s)).length;
+  const cancelledCount = subs.filter(s => s.status === 'cancelled').length;
+
   const filtered = subs.filter(s => {
-    const matchFilter = filter === 'all' || s.status === filter;
-    const matchSearch = !search ||
-      s.user?.name?.toLowerCase().includes(search.toLowerCase()) ||
-      s.user?.email?.toLowerCase().includes(search.toLowerCase());
+    let matchFilter = true;
+    if (filter === 'pending') {
+      matchFilter = s.status === 'pending';
+    } else if (filter === 'active') {
+      matchFilter = s.status === 'active' && !isSubscriptionExpired(s);
+    } else if (filter === 'expiring') {
+      matchFilter = isSubscriptionExpiringSoon(s);
+    } else if (filter === 'expired') {
+      matchFilter = isSubscriptionExpired(s);
+    } else if (filter === 'cancelled') {
+      matchFilter = s.status === 'cancelled';
+    } else if (filter === 'rejected') {
+      matchFilter = s.status === 'rejected';
+    }
+
+    const query = search.trim().toLowerCase();
+    const matchSearch = !query ||
+      s.user?.name?.toLowerCase().includes(query) ||
+      s.billing_name?.toLowerCase().includes(query) ||
+      s.user?.email?.toLowerCase().includes(query) ||
+      s.billing_email?.toLowerCase().includes(query) ||
+      (s.billing_phone && s.billing_phone.includes(query)) ||
+      (s.user?.phone && s.user.phone.includes(query)) ||
+      (s.resolved_phone && s.resolved_phone.includes(query));
+
     return matchFilter && matchSearch;
   });
 
@@ -634,32 +697,42 @@ export default function Subscriptions() {
         </div>
 
         <div className="sub-stat-card">
-          <div className="sub-stat-icon-wrapper pending">
-            <Clock size={20} />
-          </div>
-          <div className="sub-stat-content">
-            <span className="sub-stat-label">Pendientes de Pago</span>
-            <span className="sub-stat-value">{subs.filter(s => s.status === 'pending').length}</span>
-          </div>
-        </div>
-
-        <div className="sub-stat-card">
           <div className="sub-stat-icon-wrapper success">
             <CheckCircle2 size={20} />
           </div>
           <div className="sub-stat-content">
             <span className="sub-stat-label">Suscripciones Activas</span>
-            <span className="sub-stat-value">{subs.filter(s => s.status === 'active').length}</span>
+            <span className="sub-stat-value">{activeCount}</span>
+          </div>
+        </div>
+
+        <div className="sub-stat-card">
+          <div className="sub-stat-icon-wrapper warning">
+            <CalendarClock size={20} />
+          </div>
+          <div className="sub-stat-content">
+            <span className="sub-stat-label">Próximas a Vencer (7d)</span>
+            <span className="sub-stat-value">{expiringCount}</span>
           </div>
         </div>
 
         <div className="sub-stat-card">
           <div className="sub-stat-icon-wrapper danger">
-            <X size={20} />
+            <XCircle size={20} />
           </div>
           <div className="sub-stat-content">
-            <span className="sub-stat-label">Expiradas / Canceladas</span>
-            <span className="sub-stat-value">{subs.filter(s => s.status === 'expired' || s.status === 'cancelled').length}</span>
+            <span className="sub-stat-label">Suscripciones Expiradas</span>
+            <span className="sub-stat-value">{expiredCount}</span>
+          </div>
+        </div>
+
+        <div className="sub-stat-card">
+          <div className="sub-stat-icon-wrapper pending">
+            <Clock size={20} />
+          </div>
+          <div className="sub-stat-content">
+            <span className="sub-stat-label">Pendientes de Pago</span>
+            <span className="sub-stat-value">{pendingCount}</span>
           </div>
         </div>
       </div>
@@ -691,7 +764,7 @@ export default function Subscriptions() {
             onClick={() => setFilter('pending')}
           >
             <span>Pendientes</span>
-            <span className="tab-count pending">{subs.filter(s => s.status === 'pending').length}</span>
+            <span className="tab-count pending">{pendingCount}</span>
           </button>
           <button
             type="button"
@@ -699,15 +772,15 @@ export default function Subscriptions() {
             onClick={() => setFilter('active')}
           >
             <span>Activas</span>
-            <span className="tab-count active">{subs.filter(s => s.status === 'active').length}</span>
+            <span className="tab-count active">{activeCount}</span>
           </button>
           <button
             type="button"
-            className={`filter-tab ${filter === 'cancelled' ? 'active' : ''}`}
-            onClick={() => setFilter('cancelled')}
+            className={`filter-tab ${filter === 'expiring' ? 'active' : ''}`}
+            onClick={() => setFilter('expiring')}
           >
-            <span>Canceladas</span>
-            <span className="tab-count cancelled">{subs.filter(s => s.status === 'cancelled').length}</span>
+            <span>Por Vencer</span>
+            <span className="tab-count expiring">{expiringCount}</span>
           </button>
           <button
             type="button"
@@ -715,7 +788,15 @@ export default function Subscriptions() {
             onClick={() => setFilter('expired')}
           >
             <span>Expiradas</span>
-            <span className="tab-count expired">{subs.filter(s => s.status === 'expired').length}</span>
+            <span className="tab-count expired">{expiredCount}</span>
+          </button>
+          <button
+            type="button"
+            className={`filter-tab ${filter === 'cancelled' ? 'active' : ''}`}
+            onClick={() => setFilter('cancelled')}
+          >
+            <span>Canceladas</span>
+            <span className="tab-count cancelled">{cancelledCount}</span>
           </button>
         </div>
       </div>
@@ -794,11 +875,33 @@ export default function Subscriptions() {
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                               <span style={{ color: 'var(--text-secondary)', fontSize: '11px' }}>Inicio: {new Date(s.starts_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}</span>
                               <span style={{ fontWeight: 600 }}>Vence: {new Date(s.ends_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-                              {s.status === 'active' && (
-                                <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--primary)', marginTop: 2 }}>
-                                  {getRemainingDaysText(s.ends_at)}
-                                </span>
-                              )}
+                              {(() => {
+                                const isExp = isSubscriptionExpired(s);
+                                const isSoon = isSubscriptionExpiringSoon(s);
+                                const days = getDaysRemainingNumber(s.ends_at);
+                                if (isExp) {
+                                  return (
+                                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#dc2626', marginTop: 2, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                      <XCircle size={12} /> {days !== null && days < 0 ? (Math.abs(days) === 1 ? 'Expiró ayer' : `Expiró hace ${Math.abs(days)} días`) : 'Expirada'}
+                                    </span>
+                                  );
+                                }
+                                if (isSoon) {
+                                  return (
+                                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#d97706', marginTop: 2, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                      <Clock size={12} /> {days === 0 ? '¡Vence hoy!' : (days === 1 ? '¡Queda 1 día!' : `Quedan ${days} días`)}
+                                    </span>
+                                  );
+                                }
+                                if (s.status === 'active') {
+                                  return (
+                                    <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--primary)', marginTop: 2 }}>
+                                      {days !== null ? `${days} días restantes` : ''}
+                                    </span>
+                                  );
+                                }
+                                return null;
+                              })()}
                             </div>
                           ) : (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -1114,11 +1217,33 @@ export default function Subscriptions() {
                           <>
                             <span style={{ opacity: 0.8 }}>Inicio: {new Date(s.starts_at).toLocaleDateString('es-MX')}</span>
                             <span>Vence: {new Date(s.ends_at).toLocaleDateString('es-MX')}</span>
-                            {s.status === 'active' && (
-                              <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--primary)', marginTop: '3px' }}>
-                                {getRemainingDaysText(s.ends_at)}
-                              </span>
-                            )}
+                            {(() => {
+                              const isExp = isSubscriptionExpired(s);
+                              const isSoon = isSubscriptionExpiringSoon(s);
+                              const days = getDaysRemainingNumber(s.ends_at);
+                              if (isExp) {
+                                return (
+                                  <span style={{ fontSize: '11px', fontWeight: 700, color: '#dc2626', marginTop: '3px', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                    <XCircle size={12} /> {days !== null && days < 0 ? (Math.abs(days) === 1 ? 'Expiró ayer' : `Expiró hace ${Math.abs(days)} días`) : 'Expirada'}
+                                  </span>
+                                );
+                              }
+                              if (isSoon) {
+                                return (
+                                  <span style={{ fontSize: '11px', fontWeight: 700, color: '#d97706', marginTop: '3px', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                    <Clock size={12} /> {days === 0 ? '¡Vence hoy!' : (days === 1 ? '¡Queda 1 día!' : `Quedan ${days} días`)}
+                                  </span>
+                                );
+                              }
+                              if (s.status === 'active') {
+                                return (
+                                  <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--primary)', marginTop: '3px' }}>
+                                    {days !== null ? `${days} días restantes` : ''}
+                                  </span>
+                                );
+                              }
+                              return null;
+                            })()}
                           </>
                         ) : (
                           <>

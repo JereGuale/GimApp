@@ -104,9 +104,33 @@ class Subscription extends Model
         return $query->where('status', 'active');
     }
 
+    public function scopeExpired($query)
+    {
+        return $query->where('status', 'expired');
+    }
+
+    public function scopeExpiringSoon($query, int $days = 7)
+    {
+        return $query->where('status', 'active')
+            ->whereNotNull('ends_at')
+            ->where('ends_at', '>=', now())
+            ->where('ends_at', '<=', now()->addDays($days));
+    }
+
     public function scopeRejected($query)
     {
         return $query->where('status', 'rejected');
+    }
+
+    /**
+     * Update active subscriptions whose ends_at is in the past to expired status
+     */
+    public static function updateExpiredStatus(): int
+    {
+        return static::where('status', 'active')
+            ->whereNotNull('ends_at')
+            ->where('ends_at', '<', now())
+            ->update(['status' => 'expired']);
     }
 
     // Helper methods

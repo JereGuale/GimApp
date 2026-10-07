@@ -42,9 +42,25 @@ Route::get('/subscription/plans', [CatalogController::class , 'subscriptionPlans
 Route::get('/banners/active', [BannerController::class , 'getActiveBanners']);
 Route::get('/offers/active', [OfferController::class , 'active']);
 
-// Endpoint público temporal para diagnóstico
+// Endpoint público de salud / keepalive (ejecuta consulta real y actualiza expiraciones)
 Route::get('/ping', function () {
-    return response()->json(['pong' => true, 'ts' => now()]);
+    try {
+        \Illuminate\Support\Facades\DB::select('SELECT 1');
+        $updated = \App\Models\Subscription::updateExpiredStatus();
+        return response()->json([
+            'status' => 'ok',
+            'database' => 'connected',
+            'expired_updated' => $updated,
+            'timestamp' => now()->toIso8601String()
+        ]);
+    } catch (\Throwable $e) {
+        return response()->json([
+            'status' => 'error',
+            'database' => 'failed',
+            'message' => $e->getMessage(),
+            'timestamp' => now()->toIso8601String()
+        ], 500);
+    }
 });
 
 Route::get('/settings/public', [SettingController::class, 'indexPublic']);
