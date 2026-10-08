@@ -15,6 +15,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { authRegister } from '../../services/api';
+import { performGoogleSignIn } from '../../services/googleAuth';
 
 export default function RegisterScreen({ navigation }) {
   const [accepted, setAccepted] = useState(false);
@@ -25,6 +26,7 @@ export default function RegisterScreen({ navigation }) {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState('error');
@@ -42,6 +44,28 @@ export default function RegisterScreen({ navigation }) {
     setTimeout(() => {
       setToastVisible(false);
     }, 3500);
+  };
+
+  const handleGoogleSignIn = async () => {
+    try {
+      setGoogleLoading(true);
+      const res = await performGoogleSignIn();
+      if (!res) return;
+      if (res.user && res.token) {
+        showToast(`¡Bienvenido, ${res.user.name || 'Cliente'}!`, 'success');
+        setTimeout(async () => {
+          await login(res.user, res.token, true);
+        }, 800);
+      }
+    } catch (error) {
+      if (error.message === 'GOOGLE_CONFIG_MISSING') {
+        showToast('Falta configurar el Google Client ID en el proyecto', 'error');
+      } else {
+        showToast(error.message || 'Error al autenticar con Google', 'error');
+      }
+    } finally {
+      setGoogleLoading(false);
+    }
   };
 
   const handleRegister = async () => {
@@ -243,11 +267,44 @@ export default function RegisterScreen({ navigation }) {
               <Text style={styles.checkText}>Acepto términos y condiciones</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={[styles.btn, loading && styles.btnDisabled]} onPress={handleRegister} disabled={loading}>
+            <TouchableOpacity style={[styles.btn, (loading || googleLoading) && styles.btnDisabled]} onPress={handleRegister} disabled={loading || googleLoading}>
               {loading
                 ? <ActivityIndicator color="#FFFFFF" />
                 : <Text style={styles.btnText}>REGISTRARSE</Text>
               }
+            </TouchableOpacity>
+
+            {/* Divider */}
+            <View style={styles.dividerRow}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>o bien</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            {/* Google Sign In Button */}
+            <TouchableOpacity
+              style={[styles.btnGoogle, (googleLoading || loading) && { opacity: 0.7 }]}
+              onPress={handleGoogleSignIn}
+              disabled={googleLoading || loading}
+              activeOpacity={0.85}
+            >
+              {googleLoading ? (
+                <ActivityIndicator color="#1F2937" size="small" />
+              ) : (
+                <>
+                  <Ionicons name="logo-google" size={19} color="#EA4335" style={{ marginRight: 10 }} />
+                  <Text style={styles.btnGoogleText}>Registrarse con Google</Text>
+                </>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.loginLinkRow}
+              onPress={() => navigation.navigate('Login')}
+            >
+              <Text style={styles.loginLinkText}>
+                ¿Ya tienes cuenta? <Text style={styles.loginLinkHighlight}>Inicia sesión</Text>
+              </Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -355,5 +412,56 @@ const styles = StyleSheet.create({
   btnDisabled: {
     backgroundColor: 'rgba(46, 139, 255, 0.6)',
   },
-  btnText: { color: '#FFFFFF', fontWeight: '700', letterSpacing: 0.5 }
+  btnText: { color: '#FFFFFF', fontWeight: '700', letterSpacing: 0.5 },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+    marginVertical: 14,
+    gap: 10,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+  },
+  dividerText: {
+    color: '#9CA3AF',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  btnGoogle: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 13,
+    borderRadius: 999,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  btnGoogleText: {
+    color: '#1F2937',
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
+  loginLinkRow: {
+    alignItems: 'center',
+    marginTop: 4,
+    paddingVertical: 6,
+  },
+  loginLinkText: {
+    color: '#9CA3AF',
+    fontSize: 13,
+  },
+  loginLinkHighlight: {
+    color: '#2E8BFF',
+    fontWeight: '700',
+  },
 });

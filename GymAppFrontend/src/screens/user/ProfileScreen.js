@@ -34,8 +34,10 @@ export default function ProfileScreen() {
   const [authModalVisible, setAuthModalVisible] = useState(false);
 
   const [editName, setEditName] = useState(user?.name || '');
+  const [editUsername, setEditUsername] = useState(user?.username || '');
   const [editEmail, setEditEmail] = useState(user?.email || '');
   const [editPhone, setEditPhone] = useState(user?.phone || '');
+  const [editingField, setEditingField] = useState(null);
   const [billingName, setBillingName] = useState(user?.billing_name || user?.name || '');
   const [billingEmail, setBillingEmail] = useState(user?.billing_email || user?.email || '');
   const [billingPhone, setBillingPhone] = useState(user?.billing_phone || user?.phone || '');
@@ -89,8 +91,10 @@ export default function ProfileScreen() {
   React.useEffect(() => {
     if (route.params?.editProfile) {
       setEditName(user?.name || '');
+      setEditUsername(user?.username || '');
       setEditEmail(user?.email || '');
       setEditPhone(user?.phone || '');
+      setEditingField(null);
       setEditModalVisible(true);
       navigation.setParams({ editProfile: undefined });
     }
@@ -179,27 +183,71 @@ export default function ProfileScreen() {
   };
 
   const handleSaveProfile = async () => {
-    setSaving(true);
-    const result = await ProfileAPI.updateProfile({
-      name: editName,
-      email: editEmail,
-      phone: editPhone
-    });
-    if (result.success) {
-      Alert.alert('¡Éxito!', 'Perfil actualizado');
-      if (updateUser) {
-        updateUser({
-          ...user,
-          name: editName,
-          email: editEmail,
-          phone: editPhone
+    const nameChanged = editName !== user?.name;
+    const usernameChanged = editUsername !== user?.username;
+
+    const performSave = async () => {
+      setSaving(true);
+      const result = await ProfileAPI.updateProfile({
+        name: editName,
+        username: editUsername,
+        phone: editPhone
+      });
+      setSaving(false);
+
+      if (result.success) {
+        if (updateUser) {
+          updateUser({
+            ...user,
+            name: editName,
+            username: editUsername,
+            phone: editPhone
+          });
+        }
+        setEditModalVisible(false);
+        setEditingField(null);
+        setConfirmModalState({
+          visible: true,
+          title: '¡Perfil actualizado!',
+          message: 'Tus cambios han sido guardados correctamente.',
+          showCancel: false,
+          confirmText: 'Aceptar',
+          isDestructive: false,
+          type: 'success',
+          onConfirm: () => setConfirmModalState(prev => ({ ...prev, visible: false }))
+        });
+      } else {
+        setConfirmModalState({
+          visible: true,
+          title: 'No se pudo actualizar',
+          message: result.error || 'Ocurrió un error al actualizar los datos.',
+          showCancel: false,
+          confirmText: 'Entendido',
+          isDestructive: false,
+          type: 'warning',
+          onConfirm: () => setConfirmModalState(prev => ({ ...prev, visible: false }))
         });
       }
-      setEditModalVisible(false);
+    };
+
+    if (nameChanged || usernameChanged) {
+      setConfirmModalState({
+        visible: true,
+        title: 'Confirmar cambios',
+        message: 'Estás a punto de cambiar tu nombre o nombre de usuario. Una vez guardado, no podrás volver a modificarlo durante los próximos 60 días.\n\n¿Deseas guardar los cambios ahora?',
+        showCancel: true,
+        cancelText: 'Cancelar',
+        confirmText: 'Sí, guardar',
+        isDestructive: false,
+        type: 'question',
+        onConfirm: async () => {
+          setConfirmModalState(prev => ({ ...prev, visible: false }));
+          await performSave();
+        }
+      });
     } else {
-      Alert.alert('Error', result.error || 'No se pudo actualizar');
+      await performSave();
     }
-    setSaving(false);
   };
 
   const handleSaveBilling = async () => {
@@ -212,8 +260,9 @@ export default function ProfileScreen() {
       billing_city: billingCity,
       billing_address: billingAddress
     });
+    setSaving(false);
+
     if (result.success) {
-      Alert.alert('¡Éxito!', 'Datos de facturación actualizados');
       if (updateUser) {
         updateUser({
           ...user,
@@ -226,10 +275,28 @@ export default function ProfileScreen() {
         });
       }
       setBillingEditVisible(false);
+      setConfirmModalState({
+        visible: true,
+        title: '¡Guardado!',
+        message: 'Datos de facturación actualizados correctamente.',
+        showCancel: false,
+        confirmText: 'Aceptar',
+        isDestructive: false,
+        type: 'success',
+        onConfirm: () => setConfirmModalState(prev => ({ ...prev, visible: false }))
+      });
     } else {
-      Alert.alert('Error', result.error || 'No se pudo actualizar');
+      setConfirmModalState({
+        visible: true,
+        title: 'Error',
+        message: result.error || 'No se pudieron actualizar los datos de facturación',
+        showCancel: false,
+        confirmText: 'Entendido',
+        isDestructive: false,
+        type: 'warning',
+        onConfirm: () => setConfirmModalState(prev => ({ ...prev, visible: false }))
+      });
     }
-    setSaving(false);
   };
 
   const profilePhotoUri = (() => {
@@ -263,8 +330,10 @@ export default function ProfileScreen() {
         <DrawerItem icon="person-outline" label="Editar Perfil" onPress={() => {
           closeDrawer();
           setEditName(user?.name || '');
+          setEditUsername(user?.username || '');
           setEditEmail(user?.email || '');
           setEditPhone(user?.phone || '');
+          setEditingField(null);
           setEditModalVisible(true);
         }} />
         <DrawerItem icon="card-outline" label="Mi Suscripción" onPress={() => { closeDrawer(); navigation.navigate('Suscripción'); }} />
@@ -307,7 +376,7 @@ export default function ProfileScreen() {
           </View>
           <Text style={[styles.guestTitle, { color: theme.colors.text }]}>Mi Cuenta</Text>
           <Text style={[styles.guestSubtitle, { color: theme.colors.textSecondary }]}>
-            Inicia sesión o regístrate para gestionar tu perfil, ver tu membresía activa y acceder a tu historial de visitas al gimnasio.
+            Inicia sesión o regístrate para gestionar tu perfil, ver tu membresía activa y acceder a más funciones del gimnasio.
           </Text>
           <TouchableOpacity
             style={[styles.guestBtn, { backgroundColor: theme.colors.primary }]}
@@ -458,8 +527,10 @@ export default function ProfileScreen() {
             style={styles.headerAvatarWrapper}
             onPress={() => {
               setEditName(user?.name || '');
+              setEditUsername(user?.username || '');
               setEditEmail(user?.email || '');
               setEditPhone(user?.phone || '');
+              setEditingField(null);
               setEditModalVisible(true);
             }}
             activeOpacity={0.8}
@@ -478,55 +549,12 @@ export default function ProfileScreen() {
 
           <View style={styles.heroTextContainer}>
             <Text style={[styles.heroGreeting, { color: textMain }]}>
-              Hola, {user?.name ? user.name.split(' ')[0] : 'Usuario'} 👋
+              {user?.name || 'Usuario'}
             </Text>
-            <Text style={[styles.heroLevel, { color: textMuted }]}>Nivel 1 • Principiante</Text>
-
-            {/* XP progress bar inside header */}
-            <View style={styles.headerXpContainer}>
-              <View style={[styles.headerXpBarBg, { backgroundColor: theme.isDark ? '#1F2937' : '#F3F4F6' }]}>
-                <View style={[styles.headerXpBarFill, { width: '32%', backgroundColor: '#5B3DF5' }]} />
-              </View>
-              <Text style={[styles.headerXpValue, { color: textMuted }]}>320 / 1000 XP</Text>
-            </View>
           </View>
         </View>
 
-        {/* Stats Section - 3 columns on Desktop/Tablet, stacked on mobile */}
-        <View style={isStacked ? styles.statsSectionStacked : styles.statsSectionRow}>
-          <View style={[styles.statCard, { backgroundColor: cardBg, borderColor: cardBorder }]}>
-            <View style={[styles.statIconWrapper, { backgroundColor: 'rgba(249, 115, 22, 0.08)' }]}>
-              <Ionicons name="flame" size={24} color="#F97316" />
-            </View>
-            <View style={styles.statContent}>
-              <Text style={[styles.statValue, { color: textMain }]}>0 Días</Text>
-              <Text style={[styles.statLabel, { color: textMuted }]}>Racha Actual</Text>
-              <Text style={[styles.statDesc, { color: textMuted }]}>Sigue entrenando para iniciar tu racha</Text>
-            </View>
-          </View>
 
-          <View style={[styles.statCard, { backgroundColor: cardBg, borderColor: cardBorder }]}>
-            <View style={[styles.statIconWrapper, { backgroundColor: 'rgba(0, 194, 255, 0.08)' }]}>
-              <Ionicons name="fitness" size={24} color="#00C2FF" />
-            </View>
-            <View style={styles.statContent}>
-              <Text style={[styles.statValue, { color: textMain }]}>0 Sesiones</Text>
-              <Text style={[styles.statLabel, { color: textMuted }]}>Entrenamientos</Text>
-              <Text style={[styles.statDesc, { color: textMuted }]}>Registros acumulados este mes</Text>
-            </View>
-          </View>
-
-          <View style={[styles.statCard, { backgroundColor: cardBg, borderColor: cardBorder }]}>
-            <View style={[styles.statIconWrapper, { backgroundColor: 'rgba(91, 61, 245, 0.08)' }]}>
-              <Ionicons name="trophy" size={24} color="#5B3DF5" />
-            </View>
-            <View style={styles.statContent}>
-              <Text style={[styles.statValue, { color: textMain }]}>Nivel 1</Text>
-              <Text style={[styles.statLabel, { color: textMuted }]}>Nivel de Cuenta</Text>
-              <Text style={[styles.statDesc, { color: textMuted }]}>Categoría inicial del usuario</Text>
-            </View>
-          </View>
-        </View>
 
         {/* Membership Platinum Section */}
         <Text style={[styles.sectionTitle, { color: textMain }]}>Membresía Activa</Text>
@@ -700,82 +728,9 @@ export default function ProfileScreen() {
           </View>
         )}
 
-        {/* Benefits list & Purchases Section: Two Columns on Desktop/Tablet, Stacked on Mobile */}
-        <View style={isStacked ? styles.bottomSectionStacked : styles.bottomSectionRow}>
-          {/* Column Left: Benefits */}
-          <View style={isStacked ? styles.bottomColMobile : styles.bottomColLeft}>
-            <Text style={[styles.sectionTitle, { color: textMain }]}>Beneficios Incluidos</Text>
-            <View style={[styles.benefitsContainer, { borderColor: cardBorder, backgroundColor: cardBg }]}>
-              {/* Header with plan name & renewal badge */}
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, borderBottomWidth: 1, borderBottomColor: cardBorder, paddingBottom: 12 }}>
-                <View style={{ flex: 1, marginRight: 8 }}>
-                  <Text style={[styles.benefitsHeaderTitle, { color: textMuted, marginBottom: 2 }]}>
-                    {subscription.data?.plan ? `Plan: ${subscription.data.plan.name}` : 'Beneficios del Club'}
-                  </Text>
-                  <Text style={{ fontSize: 13, fontWeight: '700', color: subscription.data?.status === 'active' ? '#22C55E' : subscription.data?.status === 'pending' ? '#EAB308' : textMuted }}>
-                    {subscription.data?.status === 'active'
-                      ? `${getDaysRemaining()} días restantes`
-                      : subscription.data?.status === 'pending'
-                        ? 'Validación pendiente'
-                        : 'Sin plan activo'}
-                  </Text>
-                </View>
-
-                {subscription.data?.status === 'active' && subscription.data.ends_at && (
-                  <View style={{ alignItems: 'flex-end', backgroundColor: theme.isDark ? 'rgba(34, 197, 94, 0.1)' : 'rgba(34, 197, 94, 0.08)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>
-                    <Text style={{ fontSize: 10, color: textMuted, fontWeight: '600' }}>Vence el</Text>
-                    <Text style={{ fontSize: 12, color: subscription.data?.status === 'active' ? '#22C55E' : textMain, fontWeight: '700' }}>
-                      {new Date(subscription.data.ends_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}
-                    </Text>
-                  </View>
-                )}
-              </View>
-
-              {/* Dynamic Benefits List */}
-              <View style={styles.benefitsGrid}>
-                {getPlanFeatures(subscription.data?.plan).map((feature, fIdx) => (
-                  <View key={fIdx} style={styles.benefitRow}>
-                    <Ionicons name="checkmark-circle-sharp" size={18} color="#22C55E" />
-                    <Text style={[styles.benefitText, { color: textMain }]}>{feature}</Text>
-                  </View>
-                ))}
-              </View>
-
-              {/* Quick Renewal Action Button */}
-              <TouchableOpacity
-                style={{
-                  marginTop: 18,
-                  backgroundColor: '#5B3DF5',
-                  borderRadius: 14,
-                  paddingVertical: 12,
-                  paddingHorizontal: 16,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                  shadowColor: '#5B3DF5',
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.2,
-                  shadowRadius: 4,
-                  elevation: 3
-                }}
-                onPress={() => navigation.navigate('Suscripción')}
-                activeOpacity={0.8}
-              >
-                <Ionicons
-                  name={subscription.data?.status === 'active' ? "sync-sharp" : "card-outline"}
-                  size={18}
-                  color="#FFFFFF"
-                />
-                <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 13 }}>
-                  {subscription.data?.status === 'active' ? 'Renovar o Cambiar Plan' : 'Suscribirme a un Plan'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Column Right: Purchase History */}
-          <View style={isStacked ? styles.bottomColMobile : styles.bottomColRight}>
+        {/* Purchases Section: full width */}
+        <View style={styles.bottomSectionStacked}>
+          <View style={styles.bottomColMobile}>
             <Text style={[styles.sectionTitle, { color: textMain }]}>Compras Recientes</Text>
             <View style={[styles.purchaseContainer, { borderColor: cardBorder, backgroundColor: cardBg }]}>
               {recentOrders.length === 0 ? (
@@ -827,8 +782,8 @@ export default function ProfileScreen() {
         <View style={styles.editModalOverlay}>
           <View style={[styles.editModalContent, { backgroundColor: theme.colors.surface }]}>
             <Text style={[styles.editModalTitle, { color: theme.colors.text }]}>Editar Perfil</Text>
-            <TouchableOpacity onPress={handlePickPhoto} disabled={uploadingPhoto} style={styles.editPhotoSection} activeOpacity={0.8}>
-              <View style={styles.avatarWrapper}>
+            <View style={styles.editPhotoSection}>
+              <TouchableOpacity onPress={handlePickPhoto} disabled={uploadingPhoto} style={styles.avatarWrapper} activeOpacity={0.8}>
                 {profilePhotoUri ? (
                   <Image source={{ uri: profilePhotoUri }} style={styles.editAvatar} contentFit="cover" transition={300} cachePolicy="memory-disk" />
                 ) : (
@@ -839,31 +794,63 @@ export default function ProfileScreen() {
                 <View style={[styles.editCameraOverlay, { backgroundColor: theme.colors.primary, borderColor: theme.colors.surface }]}>
                   {uploadingPhoto ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="camera" size={14} color={theme.colors.background} />}
                 </View>
-              </View>
-              <Text style={[styles.changePhotoText, { color: theme.colors.primary }]}>
-                {uploadingPhoto ? 'Subiendo foto...' : 'Cambiar foto de perfil'}
-              </Text>
-            </TouchableOpacity>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handlePickPhoto} disabled={uploadingPhoto} activeOpacity={0.7} style={{ marginTop: 12 }}>
+                <Text style={[styles.changePhotoText, { color: theme.colors.primary, marginTop: 0 }]}>
+                  {uploadingPhoto ? 'Subiendo foto...' : 'Cambiar foto de perfil'}
+                </Text>
+              </TouchableOpacity>
+            </View>
 
             <View style={styles.editField}>
               <Text style={[styles.editLabel, { color: theme.colors.textSecondary }]}>Nombre</Text>
-              <TextInput style={[styles.editInput, { color: theme.colors.text, borderColor: theme.colors.border }]} value={editName} onChangeText={setEditName} placeholder="Tu nombre" placeholderTextColor={theme.colors.textSecondary} autoCapitalize="words" />
+              {editingField === 'name' ? (
+                <TextInput style={[styles.editInput, { color: theme.colors.text, borderColor: theme.colors.primary }]} value={editName} onChangeText={setEditName} placeholder="Tu nombre" placeholderTextColor={theme.colors.textSecondary} autoCapitalize="words" autoFocus />
+              ) : (
+                <View style={[styles.editInput, { borderColor: theme.colors.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'rgba(0,0,0,0.02)' }]}>
+                  <Text style={{ color: theme.colors.text, fontSize: 15, flex: 1 }}>{editName || 'Tu nombre'}</Text>
+                  <TouchableOpacity onPress={() => setEditingField('name')} style={{ padding: 4 }}>
+                    <Ionicons name="pencil-outline" size={18} color={theme.colors.primary} />
+                  </TouchableOpacity>
+                </View>
+              )}
             </View>
             {user?.username && (
               <View style={styles.editField}>
                 <Text style={[styles.editLabel, { color: theme.colors.textSecondary }]}>Nombre de usuario</Text>
-                <View style={[styles.editInput, { borderColor: theme.colors.border, justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.05)' }]}>
-                  <Text style={{ color: theme.colors.textSecondary, fontSize: 15 }}>@{user.username}</Text>
-                </View>
+                {editingField === 'username' ? (
+                  <View style={[styles.editInput, { borderColor: theme.colors.primary, flexDirection: 'row', alignItems: 'center' }]}>
+                    <Text style={{ color: theme.colors.primary, fontSize: 15, marginRight: 2, fontWeight: '600' }}>@</Text>
+                    <TextInput style={{ color: theme.colors.text, fontSize: 15, flex: 1, outlineStyle: 'none' }} value={editUsername} onChangeText={setEditUsername} placeholder="usuario" placeholderTextColor={theme.colors.textSecondary} autoCapitalize="none" autoFocus />
+                  </View>
+                ) : (
+                  <View style={[styles.editInput, { borderColor: theme.colors.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'rgba(0,0,0,0.02)' }]}>
+                    <Text style={{ color: theme.colors.text, fontSize: 15, flex: 1 }}>@{editUsername || user.username}</Text>
+                    <TouchableOpacity onPress={() => setEditingField('username')} style={{ padding: 4 }}>
+                      <Ionicons name="pencil-outline" size={18} color={theme.colors.primary} />
+                    </TouchableOpacity>
+                  </View>
+                )}
               </View>
             )}
             <View style={styles.editField}>
               <Text style={[styles.editLabel, { color: theme.colors.textSecondary }]}>Email</Text>
-              <TextInput style={[styles.editInput, { color: theme.colors.text, borderColor: theme.colors.border }]} value={editEmail} onChangeText={setEditEmail} placeholder="tu@email.com" placeholderTextColor={theme.colors.textSecondary} keyboardType="email-address" autoCapitalize="none" />
+              <View style={[styles.editInput, { borderColor: theme.colors.border, justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.05)' }]}>
+                <Text style={{ color: theme.colors.textSecondary, fontSize: 15 }}>{user?.email}</Text>
+              </View>
             </View>
             <View style={styles.editField}>
               <Text style={[styles.editLabel, { color: theme.colors.textSecondary }]}>Teléfono</Text>
-              <TextInput style={[styles.editInput, { color: theme.colors.text, borderColor: theme.colors.border }]} value={editPhone} onChangeText={setEditPhone} placeholder="+593 99 999 9999" placeholderTextColor={theme.colors.textSecondary} keyboardType="phone-pad" />
+              {editingField === 'phone' ? (
+                <TextInput style={[styles.editInput, { color: theme.colors.text, borderColor: theme.colors.primary }]} value={editPhone} onChangeText={setEditPhone} placeholder="+593 99 999 9999" placeholderTextColor={theme.colors.textSecondary} keyboardType="phone-pad" autoFocus />
+              ) : (
+                <View style={[styles.editInput, { borderColor: theme.colors.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'rgba(0,0,0,0.02)' }]}>
+                  <Text style={{ color: theme.colors.text, fontSize: 15, flex: 1 }}>{editPhone || '+593 99 999 9999'}</Text>
+                  <TouchableOpacity onPress={() => setEditingField('phone')} style={{ padding: 4 }}>
+                    <Ionicons name="pencil-outline" size={18} color={theme.colors.primary} />
+                  </TouchableOpacity>
+                </View>
+              )}
             </View>
 
             <View style={styles.editModalBtns}>
@@ -932,9 +919,9 @@ export default function ProfileScreen() {
         visible={confirmModalState.visible}
         title={confirmModalState.title}
         message={confirmModalState.message}
-        showCancel={true}
-        cancelText="Cancelar"
-        confirmText="Descartar"
+        showCancel={confirmModalState.showCancel !== false}
+        cancelText={confirmModalState.cancelText || "Cancelar"}
+        confirmText={confirmModalState.confirmText || "Aceptar"}
         isDestructive={confirmModalState.isDestructive}
         type={confirmModalState.type}
         onClose={() => setConfirmModalState(prev => ({ ...prev, visible: false }))}

@@ -2,14 +2,14 @@ import { useEffect, useState, useCallback } from 'react';
 import { apiFetch, API_BASE_URL } from '../api/client';
 import {
   Loader2, AlertTriangle, CheckCircle2, ShieldAlert,
-  Search, X, Mail, Phone, MoreVertical, Eye,
-  UserCheck, Trash2, Users as UsersIcon,
-  UserCircle, Calendar, Lock, ShieldOff
+  Search, X, Mail, Phone, Eye,
+  UserCheck, Users as UsersIcon,
+  UserCircle, Calendar, Lock, ShieldOff, UserX, ShieldCheck
 } from 'lucide-react';
 import '../components/Layout.css';
 import './Users.css';
 
-const MODAL = { VIEW: 'view', STATUS: 'status', DELETE: 'delete' };
+const MODAL = { VIEW: 'view', STATUS: 'status' };
 
 // ─── Confirmation Alert Step ─────────────────────────────────────────────────
 // type: 'danger' | 'warning'
@@ -40,7 +40,6 @@ export default function Users() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving]   = useState(false);
   const [search, setSearch]   = useState('');
-  const [activeDropdownId, setActiveDropdownId] = useState(null);
 
   // Global success/error (shown at page level after modal closes)
   const [pageError, setPageError]     = useState('');
@@ -112,11 +111,6 @@ export default function Users() {
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
   useEffect(() => { setCurrentPage(1); }, [search]);
-  useEffect(() => {
-    const close = () => setActiveDropdownId(null);
-    document.addEventListener('click', close);
-    return () => document.removeEventListener('click', close);
-  }, []);
 
   // Auto-hide page alerts after 5s
   useEffect(() => {
@@ -132,7 +126,6 @@ export default function Users() {
     setModalType(type);
     setModalError(''); setModalSuccess('');
     setConfirmStep(null);
-    setActiveDropdownId(null);
 
     if (type === MODAL.STATUS) {
       const active = u.is_active === 1 || u.is_active === true || u.is_active === undefined;
@@ -193,21 +186,7 @@ export default function Users() {
     } finally { setSaving(false); }
   };
 
-  const doDelete = async () => {
-    setSaving(true); setModalError('');
-    try {
-      await apiFetch(`/admin/users/${targetUser.id}`, {
-        method: 'PUT',
-        body: JSON.stringify({ is_active: false }),
-      });
-      setPageSuccess(`Cuenta de "${targetUser.name}" desactivada permanentemente`);
-      fetchUsers();
-      closeModal();
-    } catch (err) {
-      setModalError(err.message || 'Error al desactivar la cuenta. Verifica tus permisos.');
-      setConfirmStep(null);
-    } finally { setSaving(false); }
-  };
+
 
   // ── filter + pagination ───────────────────────────────────────────────────────
   const filtered = users.filter(u =>
@@ -316,32 +295,35 @@ export default function Users() {
                             : <span className="phone-unregistered">No registrado</span>
                           }
                         </td>
-                        <td className="actions-dropdown-cell">
-                          <button
-                            className={`btn-actions-trigger ${activeDropdownId === u.id ? 'active' : ''}`}
-                            onClick={e => { e.stopPropagation(); setActiveDropdownId(activeDropdownId === u.id ? null : u.id); }}
-                            title="Opciones"
-                          >
-                            <MoreVertical size={16}/>
-                          </button>
-                          {activeDropdownId === u.id && (
-                            <>
-                              <div className="actions-dropdown-overlay" onClick={() => setActiveDropdownId(null)}/>
-                              <div className={`actions-dropdown-menu ${isLastRow ? 'open-up' : ''}`} onClick={e => e.stopPropagation()}>
-                                <button className="actions-dropdown-item" onClick={() => openModal(MODAL.VIEW, u)}>
-                                  <Eye size={14}/> Ver perfil
-                                </button>
-                                <button className="actions-dropdown-item" onClick={() => openModal(MODAL.STATUS, u)}>
-                                  <UserCheck size={14}/>
-                                  {!active && !tempSusp ? 'Activar cuenta' : 'Suspender / Bloquear'}
-                                </button>
-                                <div className="actions-dropdown-divider"/>
-                                <button className="actions-dropdown-item actions-dropdown-item--danger" onClick={() => openModal(MODAL.DELETE, u)}>
-                                  <Trash2 size={14}/> Eliminar cuenta
-                                </button>
-                              </div>
-                            </>
-                          )}
+                        <td className="actions-inline-cell">
+                          <div className="actions-inline-group">
+                            {/* Ver perfil */}
+                            <div className="action-btn-wrapper">
+                              <button
+                                className="action-btn action-btn--view"
+                                onClick={() => openModal(MODAL.VIEW, u)}
+                                aria-label="Ver perfil"
+                              >
+                                <Eye size={15}/>
+                              </button>
+                              <span className="action-btn-tooltip">Ver perfil</span>
+                            </div>
+
+                            {/* Activar / Suspender */}
+                            <div className="action-btn-wrapper">
+                              <button
+                                className={`action-btn ${!active && !tempSusp ? 'action-btn--activate' : 'action-btn--suspend'}`}
+                                onClick={() => openModal(MODAL.STATUS, u)}
+                                aria-label={!active && !tempSusp ? 'Activar cuenta' : 'Suspender / Bloquear'}
+                              >
+                                {!active && !tempSusp ? <ShieldCheck size={15}/> : <UserX size={15}/>}
+                              </button>
+                              <span className="action-btn-tooltip">
+                                {!active && !tempSusp ? 'Activar cuenta' : 'Suspender'}
+                              </span>
+                            </div>
+
+                          </div>
                         </td>
                       </tr>
                     );
@@ -532,66 +514,7 @@ export default function Users() {
         </div>
       )}
 
-      {/* ════════════════════════════════════════════════════════
-          MODAL: ELIMINAR CUENTA (3 alertas de confirmación)
-      ════════════════════════════════════════════════════════ */}
-      {modalType === MODAL.DELETE && targetUser && (
-        <div className="modal-overlay" onClick={closeModal}>
-          <div className="modal" style={{ maxWidth: 440 }} onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Eliminar / Desactivar Cuenta</h3>
-              <button className="modal-close-btn" onClick={closeModal}><X size={18}/></button>
-            </div>
 
-            <div className="modal-user-badge">
-              <Avatar user={targetUser} size={36}/>
-              <div>
-                <div style={{ fontWeight: 600, fontSize: 14 }}>{targetUser.name}</div>
-                <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{targetUser.email}</div>
-              </div>
-            </div>
-
-            {modalError && (
-              <div className="alert alert--error" style={{ marginBottom: 14 }}>
-                <AlertTriangle size={15}/> <span>{modalError}</span>
-              </div>
-            )}
-
-            {/* Step 1: initial warning */}
-            {confirmStep === null && (
-              <>
-                <div className="users-action-preview users-action-preview--danger">
-                  <AlertTriangle size={15}/>
-                  <span>
-                    Estás a punto de <strong>desactivar permanentemente</strong> la cuenta de <strong>{targetUser.name}</strong>.
-                    El usuario no podrá iniciar sesión. <strong>Su suscripción NO se eliminará automáticamente.</strong>
-                  </span>
-                </div>
-                <div className="modal-actions" style={{ marginTop: 20 }}>
-                  <button className="btn btn--ghost" onClick={closeModal}>Cancelar</button>
-                  <button className="btn btn--danger" onClick={() => setConfirmStep('confirm1')}>
-                    Continuar →
-                  </button>
-                </div>
-              </>
-            )}
-
-            {/* Step 2: Are you sure? */}
-            {confirmStep === 'confirm1' && (
-              <ConfirmAlert
-                icon={ShieldAlert}
-                color="danger"
-                title="¿Estás completamente seguro?"
-                message={`Esta acción desactivará la cuenta de "${targetUser.name}". Podrás revertirlo usando "Suspender / Bloquear → Activa". La suscripción activa del usuario NO será cancelada.`}
-                confirmLabel="Sí, desactivar cuenta"
-                onCancel={() => setConfirmStep(null)}
-                onConfirm={doDelete}
-                saving={saving}
-              />
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

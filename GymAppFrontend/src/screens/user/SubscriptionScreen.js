@@ -473,32 +473,22 @@ export default function SubscriptionScreen() {
                       disabled={!!existingSub}
                     >
                       <Text style={styles.planButtonText}>
-                        {existingSub ? 'NO DISPONIBLE' : isElite ? 'Suscribirse Ahora' : 'Seleccionar'}
+                        {existingSub ? 'NO DISPONIBLE' : 'Seleccionar'}
                       </Text>
                     </TouchableOpacity>
                   </View>
                 );
 
-                if (isElite) {
-                  return (
-                    <View key={plan.id} style={[styles.cardOuter, isSmallScreen ? { width: CARD_WIDTH_MOBILE } : { width: CARD_WIDTH_DESKTOP, marginHorizontal: 12 }]}>
-                      <LinearGradient
-                        colors={['#5B3DF5', '#00C2FF']}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={styles.eliteCardGradient}
-                      >
-                        {cardContent}
-                      </LinearGradient>
-                    </View>
-                  );
-                }
-
                 return (
                   <View key={plan.id} style={[styles.cardOuter, isSmallScreen ? { width: CARD_WIDTH_MOBILE } : { width: CARD_WIDTH_DESKTOP, marginHorizontal: 12 }]}>
-                    <View style={[styles.standardCardBorder, { borderColor: cardBorder, backgroundColor: cardBg }]}>
+                    <LinearGradient
+                      colors={['#5B3DF5', '#00C2FF']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.eliteCardGradient}
+                    >
                       {cardContent}
-                    </View>
+                    </LinearGradient>
                   </View>
                 );
               })}

@@ -43,7 +43,6 @@ export default function RootNavigator() {
       ) : (
         <>
           <Stack.Screen name="UserTabs" component={UserTabs} />
-          <Stack.Screen name="ProductDetail" component={ProductDetailScreen} />
           <Stack.Screen
             name="Cart"
             component={CartScreen}

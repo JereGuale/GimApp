@@ -24,15 +24,21 @@ class User extends Authenticatable
         'name',
         'username',
         'email',
+        'google_id',
         'password',
         'role',
         'profile_photo',
         'phone',
         'is_active',
         'suspended_until',
+        'billing_name',
+        'billing_email',
+        'billing_phone',
         'billing_id_number',
         'billing_city',
         'billing_address',
+        'name_changed_at',
+        'username_changed_at',
     ];
 
     /**
@@ -57,6 +63,8 @@ class User extends Authenticatable
             'password' => 'hashed',
             'is_active' => 'boolean',
             'suspended_until' => 'datetime',
+            'name_changed_at' => 'datetime',
+            'username_changed_at' => 'datetime',
         ];
     }
 

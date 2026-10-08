@@ -143,12 +143,34 @@ export const ProfileAPI = {
         try {
             const headers = await getAuthHeaders();
             const response = await axios.put(`${API_URL}/profile`, data, { headers });
+            if (response.data.success === false) {
+                return {
+                    success: false,
+                    error: response.data.error || response.data.message || 'Error al actualizar perfil'
+                };
+            }
             return { success: true, data: response.data.user, message: response.data.message };
         } catch (error) {
             console.error('Error updating profile:', error.response?.data || error.message);
+            const resData = error.response?.data;
+            let errMsg = null;
+            if (resData) {
+                if (typeof resData.error === 'string' && resData.error.trim()) {
+                    errMsg = resData.error;
+                } else if (resData.errors && typeof resData.errors === 'object') {
+                    const firstKey = Object.keys(resData.errors)[0];
+                    if (firstKey && Array.isArray(resData.errors[firstKey])) {
+                        errMsg = resData.errors[firstKey][0];
+                    } else if (typeof resData.errors[firstKey] === 'string') {
+                        errMsg = resData.errors[firstKey];
+                    }
+                } else if (typeof resData.message === 'string' && resData.message.trim()) {
+                    errMsg = resData.message;
+                }
+            }
             return {
                 success: false,
-                error: error.response?.data?.message || 'Error al actualizar perfil'
+                error: errMsg || error.message || 'Error al actualizar perfil'
             };
         }
     },

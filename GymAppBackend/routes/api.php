@@ -31,6 +31,8 @@ Route::post('/login', [AuthController::class , 'login']);
 
 Route::post('/register', [AuthController::class , 'register']);
 
+Route::post('/auth/google', [AuthController::class, 'googleAuth']);
+
 Route::post('/password/request-reset', [PasswordResetController::class, 'requestReset']);
 Route::post('/password/verify-code', [PasswordResetController::class, 'verifyCode']);
 Route::post('/password/reset', [PasswordResetController::class, 'reset']);

@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { authLogin, authRegister } from '../services/api';
+import { performGoogleSignIn } from '../services/googleAuth';
 
 // ─── Premium Icon-prefixed Input Field ────────────────────────────────────────
 function InputField({ label, icon, value, onChangeText, placeholder, keyboardType, autoCapitalize, secureTextEntry, maxLength, autoCorrect, isDark }) {
@@ -85,6 +86,7 @@ export default function AuthModal({ visible, onClose, onSuccess }) {
   
   const [activeTab, setActiveTab] = useState('login'); // 'login' | 'register'
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
   // Form states
@@ -108,6 +110,28 @@ export default function AuthModal({ visible, onClose, onSuccess }) {
   const handleClose = () => {
     resetForm();
     onClose();
+  };
+
+  const handleGoogleAuth = async () => {
+    try {
+      setGoogleLoading(true);
+      setErrorMsg('');
+      const res = await performGoogleSignIn();
+      if (!res) return;
+      if (res.user && res.token) {
+        await login(res.user, res.token, true);
+        resetForm();
+        if (onSuccess) onSuccess();
+      }
+    } catch (error) {
+      if (error.message === 'GOOGLE_CONFIG_MISSING') {
+        setErrorMsg('Falta configurar el Google Client ID en el proyecto');
+      } else {
+        setErrorMsg(error.message || 'Error al autenticar con Google');
+      }
+    } finally {
+      setGoogleLoading(false);
+    }
   };
 
   const handleLoginSubmit = async () => {
@@ -273,7 +297,12 @@ export default function AuthModal({ visible, onClose, onSuccess }) {
               </TouchableOpacity>
             </View>
 
-            <ScrollView contentContainerStyle={styles.formScroll} showsVerticalScrollIndicator={false}>
+            <ScrollView
+              style={styles.scrollView}
+              contentContainerStyle={styles.formScroll}
+              showsVerticalScrollIndicator={true}
+              keyboardShouldPersistTaps="handled"
+            >
               {activeTab === 'login' ? (
                 /* LOGIN FORM */
                 <View style={styles.form}>
@@ -299,14 +328,38 @@ export default function AuthModal({ visible, onClose, onSuccess }) {
                   />
 
                   <TouchableOpacity
-                    style={[styles.submitBtn, { backgroundColor: theme.colors.primary }, loading && { opacity: 0.6 }]}
+                    style={[styles.submitBtn, { backgroundColor: theme.colors.primary }, (loading || googleLoading) && { opacity: 0.6 }]}
                     onPress={handleLoginSubmit}
-                    disabled={loading}
+                    disabled={loading || googleLoading}
                   >
                     {loading ? (
                       <ActivityIndicator color="#FFF" />
                     ) : (
                       <Text style={styles.submitBtnText}>ENTRAR</Text>
+                    )}
+                  </TouchableOpacity>
+
+                  {/* Divider */}
+                  <View style={styles.dividerRow}>
+                    <View style={[styles.dividerLine, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]} />
+                    <Text style={[styles.dividerText, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>o bien</Text>
+                    <View style={[styles.dividerLine, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]} />
+                  </View>
+
+                  {/* Google Button */}
+                  <TouchableOpacity
+                    style={[styles.btnGoogle, (googleLoading || loading) && { opacity: 0.7 }]}
+                    onPress={handleGoogleAuth}
+                    disabled={googleLoading || loading}
+                    activeOpacity={0.85}
+                  >
+                    {googleLoading ? (
+                      <ActivityIndicator color="#1F2937" size="small" />
+                    ) : (
+                      <>
+                        <Ionicons name="logo-google" size={18} color="#EA4335" style={{ marginRight: 8 }} />
+                        <Text style={styles.btnGoogleText}>Continuar con Google</Text>
+                      </>
                     )}
                   </TouchableOpacity>
                 </View>
@@ -378,14 +431,38 @@ export default function AuthModal({ visible, onClose, onSuccess }) {
                   />
 
                   <TouchableOpacity
-                    style={[styles.submitBtn, { backgroundColor: theme.colors.primary }, loading && { opacity: 0.6 }]}
+                    style={[styles.submitBtn, { backgroundColor: theme.colors.primary }, (loading || googleLoading) && { opacity: 0.6 }]}
                     onPress={handleRegisterSubmit}
-                    disabled={loading}
+                    disabled={loading || googleLoading}
                   >
                     {loading ? (
                       <ActivityIndicator color="#FFF" />
                     ) : (
                       <Text style={styles.submitBtnText}>REGISTRARSE</Text>
+                    )}
+                  </TouchableOpacity>
+
+                  {/* Divider */}
+                  <View style={styles.dividerRow}>
+                    <View style={[styles.dividerLine, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]} />
+                    <Text style={[styles.dividerText, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>o bien</Text>
+                    <View style={[styles.dividerLine, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]} />
+                  </View>
+
+                  {/* Google Button */}
+                  <TouchableOpacity
+                    style={[styles.btnGoogle, (googleLoading || loading) && { opacity: 0.7 }]}
+                    onPress={handleGoogleAuth}
+                    disabled={googleLoading || loading}
+                    activeOpacity={0.85}
+                  >
+                    {googleLoading ? (
+                      <ActivityIndicator color="#1F2937" size="small" />
+                    ) : (
+                      <>
+                        <Ionicons name="logo-google" size={18} color="#EA4335" style={{ marginRight: 8 }} />
+                        <Text style={styles.btnGoogleText}>Registrarse con Google</Text>
+                      </>
                     )}
                   </TouchableOpacity>
                 </View>
@@ -401,38 +478,44 @@ export default function AuthModal({ visible, onClose, onSuccess }) {
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: 'rgba(0,0,0,0.65)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20
+    padding: 16,
   },
   container: {
     width: '100%',
-    maxWidth: 420,
+    maxWidth: 440,
+    maxHeight: Platform.OS === 'web' ? '88vh' : '92%',
   },
   modalCard: {
-    borderRadius: 16,
+    borderRadius: 18,
     borderWidth: 1,
     overflow: 'hidden',
+    maxHeight: '100%',
+    display: 'flex',
+    flexDirection: 'column',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 14,
+    elevation: 10,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 20,
-    paddingBottom: 15,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 12,
   },
   title: {
-    fontSize: 20,
+    fontSize: 19,
     fontWeight: 'bold',
   },
   closeBtn: {
-    padding: 4
+    padding: 6,
+    borderRadius: 20,
   },
   tabBar: {
     flexDirection: 'row',
@@ -441,48 +524,54 @@ const styles = StyleSheet.create({
   },
   tabButton: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 10,
     alignItems: 'center',
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
   },
   tabButtonText: {
-    fontSize: 15,
+    fontSize: 14.5,
     fontWeight: '600',
   },
+  scrollView: {
+    flex: 1,
+    width: '100%',
+  },
   formScroll: {
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingTop: 14,
+    paddingBottom: 24,
   },
   form: {
     width: '100%',
   },
   inputContainer: {
-    marginBottom: 15,
+    marginBottom: 11,
   },
   inputRow: {},
   inputLabel: {
-    fontSize: 13,
+    fontSize: 12.5,
     fontWeight: '500',
-    marginBottom: 6,
+    marginBottom: 5,
   },
   input: {
-    height: 48,
+    height: 44,
     borderWidth: 1,
     borderRadius: 8,
     paddingHorizontal: 12,
-    fontSize: 15,
+    fontSize: 14,
   },
   submitBtn: {
-    height: 48,
-    borderRadius: 8,
+    height: 44,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 10,
-    marginBottom: 20,
+    marginTop: 8,
+    marginBottom: 10,
   },
   submitBtnText: {
     color: '#FFF',
-    fontSize: 15,
+    fontSize: 14.5,
     fontWeight: 'bold',
     letterSpacing: 0.5,
   },
@@ -491,14 +580,51 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'rgba(239, 68, 68, 0.1)',
     marginHorizontal: 20,
-    padding: 10,
+    padding: 9,
     borderRadius: 8,
-    marginBottom: 10,
+    marginBottom: 8,
   },
   errorText: {
     color: '#EF4444',
-    fontSize: 13,
+    fontSize: 12.5,
     marginLeft: 8,
     flex: 1,
-  }
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+    marginVertical: 10,
+    gap: 10,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+  },
+  dividerText: {
+    fontSize: 11.5,
+    fontWeight: '500',
+  },
+  btnGoogle: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 11,
+    borderRadius: 10,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  btnGoogleText: {
+    color: '#1F2937',
+    fontSize: 13.5,
+    fontWeight: '700',
+  },
 });

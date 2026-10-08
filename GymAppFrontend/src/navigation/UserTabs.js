@@ -7,6 +7,7 @@ import CategoriesScreen from '../screens/user/CategoriesScreen';
 import SubscriptionScreen from '../screens/user/SubscriptionScreen';
 import ProfileScreen from '../screens/user/ProfileScreen';
 import MyPurchasesScreen from '../screens/user/MyPurchasesScreen';
+import ProductDetailScreen from '../screens/user/ProductDetailScreen';
 import { Image as ExpoImage } from 'expo-image';
 import { useTheme } from '../context/ThemeContext';
 import { useCart } from '../context/CartContext';
@@ -160,6 +161,15 @@ export default function UserTabs() {
               <Ionicons name="grid-outline" size={size} color={color} />
             ),
             title: 'Categorías',
+          }}
+        />
+        <Tab.Screen
+          name="ProductDetail"
+          component={ProductDetailScreen}
+          options={{
+            tabBarButton: () => null, // Ocultar de la barra de navegación inferior
+            headerShown: false,
+            title: 'Detalle del Producto',
           }}
         />
         <Tab.Screen

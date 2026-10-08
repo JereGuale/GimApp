@@ -1,5 +1,5 @@
-// API Configuration for Laravel Backend
 import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 import { DEV_BACKEND_IP as HARDCODED_IP } from '../../.env.js';
 
 // Production URL (Render.com deployment)
@@ -11,6 +11,11 @@ let DEV_BACKEND_IP = HARDCODED_IP;
 const hostUri = Constants.expoConfig?.hostUri || Constants.manifest?.hostUri;
 if (hostUri) {
   DEV_BACKEND_IP = hostUri.split(':')[0];
+}
+
+// On Web: use current browser hostname (e.g. localhost or LAN IP) for 100% reliable local communication
+if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.hostname) {
+  DEV_BACKEND_IP = window.location.hostname;
 }
 
 // In production (__DEV__ is false), use Render URL. In dev, use local IP.
@@ -191,6 +196,24 @@ export const authRegister = async (name, username, email, password, passwordConf
   if (!response.ok) {
     const message = await response.text();
     throw new Error(message || `HTTP error! status: ${response.status}`);
+  }
+
+  return response.json();
+};
+
+export const authGoogle = async (googlePayload) => {
+  const response = await fetch(`${API_URL}/auth/google`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json'
+    },
+    body: JSON.stringify(googlePayload)
+  });
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw new Error(data?.message || `HTTP error! status: ${response.status}`);
   }
 
   return response.json();

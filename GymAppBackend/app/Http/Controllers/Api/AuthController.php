@@ -80,6 +80,118 @@ class AuthController extends Controller
         ]);
     }
 
+    public function googleAuth(Request $request)
+    {
+        $idToken = $request->input('id_token') ?: $request->input('token');
+        $email = $request->input('email');
+        $name = $request->input('name');
+        $googleId = $request->input('google_id') ?: $request->input('sub');
+        $picture = $request->input('photo') ?: $request->input('avatar') ?: $request->input('picture');
+
+        // Si se envía id_token, verificarlo directamente con Google
+        if ($idToken) {
+            try {
+                $response = \Illuminate\Support\Facades\Http::timeout(6)->get("https://oauth2.googleapis.com/tokeninfo", [
+                    'id_token' => $idToken,
+                ]);
+
+                if ($response->successful()) {
+                    $googleData = $response->json();
+                    $email = $googleData['email'] ?? $email;
+                    $name = $googleData['name'] ?? $name;
+                    $googleId = $googleData['sub'] ?? $googleId;
+                    $picture = $googleData['picture'] ?? $picture;
+                }
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Google id_token verification fallback: ' . $e->getMessage());
+            }
+        }
+
+        if (!$email) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No se pudo obtener el correo de la cuenta de Google.'
+            ], 422);
+        }
+
+        // Buscar si ya existe el usuario por google_id o por email
+        $user = null;
+        if ($googleId) {
+            $user = User::where('google_id', $googleId)->first();
+        }
+        if (!$user) {
+            $user = User::where('email', $email)->first();
+        }
+
+        if ($user) {
+            // Verificar si la cuenta está suspendida o inactiva
+            if (!$user->is_active || ($user->suspended_until && $user->suspended_until->isFuture())) {
+                $message = 'Cuenta suspendida o inactiva. Contacta al administrador.';
+                if ($user->suspended_until && $user->suspended_until->isFuture()) {
+                    $formattedDate = $user->suspended_until->timezone('America/Bogota')->format('d/m/Y H:i');
+                    $message = "Tu cuenta ha sido suspendida temporalmente hasta el {$formattedDate}. Contacta al administrador.";
+                }
+                return response()->json(['message' => $message], 403);
+            }
+
+            // Actualizar google_id o foto si no los tenía
+            $updates = [];
+            if (!$user->google_id && $googleId) {
+                $updates['google_id'] = $googleId;
+            }
+            if (!$user->profile_photo && $picture) {
+                $updates['profile_photo'] = $picture;
+            }
+            if (!empty($updates)) {
+                $user->update($updates);
+            }
+        } else {
+            // Generar un username único basado en el email o nombre
+            $baseUsername = \Illuminate\Support\Str::slug(explode('@', $email)[0], '_');
+            if (empty($baseUsername)) {
+                $baseUsername = 'user_' . rand(1000, 9999);
+            }
+            $usernameCandidate = $baseUsername;
+            $counter = 1;
+            while (User::where('username', $usernameCandidate)->exists()) {
+                $usernameCandidate = $baseUsername . '_' . rand(100, 999);
+                $counter++;
+                if ($counter > 10) {
+                    $usernameCandidate = 'user_' . time();
+                    break;
+                }
+            }
+
+            // Crear el nuevo usuario
+            $user = User::create([
+                'name'          => $name ?: explode('@', $email)[0],
+                'username'      => $usernameCandidate,
+                'email'         => $email,
+                'google_id'     => $googleId,
+                'role'          => 'user',
+                'profile_photo' => $picture,
+                'is_active'     => true,
+            ]);
+
+            $userRole = \App\Models\Role::where('name', 'user')->first();
+            if ($userRole) {
+                $user->assignRole($userRole);
+            }
+        }
+
+        $token = $user->createToken('auth')->plainTextToken;
+        $user->load('roles.permissions');
+        $permissions = $user->roles->flatMap(fn($r) => $r->permissions)->unique('id')->values();
+
+        return response()->json([
+            'success'     => true,
+            'user'        => $user,
+            'token'       => $token,
+            'roles'       => $user->roles,
+            'permissions' => $permissions
+        ], 200);
+    }
+
     public function permissions(Request $request)
     {
         $user = $request->user();
@@ -101,13 +213,46 @@ class AuthController extends Controller
     {
         $user = $request->user();
         $validated = $request->validate([
-            'name' => 'sometimes|string|max:255',
-            'email' => 'sometimes|email|unique:users,email,' . $user->id,
+            'name' => 'sometimes|nullable|string|max:255',
+            'username' => 'sometimes|nullable|string|max:50|alpha_dash|unique:users,username,' . $user->id,
             'phone' => 'sometimes|nullable|string|max:20',
+            'billing_name' => 'sometimes|nullable|string|max:255',
+            'billing_email' => 'sometimes|nullable|email',
+            'billing_phone' => 'sometimes|nullable|string|max:20',
             'billing_id_number' => 'sometimes|nullable|string|max:30',
             'billing_city' => 'sometimes|nullable|string|max:100',
             'billing_address' => 'sometimes|nullable|string',
+        ], [
+            'username.unique' => 'Este nombre de usuario ya está registrado por otra cuenta.',
+            'username.alpha_dash' => 'El nombre de usuario no debe contener espacios ni caracteres especiales (solo letras, números, _ o -).',
+            'username.max' => 'El nombre de usuario no puede superar los 50 caracteres.',
+            'billing_email.email' => 'El correo de facturación debe ser un correo válido.',
         ]);
+
+        if (isset($validated['name']) && $validated['name'] !== $user->name) {
+            if ($user->name_changed_at && now()->diffInDays($user->name_changed_at) < 60) {
+                $daysPassed = (int)now()->diffInDays($user->name_changed_at);
+                $daysRemaining = max(1, 60 - $daysPassed);
+                return response()->json([
+                    'success' => false,
+                    'error' => "No puedes cambiar tu nombre todavía. Debes esperar {$daysRemaining} día(s) más (el cambio se permite una vez cada 60 días)."
+                ], 422);
+            }
+            $validated['name_changed_at'] = now();
+        }
+
+        if (isset($validated['username']) && $validated['username'] !== $user->username) {
+            if ($user->username_changed_at && now()->diffInDays($user->username_changed_at) < 60) {
+                $daysPassed = (int)now()->diffInDays($user->username_changed_at);
+                $daysRemaining = max(1, 60 - $daysPassed);
+                return response()->json([
+                    'success' => false,
+                    'error' => "No puedes cambiar tu nombre de usuario todavía. Debes esperar {$daysRemaining} día(s) más (el cambio se permite una vez cada 60 días)."
+                ], 422);
+            }
+            $validated['username_changed_at'] = now();
+        }
+
         $user->update($validated);
         return response()->json(['success' => true, 'message' => 'Perfil actualizado exitosamente', 'user' => $user]);
     }
