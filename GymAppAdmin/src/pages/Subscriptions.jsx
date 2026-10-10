@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { apiFetch, API_BASE_URL } from '../api/client';
 import {
   Check,
@@ -12,7 +12,6 @@ import {
   Building,
   X,
   User,
-  Tag,
   Layers,
   Calendar,
   Search,
@@ -32,7 +31,8 @@ import {
   Copy,
   Phone,
   FileText,
-  Mail
+  Mail,
+  UserCheck
 } from 'lucide-react';
 import '../components/Layout.css';
 import './Subscriptions.css';
@@ -51,6 +51,8 @@ export default function Subscriptions() {
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
   const [activeDropdown, setActiveDropdown] = useState(null);
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, right: 0 });
+  const dropdownRef = useRef(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -571,13 +573,19 @@ export default function Subscriptions() {
   useEffect(() => {
     const handleOutsideClick = (e) => {
       if (activeDropdown === null) return;
-      if (!e.target.closest('.actions-dropdown-wrapper')) {
+      if (
+        !e.target.closest('.actions-dropdown-wrapper') &&
+        !e.target.closest('.fixed-dropdown-menu')
+      ) {
         setActiveDropdown(null);
       }
     };
+    const handleScroll = () => setActiveDropdown(null);
     document.addEventListener('click', handleOutsideClick);
+    document.addEventListener('scroll', handleScroll, true);
     return () => {
       document.removeEventListener('click', handleOutsideClick);
+      document.removeEventListener('scroll', handleScroll, true);
     };
   }, [activeDropdown]);
 
@@ -921,7 +929,7 @@ export default function Subscriptions() {
                           {renderStatusCell(s)}
                         </td>
                         <td>
-                          <span className={`payment-method-pill ${s.payment_method === 'transfer' ? 'payment-method--transfer' : 'payment-method--card'}`}>
+                          <span className={`payment-method-pill ${s.payment_method === 'transfer' ? 'payment-method--transfer' : s.payment_method === 'card' ? 'payment-method--card' : 'payment-method--manual'}`}>
                             {s.payment_method === 'transfer' ? (
                               <>
                                 <Building size={12} />
@@ -933,7 +941,10 @@ export default function Subscriptions() {
                                 <span>Tarjeta</span>
                               </>
                             ) : (
-                              <span>{s.payment_method || 'Manual'}</span>
+                              <>
+                                <UserCheck size={12} />
+                                <span>Manual</span>
+                              </>
                             )}
                           </span>
                         </td>
@@ -1012,7 +1023,18 @@ export default function Subscriptions() {
                               <button
                                 type="button"
                                 className={`actions-dropdown-trigger ${activeDropdown === s.id ? 'active' : ''}`}
-                                onClick={() => setActiveDropdown(activeDropdown === s.id ? null : s.id)}
+                                onClick={(e) => {
+                                  if (activeDropdown === s.id) {
+                                    setActiveDropdown(null);
+                                    return;
+                                  }
+                                  const rect = e.currentTarget.getBoundingClientRect();
+                                  setDropdownPos({
+                                    top: rect.bottom + 6,
+                                    right: window.innerWidth - rect.right,
+                                  });
+                                  setActiveDropdown(s.id);
+                                }}
                                 title="Más opciones"
                                 disabled={actionLoading === s.id + '_approve' || actionLoading === s.id + '_reject' || actionLoading === s.id + '_renew' || actionLoading === s.id + '_delete'}
                               >
@@ -1022,67 +1044,6 @@ export default function Subscriptions() {
                                   <MoreVertical size={16} />
                                 )}
                               </button>
-                              {activeDropdown === s.id && (
-                                <div className={`actions-dropdown-menu ${isLastRows ? 'open-up' : ''}`}>
-                                  {s.status === 'pending' ? (
-                                    <>
-                                      <button
-                                        type="button"
-                                        className="dropdown-item dropdown-item--approve"
-                                        onClick={() => { setActiveDropdown(null); handleApprove(s.id); }}
-                                      >
-                                        <Check size={14} /> <span>Aprobar pago</span>
-                                      </button>
-                                      <button
-                                        type="button"
-                                        className="dropdown-item dropdown-item--danger"
-                                        onClick={() => { setActiveDropdown(null); handleReject(s.id); }}
-                                      >
-                                        <X size={14} /> <span>Rechazar pago</span>
-                                      </button>
-                                    </>
-                                  ) : (
-                                    <button
-                                      type="button"
-                                      className="dropdown-item dropdown-item--renew"
-                                      onClick={() => { setActiveDropdown(null); handleRenew(s.id); }}
-                                    >
-                                      <RefreshCw size={14} /> <span>Renovar membresía</span>
-                                    </button>
-                                  )}
-                                  <button
-                                    type="button"
-                                    className="dropdown-item"
-                                    onClick={() => {
-                                      setActiveDropdown(null);
-                                      setEditClientModal({
-                                        sub: s,
-                                        name: s.user?.name || s.billing_name || '',
-                                        phone: s.user?.phone || s.billing_phone || '',
-                                        email: s.user?.email || s.billing_email || '',
-                                        notes: s.notes || '',
-                                        saving: false
-                                      });
-                                    }}
-                                  >
-                                    <User size={14} /> <span>Detalles del cliente</span>
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="dropdown-item"
-                                    onClick={() => { setActiveDropdown(null); setNoteModal({ sub: s, note: s.notes || '', saving: false }); }}
-                                  >
-                                    <FileText size={14} /> <span>{s.notes ? 'Editar nota' : 'Añadir nota'}</span>
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="dropdown-item dropdown-item--danger"
-                                    onClick={() => { setActiveDropdown(null); handleDelete(s); }}
-                                  >
-                                    <Trash2 size={14} /> <span>Eliminar registro</span>
-                                  </button>
-                                </div>
-                              )}
                             </div>
                           </div>
                         </td>
@@ -1212,16 +1173,6 @@ export default function Subscriptions() {
 
                   {/* Card details */}
                   <div className="sub-mobile-card-details">
-                    <div className="sub-mobile-card-row">
-                      <span className="sub-mobile-card-label">
-                        <Tag size={13} style={{ opacity: 0.7 }} />
-                        <span>Suscripción ID</span>
-                      </span>
-                      <span className="sub-mobile-card-val" style={{ color: 'var(--text-secondary)' }}>
-                        #{s.id}
-                      </span>
-                    </div>
-
                     <div className="sub-mobile-card-row">
                       <span className="sub-mobile-card-label">
                         <Layers size={13} style={{ opacity: 0.7 }} />
@@ -1756,10 +1707,6 @@ Estamos validando tu comprobante de pago para activar tu membresía de inmediato
                     <span className="delete-summary-label">Estado</span>
                     <span className="delete-summary-value">{STATUS_LABELS[deleteModal.sub.status] || deleteModal.sub.status}</span>
                   </div>
-                  <div className="delete-summary-row" style={{ borderBottom: 'none' }}>
-                    <span className="delete-summary-label">ID</span>
-                    <span className="delete-summary-value">#{deleteModal.sub.id}</span>
-                  </div>
                 </div>
 
                 {/* Warning 1 */}
@@ -1832,7 +1779,7 @@ Estamos validando tu comprobante de pago para activar tu membresía de inmediato
                 {/* Final warning */}
                 <div className="delete-warning-box delete-warning-box--red" style={{ marginBottom: 20 }}>
                   <AlertTriangle size={16} />
-                  <span>Suscripción de <strong>{deleteModal.sub.user?.name}</strong> · Plan <strong>{deleteModal.sub.plan?.name || '—'}</strong> · ID #{deleteModal.sub.id}</span>
+                  <span>Suscripción de <strong>{deleteModal.sub.user?.name}</strong> · Plan <strong>{deleteModal.sub.plan?.name || '—'}</strong></span>
                 </div>
 
                 <div className="delete-modal-actions">
@@ -2107,7 +2054,7 @@ Estamos validando tu comprobante de pago para activar tu membresía de inmediato
                 <div>
                   <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Editar Datos del Cliente</h3>
                   <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--text-secondary)' }}>
-                    Membresía #{editClientModal.sub?.id} — {editClientModal.sub?.plan?.name || 'Plan'}
+                    Plan: {editClientModal.sub?.plan?.name || 'Plan'}
                   </p>
                 </div>
               </div>
@@ -2343,6 +2290,83 @@ Estamos validando tu comprobante de pago para activar tu membresía de inmediato
           </div>
         </div>
       )}
+      {/* ═══════════════════════════════════════════════════════════
+          DROPDOWN FLOTANTE — position:fixed, nunca cortado por overflow
+      ═══════════════════════════════════════════════════════════ */}
+      {activeDropdown !== null && (() => {
+        const s = subs.find(sub => sub.id === activeDropdown);
+        if (!s) return null;
+        return (
+          <div
+            className="fixed-dropdown-menu actions-dropdown-menu"
+            style={{
+              position: 'fixed',
+              top: dropdownPos.top,
+              right: dropdownPos.right,
+              zIndex: 9999,
+              minWidth: 190,
+            }}
+          >
+            {s.status === 'pending' ? (
+              <>
+                <button
+                  type="button"
+                  className="dropdown-item dropdown-item--approve"
+                  onClick={() => { setActiveDropdown(null); handleApprove(s.id); }}
+                >
+                  <Check size={14} /> <span>Aprobar pago</span>
+                </button>
+                <button
+                  type="button"
+                  className="dropdown-item dropdown-item--danger"
+                  onClick={() => { setActiveDropdown(null); handleReject(s.id); }}
+                >
+                  <X size={14} /> <span>Rechazar pago</span>
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                className="dropdown-item dropdown-item--renew"
+                onClick={() => { setActiveDropdown(null); handleRenew(s.id); }}
+              >
+                <RefreshCw size={14} /> <span>Renovar membresía</span>
+              </button>
+            )}
+            <button
+              type="button"
+              className="dropdown-item"
+              onClick={() => {
+                setActiveDropdown(null);
+                setEditClientModal({
+                  sub: s,
+                  name: s.user?.name || s.billing_name || '',
+                  phone: s.user?.phone || s.billing_phone || '',
+                  email: s.user?.email || s.billing_email || '',
+                  notes: s.notes || '',
+                  saving: false
+                });
+              }}
+            >
+              <User size={14} /> <span>Detalles del cliente</span>
+            </button>
+            <button
+              type="button"
+              className="dropdown-item"
+              onClick={() => { setActiveDropdown(null); setNoteModal({ sub: s, note: s.notes || '', saving: false }); }}
+            >
+              <FileText size={14} /> <span>{s.notes ? 'Editar nota' : 'Añadir nota'}</span>
+            </button>
+            <button
+              type="button"
+              className="dropdown-item dropdown-item--danger"
+              onClick={() => { setActiveDropdown(null); handleDelete(s); }}
+            >
+              <Trash2 size={14} /> <span>Eliminar registro</span>
+            </button>
+          </div>
+        );
+      })()}
     </div>
   );
 }

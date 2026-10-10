@@ -387,7 +387,7 @@ export default function Orders() {
           <Search className="orders-search-icon" size={16} />
           <input 
             className="orders-search-input-premium" 
-            placeholder="Buscar por cliente o ID de pedido..." 
+            placeholder="Buscar por cliente..." 
             value={search} 
             onChange={e => setSearch(e.target.value)} 
           />
@@ -798,11 +798,6 @@ export default function Orders() {
 
                   {/* Card Details */}
                   <div className="order-mobile-card-details">
-                    <div className="order-mobile-card-row">
-                      <span className="order-mobile-card-label">ID de Pedido</span>
-                      <span className="order-mobile-card-val" style={{ color: 'var(--text-secondary)' }}>#{o.id}</span>
-                    </div>
-
                     <div className="order-mobile-card-row">
                       <span className="order-mobile-card-label">Productos</span>
                       <span className="order-mobile-card-val" style={{ fontSize: '11px', textAlign: 'right', opacity: 0.8 }}>

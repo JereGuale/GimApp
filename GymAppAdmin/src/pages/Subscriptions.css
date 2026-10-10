@@ -2121,6 +2121,18 @@
   border-color: rgba(52, 211, 153, 0.25);
 }
 
+.payment-method--manual {
+  color: #b45309;
+  background: rgba(180, 83, 9, 0.08);
+  border-color: rgba(180, 83, 9, 0.2);
+}
+
+:root.dark .payment-method--manual {
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.12);
+  border-color: rgba(251, 191, 36, 0.25);
+}
+
 /* Vigencia stack */
 .vigencia-stack {
   display: flex;

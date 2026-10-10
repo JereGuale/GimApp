@@ -9,8 +9,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
 import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
-import { LinearGradient } from 'expo-linear-gradient';
-import { API_URL, OfferService } from '../../services/api';
+import { API_URL } from '../../services/api';
 import { OrderAPI } from '../../services/orderService';
 import ReceiptUploader from '../../components/ReceiptUploader';
 import AuthModal from '../../components/AuthModal';
@@ -28,9 +27,7 @@ export default function CartScreen() {
   const { theme } = useTheme();
   const navigation = useNavigation();
   const { items, removeFromCart, updateQuantity, clearCart, totalItems, totalPrice } = useCart();
-  const { user, token, updateUser } = useAuth();
-
-  const [activeOffer, setActiveOffer] = React.useState(null);
+  const { user, updateUser } = useAuth();
 
   const slideAnim = useRef(new Animated.Value(DRAWER_WIDTH)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -67,7 +64,7 @@ export default function CartScreen() {
     });
   };
 
-  // Animar apertura y cargar oferta activa
+  // Animar apertura
   useEffect(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -82,18 +79,7 @@ export default function CartScreen() {
       })
     ]).start();
 
-    const fetchActiveOffer = async () => {
-      try {
-        const res = await OfferService.getActive(token);
-        if (res && res.title) {
-          setActiveOffer(res);
-        }
-      } catch (err) {
-        console.log('[CartScreen] Error loading offer:', err);
-      }
-    };
-    fetchActiveOffer();
-  }, [fadeAnim, slideAnim, token]);
+  }, [fadeAnim, slideAnim]);
 
   const closeDrawer = () => {
     Animated.parallel([
@@ -309,28 +295,6 @@ export default function CartScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Promo Card dynamically loaded from backend */}
-        {activeOffer ? (
-          <View style={styles.promoWrapper}>
-            <LinearGradient
-              colors={['rgba(16, 185, 129, 0.1)', 'rgba(6, 182, 212, 0.05)', 'transparent']}
-              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-              style={[styles.promoCard, { borderColor: theme.isDark ? '#1F2937' : '#E5E7EB' }]}
-            >
-              <View style={styles.promoIconContainer}>
-                <Ionicons name="gift" size={20} color="#F59E0B" />
-              </View>
-              <View style={styles.promoContent}>
-                <View style={styles.promoBadge}><Text style={styles.promoBadgeText}>ESPECIAL</Text></View>
-                <Text style={[styles.promoTitle, { color: theme.colors.text }]}>{activeOffer.title}</Text>
-                <Text style={[styles.promoDesc, { color: theme.colors.textSecondary }]}>
-                  {activeOffer.subtitle || (activeOffer.price ? `¡Por solo $${Number(activeOffer.price).toFixed(2)}!` : '')}
-                </Text>
-              </View>
-            </LinearGradient>
-          </View>
-        ) : null}
-
         {/* Action Clear */}
         {items.length > 0 && (
           <View style={styles.clearRow}>
@@ -473,22 +437,6 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 20, fontWeight: '800' },
   closeBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, opacity: 0.8 },
   closeText: { fontSize: 14, fontWeight: '600' },
-
-  /* Promo Card */
-  promoWrapper: { paddingHorizontal: 16, paddingTop: 20, paddingBottom: 10 },
-  promoCard: {
-    flexDirection: 'row', padding: 16, borderRadius: 12, borderWidth: 1,
-    alignItems: 'center', gap: 12,
-  },
-  promoIconContainer: {
-    width: 36, height: 36, borderRadius: 8, backgroundColor: 'rgba(245, 158, 11, 0.15)',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  promoContent: { flex: 1 },
-  promoBadge: { backgroundColor: '#10B981', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, alignSelf: 'flex-start', marginBottom: 4 },
-  promoBadgeText: { color: '#000', fontSize: 10, fontWeight: '800', letterSpacing: 0.5 },
-  promoTitle: { fontSize: 14, fontWeight: '700', marginBottom: 2 },
-  promoDesc: { fontSize: 12 },
 
   /* Clear row */
   clearRow: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: 20, paddingBottom: 10 },

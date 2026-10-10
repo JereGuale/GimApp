@@ -247,6 +247,14 @@ export default function Users() {
           <div className="users-table-card">
             <div className="users-table-wrap">
               <table className="users-table">
+                <colgroup>
+                  <col style={{ width: '22%' }} />
+                  <col style={{ width: '30%' }} />
+                  <col style={{ width: '11%' }} />
+                  <col style={{ width: '11%' }} />
+                  <col style={{ width: '16%' }} />
+                  <col style={{ width: '10%' }} />
+                </colgroup>
                 <thead>
                   <tr>
                     <th>Usuario</th>
@@ -254,7 +262,7 @@ export default function Users() {
                     <th>Rol</th>
                     <th>Estado</th>
                     <th>Teléfono</th>
-                    <th style={{ width: 80, textAlign: 'center' }}>Acciones</th>
+                    <th style={{ textAlign: 'center' }}>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>

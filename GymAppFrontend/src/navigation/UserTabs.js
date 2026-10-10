@@ -142,56 +142,58 @@ export default function UserTabs() {
           tabBarIconStyle: { marginTop: 6 }
         })}
       >
-        <Tab.Screen
-          name="Inicio"
-          component={HomeScreen}
-          options={{
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="home-outline" size={size} color={color} />
-            ),
-            title: 'Inicio',
-          }}
-        />
-        <Tab.Screen
-          name="Categorías"
-          component={CategoriesScreen}
-          options={{
-            tabBarButton: () => null, // Ocultar de la barra de navegación inferior
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="grid-outline" size={size} color={color} />
-            ),
-            title: 'Categorías',
-          }}
-        />
-        <Tab.Screen
-          name="ProductDetail"
-          component={ProductDetailScreen}
-          options={{
-            tabBarButton: () => null, // Ocultar de la barra de navegación inferior
-            headerShown: false,
-            title: 'Detalle del Producto',
-          }}
-        />
-        <Tab.Screen
-          name="Suscripción"
-          component={SubscriptionScreen}
-          options={{
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="card-outline" size={size} color={color} />
-            ),
-            title: 'Suscripción',
-          }}
-        />
-        <Tab.Screen
-          name="Mis Compras"
-          component={MyPurchasesScreen}
-          options={{
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="bag-handle-outline" size={size} color={color} />
-            ),
-            title: 'Mis Compras',
-          }}
-        />
+          <Tab.Screen
+            name="Inicio"
+            component={HomeScreen}
+            options={{
+              tabBarIcon: ({ color, size }) => (
+                <Ionicons name="home-outline" size={size} color={color} />
+              ),
+              title: 'Inicio',
+            }}
+          />
+          <Tab.Screen
+            name="Categorías"
+            component={CategoriesScreen}
+            options={{
+              tabBarButton: () => null,
+              tabBarIcon: ({ color, size }) => (
+                <Ionicons name="grid-outline" size={size} color={color} />
+              ),
+              title: 'Categorías',
+            }}
+          />
+          <Tab.Screen
+            name="ProductDetail"
+            component={ProductDetailScreen}
+            options={{
+              tabBarButton: () => null,
+              headerShown: false,
+              title: 'Detalle del Producto',
+            }}
+          />
+          <Tab.Screen
+            name="Suscripción"
+            component={SubscriptionScreen}
+            options={{
+              tabBarIcon: ({ color, size }) => (
+                <Ionicons name="card-outline" size={size} color={color} />
+              ),
+              title: 'Suscripción',
+            }}
+          />
+          {user && (
+            <Tab.Screen
+              name="Mis Compras"
+              component={MyPurchasesScreen}
+              options={{
+                tabBarIcon: ({ color, size }) => (
+                  <Ionicons name="bag-handle-outline" size={size} color={color} />
+                ),
+                title: 'Mis Compras',
+              }}
+            />
+          )}
         <Tab.Screen
           name="Perfil"
           component={ProfileScreen}

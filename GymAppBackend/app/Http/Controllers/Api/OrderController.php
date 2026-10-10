@@ -249,7 +249,7 @@ class OrderController extends Controller
                 'user_id' => $order->user_id,
                 'type' => 'order_approved',
                 'title' => '¡Pedido aprobado!',
-                'message' => "Tu pedido #$order->id por \${$order->total} ha sido aprobado.",
+                'message' => "Tu pedido por \${$order->total} ha sido aprobado.",
                 'data' => [
                     'order_id' => $order->id,
                     'status' => 'approved',
@@ -287,7 +287,7 @@ class OrderController extends Controller
                 'user_id' => $order->user_id,
                 'type' => 'order_rejected',
                 'title' => 'Pedido rechazado',
-                'message' => "Tu pedido #$order->id fue rechazado. Razón: $reason",
+                'message' => "Tu pedido fue rechazado. Razón: $reason",
                 'data' => [
                     'order_id' => $order->id,
                     'status' => 'rejected',
@@ -352,7 +352,7 @@ class OrderController extends Controller
                 'user_id' => $order->user_id,
                 'type' => 'order_status_updated',
                 'title' => 'Estado de tu compra actualizado',
-                'message' => "El estado de tu compra #$order->id ahora es: $statusLabel.",
+                'message' => "El estado de tu compra ahora es: $statusLabel.",
                 'data' => [
                     'order_id' => $order->id,
                     'status' => $request->status,

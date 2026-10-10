@@ -151,7 +151,7 @@ export default function MyPurchasesScreen() {
                         <Text style={[styles.orderTitle, { color: theme.colors.text }]} numberOfLines={1}>
                             {titleLabel}
                         </Text>
-                        <Text style={[styles.orderSubId, { color: mutedText }]}>Pedido #{order.id} · {createdAt}</Text>
+                        <Text style={[styles.orderSubId, { color: mutedText }]}>{createdAt}</Text>
                     </View>
                     <View style={[styles.statusBadge, { borderColor: statusColor, backgroundColor: statusColor + "18" }]}>
                         <Ionicons name={statusIcon} size={12} color={statusColor} />
@@ -291,16 +291,15 @@ export default function MyPurchasesScreen() {
                     </View>
                 </View>
 
-                {/* Search by Order Number */}
+                {/* Search purchases */}
                 <View style={[styles.searchContainer, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
                     <Ionicons name="search-outline" size={18} color={mutedText} />
                     <TextInput
                         style={[styles.searchInput, { color: theme.colors.text }]}
-                        placeholder="Buscar por # de pedido..."
+                        placeholder="Buscar en tus compras..."
                         placeholderTextColor={mutedText}
                         value={searchQuery}
                         onChangeText={setSearchQuery}
-                        keyboardType="numeric"
                         returnKeyType="search"
                     />
                     {searchQuery.length > 0 && (
@@ -348,10 +347,10 @@ export default function MyPurchasesScreen() {
                         <View style={[styles.emptyBox, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface }]}>
                             <Ionicons name="bag-outline" size={40} color={mutedText} style={{ marginBottom: 8 }} />
                             <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
-                                {searchQuery ? `Sin resultados para "#${searchQuery}"` : "Sin compras aquí"}
+                                {searchQuery ? "No se encontraron compras" : "Sin compras aquí"}
                             </Text>
                             <Text style={[styles.emptyText, { color: mutedText }]}>
-                                {searchQuery ? "Intenta con otro número de pedido" : "No hay compras para este filtro."}
+                                {searchQuery ? "Intenta con otro término de búsqueda" : "No hay compras para este filtro."}
                             </Text>
                         </View>
                     ) : (

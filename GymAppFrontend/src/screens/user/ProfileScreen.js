@@ -183,6 +183,12 @@ export default function ProfileScreen() {
   };
 
   const handleSaveProfile = async () => {
+    if (!editPhone.trim()) {
+      Alert.alert('Teléfono obligatorio', 'Agrega tu número de teléfono para continuar usando la aplicación.');
+      setEditingField('phone');
+      return;
+    }
+
     const nameChanged = editName !== user?.name;
     const usernameChanged = editUsername !== user?.username;
 
@@ -778,10 +784,17 @@ export default function ProfileScreen() {
       </ScrollView>
 
       {/* Edit Profile Modal */}
-      <Modal visible={editModalVisible} transparent animationType="slide" onRequestClose={() => setEditModalVisible(false)}>
+      <Modal
+        visible={editModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setEditModalVisible(false)}
+      >
         <View style={styles.editModalOverlay}>
           <View style={[styles.editModalContent, { backgroundColor: theme.colors.surface }]}>
-            <Text style={[styles.editModalTitle, { color: theme.colors.text }]}>Editar Perfil</Text>
+            <Text style={[styles.editModalTitle, { color: theme.colors.text }]}>
+              Editar Perfil
+            </Text>
             <View style={styles.editPhotoSection}>
               <TouchableOpacity onPress={handlePickPhoto} disabled={uploadingPhoto} style={styles.avatarWrapper} activeOpacity={0.8}>
                 {profilePhotoUri ? (

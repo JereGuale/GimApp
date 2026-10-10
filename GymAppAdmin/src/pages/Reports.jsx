@@ -2491,7 +2491,7 @@ export default function Reports() {
                 <div>
                   <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Editar Datos del Cliente</h3>
                   <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--text-secondary)' }}>
-                    Membresía #{editClientModal.sub?.id} — {editClientModal.sub?.plan?.name || 'Plan'}
+                    Plan: {editClientModal.sub?.plan?.name || 'Plan'}
                   </p>
                 </div>
               </div>

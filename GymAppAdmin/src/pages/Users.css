@@ -41,7 +41,7 @@
 .search-input-container {
   position: relative;
   width: 100%;
-  max-width: 360px;
+  max-width: 400px;
 }
 
 .search-icon-left {
@@ -102,55 +102,79 @@
   color: var(--text);
 }
 
-/* Table Wrapper Premium */
+/* Table Wrapper — mismo estilo que Subscriptions */
 .users-table-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: var(--card);
   border-radius: 16px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.01), 0 2px 4px -2px rgba(0, 0, 0, 0.01);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -2px rgba(0, 0, 0, 0.02);
   overflow: hidden;
+  margin-bottom: 24px;
 }
 
 .users-table-wrap {
-  overflow-x: auto;
   width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Ocultar barra de scroll en escritorio cuando no es necesaria */
+@media (min-width: 1100px) {
+  .users-table-wrap {
+    overflow-x: visible;
+  }
 }
 
 .users-table {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
+  font-size: 14px;
+  table-layout: fixed;
 }
 
+/* Anchos de columna fijos para evitar que el badge ROL desalinee */
+.users-table colgroup col:nth-child(1) { width: 22%; }
+.users-table colgroup col:nth-child(2) { width: 27%; }
+.users-table colgroup col:nth-child(3) { width: 11%; }
+.users-table colgroup col:nth-child(4) { width: 11%; }
+.users-table colgroup col:nth-child(5) { width: 16%; }
+.users-table colgroup col:nth-child(6) { width: 13%; }
+
 .users-table th {
-  background: var(--surface);
+  background: var(--thead-bg, var(--surface));
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   text-transform: uppercase;
   color: var(--text-secondary);
   letter-spacing: 0.05em;
-  padding: 12px 18px;
+  padding: 16px 20px;
   border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 0;
-  z-index: 10;
+  vertical-align: middle;
+  white-space: nowrap;
 }
 
 .users-table td {
-  padding: 10px 18px;
+  padding: 16px 20px;
   border-bottom: 1px solid var(--border);
-  font-size: 13.5px;
+  font-size: 14px;
   vertical-align: middle;
   color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .users-table tbody tr {
-  transition: background-color 0.15s ease;
+  transition: background-color 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .users-table tbody tr:hover {
-  background-color: var(--surface-hover);
+  background-color: rgba(37, 99, 235, 0.015);
+}
+
+:root.dark .users-table tbody tr:hover {
+  background-color: rgba(59, 130, 246, 0.025);
 }
 
 /* User Profile Cell (Avatar + Names) */
@@ -323,8 +347,9 @@
 
 /* ── Inline Action Buttons ─────────────────────────────────────── */
 .actions-inline-cell {
-  width: 84px;
+  width: auto;
   text-align: center;
+  overflow: visible !important;
 }
 
 .actions-inline-group {
