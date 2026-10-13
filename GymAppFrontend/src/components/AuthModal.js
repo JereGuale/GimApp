@@ -18,7 +18,7 @@ import { authLogin, authRegister } from '../services/api';
 import { performGoogleSignIn } from '../services/googleAuth';
 
 // ─── Premium Icon-prefixed Input Field ────────────────────────────────────────
-function InputField({ label, icon, value, onChangeText, placeholder, keyboardType, autoCapitalize, secureTextEntry, maxLength, autoCorrect, isDark }) {
+function InputField({ label, icon, value, onChangeText, placeholder, keyboardType, autoCapitalize, secureTextEntry, maxLength, autoCorrect, isDark, onSubmitEditing, returnKeyType }) {
   const [focused, setFocused] = useState(false);
 
   const borderColor = focused
@@ -62,6 +62,8 @@ function InputField({ label, icon, value, onChangeText, placeholder, keyboardTyp
             fontSize: 14,
             fontWeight: '500',
             height: '100%',
+            outlineStyle: 'none',
+            outlineWidth: 0,
           }}
           value={value}
           onChangeText={onChangeText}
@@ -72,6 +74,14 @@ function InputField({ label, icon, value, onChangeText, placeholder, keyboardTyp
           secureTextEntry={secureTextEntry}
           maxLength={maxLength}
           autoCorrect={autoCorrect}
+          onSubmitEditing={onSubmitEditing}
+          returnKeyType={returnKeyType}
+          onKeyPress={Platform.OS === 'web' ? (event) => {
+            if (event.nativeEvent.key === 'Enter' && onSubmitEditing) {
+              event.preventDefault?.();
+              onSubmitEditing(event);
+            }
+          } : undefined}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
         />
@@ -140,9 +150,8 @@ export default function AuthModal({ visible, onClose, onSuccess }) {
       setErrorMsg('Ingresa tu usuario o correo y contraseña');
       return;
     }
-    // Allow email logins. If it is NOT an email (no '@'), validate 10-char limit for username.
-    if (!inputVal.includes('@') && inputVal.length > 10) {
-      setErrorMsg('El nombre de usuario no debe superar los 10 caracteres');
+    if (inputVal.length > 40) {
+      setErrorMsg('El usuario o correo no debe superar los 40 caracteres');
       return;
     }
     setErrorMsg('');
@@ -176,13 +185,21 @@ export default function AuthModal({ visible, onClose, onSuccess }) {
       setErrorMsg('El nombre completo no debe superar los 40 caracteres');
       return;
     }
-    if (username.trim().length > 10) {
-      setErrorMsg('El nombre de usuario no debe superar los 10 caracteres');
+    if (username.trim().length > 40) {
+      setErrorMsg('El nombre de usuario no debe superar los 40 caracteres');
       return;
     }
     const usernameRegex = /^[a-zA-Z0-9_-]+$/;
     if (!usernameRegex.test(username.trim())) {
       setErrorMsg('El usuario solo puede tener letras, números, _ y -');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setErrorMsg('Ingresa un correo electrónico válido');
+      return;
+    }
+    if (!/^\d+$/.test(phone.trim())) {
+      setErrorMsg('El teléfono solo puede contener números');
       return;
     }
     if (password.length < 8) {
@@ -312,6 +329,7 @@ export default function AuthModal({ visible, onClose, onSuccess }) {
                     placeholder="Tu usuario o correo"
                     autoCapitalize="none"
                     autoCorrect={false}
+                    maxLength={40}
                     value={email}
                     onChangeText={setEmail}
                     isDark={isDark}
@@ -324,11 +342,13 @@ export default function AuthModal({ visible, onClose, onSuccess }) {
                     secureTextEntry
                     value={password}
                     onChangeText={setPassword}
+                    onSubmitEditing={handleLoginSubmit}
+                    returnKeyType="done"
                     isDark={isDark}
                   />
 
                   <TouchableOpacity
-                    style={[styles.submitBtn, { backgroundColor: theme.colors.primary }, (loading || googleLoading) && { opacity: 0.6 }]}
+                    style={[styles.submitBtn, { backgroundColor: theme.colors.orange }, (loading || googleLoading) && { opacity: 0.6 }]}
                     onPress={handleLoginSubmit}
                     disabled={loading || googleLoading}
                   >
@@ -378,23 +398,24 @@ export default function AuthModal({ visible, onClose, onSuccess }) {
                   />
 
                   <InputField
-                    label="Nombre de usuario único"
+                    label="Nombre de usuario"
                     icon="at-outline"
-                    placeholder="mi_usuario (sin espacios)"
+                    placeholder="Nombre de usuario"
                     autoCapitalize="none"
                     autoCorrect={false}
-                    maxLength={10}
+                    maxLength={40}
                     value={username}
                     onChangeText={(t) => setUsername(t.replace(/\s/g, ''))}
                     isDark={isDark}
                   />
 
                   <InputField
-                    label="Correo Electrónico"
+                    label="Correo electrónico"
                     icon="mail-outline"
-                    placeholder="ejemplo@correo.com"
+                    placeholder="Correo electrónico"
                     keyboardType="email-address"
                     autoCapitalize="none"
+                    maxLength={40}
                     value={email}
                     onChangeText={setEmail}
                     isDark={isDark}
@@ -403,10 +424,11 @@ export default function AuthModal({ visible, onClose, onSuccess }) {
                   <InputField
                     label="Teléfono (WhatsApp)"
                     icon="call-outline"
-                    placeholder="+593 99 999 9999"
-                    keyboardType="phone-pad"
+                    placeholder="Teléfono"
+                    keyboardType="numeric"
+                    maxLength={40}
                     value={phone}
-                    onChangeText={setPhone}
+                    onChangeText={(t) => setPhone(t.replace(/\D/g, ''))}
                     isDark={isDark}
                   />
 
@@ -415,6 +437,7 @@ export default function AuthModal({ visible, onClose, onSuccess }) {
                     icon="lock-closed-outline"
                     placeholder="Mínimo 8 caracteres"
                     secureTextEntry
+                    maxLength={40}
                     value={password}
                     onChangeText={setPassword}
                     isDark={isDark}
@@ -425,13 +448,16 @@ export default function AuthModal({ visible, onClose, onSuccess }) {
                     icon="lock-closed-outline"
                     placeholder="Mínimo 8 caracteres"
                     secureTextEntry
+                    maxLength={40}
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
+                    onSubmitEditing={handleRegisterSubmit}
+                    returnKeyType="done"
                     isDark={isDark}
                   />
 
                   <TouchableOpacity
-                    style={[styles.submitBtn, { backgroundColor: theme.colors.primary }, (loading || googleLoading) && { opacity: 0.6 }]}
+                    style={[styles.submitBtn, { backgroundColor: theme.colors.orange }, (loading || googleLoading) && { opacity: 0.6 }]}
                     onPress={handleRegisterSubmit}
                     disabled={loading || googleLoading}
                   >

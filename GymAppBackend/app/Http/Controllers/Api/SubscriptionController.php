@@ -36,12 +36,7 @@ class SubscriptionController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'subscription_plan_id' => 'required|exists:subscription_plans,id',
-            'payment_method' => 'required|in:card,transfer',
-            // Si es tarjeta
-            'card_number' => 'required_if:payment_method,card',
-            'card_name' => 'required_if:payment_method,card',
-            'card_expiry' => 'required_if:payment_method,card',
-            'card_cvv' => 'required_if:payment_method,card',
+            'payment_method' => 'required|in:transfer',
             // Campos de facturación
             'billing_name' => 'nullable|string|max:255',
             'billing_email' => 'nullable|email',
@@ -87,30 +82,8 @@ class SubscriptionController extends Controller
             'billing_address' => $request->input('billing_address') ?: $user->billing_address,
         ];
 
-        if ($request->payment_method === 'card') {
-            // En producción, aquí iría integración con pasarela de pago
-            // Por ahora, simulamos validación exitosa
-            $subscriptionData['card_data'] = json_encode([
-                'last_four' => substr($request->card_number, -4),
-                'card_name' => $request->card_name,
-                'expiry' => $request->card_expiry
-            ]);
-            $duration = $plan->duration ?? 'monthly';
-            $months = 1;
-            if ($duration === 'quarterly') { $months = 3; }
-            elseif ($duration === 'semiannual') { $months = 6; }
-            elseif ($duration === 'annual' || $duration === 'yearly') { $months = 12; }
-            elseif (is_numeric($duration)) { $months = (int)$duration; }
-
-            $subscriptionData['status'] = 'active';
-            $subscriptionData['starts_at'] = now();
-            $subscriptionData['ends_at'] = now()->addDays($months * 30);
-            $subscriptionData['approved_at'] = now();
-        }
-        else {
-            // Transferencia -> Pendiente hasta subir comprobante
-            $subscriptionData['status'] = 'pending';
-        }
+        // Transferencia -> pendiente hasta que el comprobante sea aprobado.
+        $subscriptionData['status'] = 'pending';
 
         $subscription = Subscription::create($subscriptionData);
         $subscription->load(['plan', 'user']);
@@ -120,25 +93,9 @@ class SubscriptionController extends Controller
             $subscription->load(['plan', 'user']);
             Notification::notifyAdmins($subscription);
         }
-        elseif ($request->payment_method === 'card') {
-            // Tarjeta: auto-aprobada, notificar al usuario
-            Notification::create([
-                'user_id' => $request->user()->id,
-                'type' => 'subscription_approved',
-                'title' => '¡Suscripción comprada con éxito!',
-                'message' => "Tu suscripción al {$subscription->plan->name} ha sido activada exitosamente.",
-                'data' => [
-                    'subscription_id' => $subscription->id,
-                    'plan_name' => $subscription->plan->name,
-                    'status' => 'active',
-                ],
-            ]);
-        }
 
         return response()->json([
-            'message' => $request->payment_method === 'card'
-            ? 'Suscripción comprada con éxito'
-            : 'Suscripción creada. Suba su comprobante para activarla',
+            'message' => 'Suscripción creada. Suba su comprobante para activarla',
             'subscription' => $subscription
         ], 201);
     }
@@ -168,14 +125,29 @@ class SubscriptionController extends Controller
         }
 
         $receiptFile = $request->file('receipt');
+        if (!$receiptFile || !$receiptFile->isValid()) {
+            Log::warning('Invalid subscription receipt upload', [
+                'subscription_id' => $id,
+                'upload_error' => $receiptFile?->getError(),
+            ]);
+            return response()->json(['message' => 'El comprobante no pudo ser recibido. Intenta nuevamente con una imagen JPG o PNG menor a 5 MB.'], 422);
+        }
+
         $supabase = new SupabaseStorage();
         $path = null;
 
-        if ($supabase->isConfigured()) {
-            $ext = $receiptFile->getClientOriginalExtension() ?: 'jpg';
-            $fileName = 'sub_' . $id . '_' . time() . '_' . uniqid() . '.' . $ext;
-            $filePath = 'receipts/' . $fileName;
-            $path = $supabase->uploadFile($receiptFile, $filePath);
+        try {
+            if ($supabase->isConfigured()) {
+                $ext = $receiptFile->getClientOriginalExtension() ?: 'jpg';
+                $fileName = 'sub_' . $id . '_' . time() . '_' . uniqid() . '.' . $ext;
+                $filePath = 'receipts/' . $fileName;
+                $path = $supabase->uploadFile($receiptFile, $filePath);
+            }
+        } catch (\Throwable $exception) {
+            Log::error('Subscription receipt storage failed', [
+                'subscription_id' => $id,
+                'error' => $exception->getMessage(),
+            ]);
         }
 
         if (!$path) {
@@ -184,7 +156,19 @@ class SubscriptionController extends Controller
                 Storage::disk('public')->delete($subscription->payment_receipt);
             }
             // Store new local receipt
-            $path = $receiptFile->store('receipts', 'public');
+            try {
+                $path = $receiptFile->store('receipts', 'public');
+            } catch (\Throwable $exception) {
+                Log::error('Subscription receipt local storage failed', [
+                    'subscription_id' => $id,
+                    'error' => $exception->getMessage(),
+                ]);
+                return response()->json(['message' => 'No se pudo guardar el comprobante. Intenta nuevamente.'], 500);
+            }
+        }
+
+        if (!$path) {
+            return response()->json(['message' => 'No se pudo guardar el comprobante. Intenta nuevamente.'], 500);
         }
 
         $subscription->update([

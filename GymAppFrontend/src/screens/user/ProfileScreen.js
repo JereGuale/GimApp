@@ -377,15 +377,15 @@ export default function ProfileScreen() {
     return (
       <View style={[styles.container, styles.guestContainer, { backgroundColor: theme.colors.background }]}>
         <View style={[styles.guestCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
-          <View style={[styles.iconContainer, { backgroundColor: theme.colors.primary + '1A' }]}>
+          <View style={[styles.iconContainer, { backgroundColor: `${theme.colors.primary}1A` }]}>
             <Ionicons name="person-circle-outline" size={64} color={theme.colors.primary} />
           </View>
           <Text style={[styles.guestTitle, { color: theme.colors.text }]}>Mi Cuenta</Text>
-          <Text style={[styles.guestSubtitle, { color: theme.colors.textSecondary }]}>
+          <Text style={[styles.guestSubtitle, { color: theme.colors.textSecondary || theme.colors.secondaryText }]}>
             Inicia sesión o regístrate para gestionar tu perfil, ver tu membresía activa y acceder a más funciones del gimnasio.
           </Text>
           <TouchableOpacity
-            style={[styles.guestBtn, { backgroundColor: theme.colors.primary }]}
+            style={[styles.guestBtn, { backgroundColor: theme.colors.orange }]}
             onPress={() => setAuthModalVisible(true)}
             activeOpacity={0.85}
           >
@@ -408,6 +408,7 @@ export default function ProfileScreen() {
   const textMain = theme.isDark ? '#F3F4F6' : '#111827';
   const textMuted = theme.isDark ? '#9CA3AF' : '#6B7280';
   const cardBg = theme.isDark ? '#111827' : '#FFFFFF';
+  const membershipAccent = subscription.data?.plan?.color || theme.colors.orange;
   const cardBorder = theme.isDark ? '#1F2937' : '#E2E8F0';
   const bentoBg = theme.isDark ? '#111827' : '#F9FAFB';
 
@@ -542,9 +543,9 @@ export default function ProfileScreen() {
             activeOpacity={0.8}
           >
             {profilePhotoUri ? (
-              <Image source={{ uri: profilePhotoUri }} style={styles.headerAvatar} contentFit="cover" transition={200} cachePolicy="memory-disk" />
+              <Image source={{ uri: profilePhotoUri }} style={[styles.headerAvatar, { borderColor: '#000000' }]} contentFit="cover" transition={200} cachePolicy="memory-disk" />
             ) : (
-              <View style={[styles.headerAvatarPlaceholder, { backgroundColor: theme.isDark ? '#374151' : '#F3F4F6' }]}>
+              <View style={[styles.headerAvatarPlaceholder, { backgroundColor: theme.isDark ? '#374151' : '#F3F4F6', borderColor: '#000000' }]}>
                 <Ionicons name="person" size={28} color={theme.colors.textSecondary || '#9CA3AF'} />
               </View>
             )}
@@ -575,7 +576,7 @@ export default function ProfileScreen() {
             <Text style={[styles.noSubTitle, { color: textMain }]}>Sin membresía activa</Text>
             <Text style={[styles.noSubDesc, { color: textMuted }]}>Únete al club fitness hoy mismo y obtén acceso ilimitado a nuestras sedes, planes nutricionales y entrenadores expertos.</Text>
             <TouchableOpacity
-              style={styles.primaryActionButton}
+              style={[styles.primaryActionButton, { backgroundColor: theme.colors.orange }]}
               onPress={() => navigation.navigate('Suscripción')}
             >
               <Text style={styles.primaryActionButtonText}>Ver Planes de Suscripción</Text>
@@ -587,13 +588,15 @@ export default function ProfileScreen() {
               colors={theme.isDark ? ['#1E293B', '#0F172A'] : ['#F9FAFB', '#F3F4F6']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
-              style={[styles.platinumCard, { borderColor: theme.isDark ? '#334155' : '#D1D5DB' }]}
+              style={[styles.platinumCard, { borderColor: cardBorder }]}
             >
               {/* Platinum Card Header */}
               <View style={styles.platinumHeader}>
                 <View>
-                  <Text style={[styles.platinumTitle, { color: textMuted }]}>Elite Pass Platinum</Text>
-                  <Text style={styles.platinumPlanName}>⭐ {subscription.data.plan?.name || 'Membresía Gym'}</Text>
+                  <Text style={[styles.platinumPlanName, { color: textMain }]}>
+                    <Text style={{ color: subscription.data.plan?.color || theme.colors.orange }}>★ </Text>
+                    {subscription.data.plan?.name || 'Membresía Gym'}
+                  </Text>
                 </View>
                 <View style={[
                   styles.platinumBadge,
@@ -616,13 +619,13 @@ export default function ProfileScreen() {
 
                 <View style={styles.platinumDetailList}>
                   <View style={styles.platinumDetailItem}>
-                    <Ionicons name="card-sharp" size={14} color="#5B3DF5" />
+                    <Ionicons name="card-sharp" size={14} color={theme.colors.primary} />
                     <Text style={[styles.platinumDetailText, { color: textMuted }]}>
                       Pago: {subscription.data.payment_method === 'transfer' ? 'Transferencia' : 'Tarjeta'}
                     </Text>
                   </View>
                   <View style={styles.platinumDetailItem}>
-                    <Ionicons name="calendar-sharp" size={14} color="#5B3DF5" />
+                    <Ionicons name="calendar-sharp" size={14} color={theme.colors.primary} />
                     <Text style={[styles.platinumDetailText, { color: textMuted }]}>
                       Siguiente cobro: {subscription.data.ends_at ? new Date(subscription.data.ends_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }) : '—'}
                     </Text>
@@ -642,29 +645,31 @@ export default function ProfileScreen() {
               {subscription.data.status === 'active' && (
                 <View style={styles.renewalSection}>
                   <View style={[styles.renewalBarBg, { backgroundColor: theme.isDark ? '#334155' : '#E5E7EB' }]}>
-                    <View style={[styles.renewalBarFill, { width: `${getSubscriptionProgress()}%`, backgroundColor: '#5B3DF5' }]} />
+                    <View style={[styles.renewalBarFill, { width: `${getSubscriptionProgress()}%`, backgroundColor: theme.colors.primary }]} />
                   </View>
                   <Text style={[styles.renewalText, { color: textMuted }]}>
-                    Renueva en {getDaysRemaining()} días ({getSubscriptionProgress()}% consumido)
+                    Renueva en {getDaysRemaining()} días
                   </Text>
                 </View>
               )}
 
-              {/* Platinum Card Action Buttons */}
-              <View style={styles.platinumActions}>
-                <TouchableOpacity
-                  style={[styles.platinumButtonOutlined, { borderColor: theme.isDark ? '#475569' : '#D1D5DB' }]}
-                  onPress={() => navigation.navigate('Suscripción')}
-                >
-                  <Text style={[styles.platinumButtonTextOutlined, { color: textMain }]}>Cambiar plan</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.platinumButtonSolid}
-                  onPress={() => navigation.navigate('Suscripción')}
-                >
-                  <Text style={styles.platinumButtonTextSolid}>Administrar membresía</Text>
-                </TouchableOpacity>
-              </View>
+              {/* Active memberships cannot be changed until they expire. */}
+              {subscription.data.status !== 'active' && subscription.data.status !== 'pending' && (
+                <View style={styles.platinumActions}>
+                  <TouchableOpacity
+                    style={[styles.platinumButtonOutlined, { borderColor: membershipAccent }]}
+                    onPress={() => navigation.navigate('Suscripción')}
+                  >
+                    <Text style={[styles.platinumButtonTextOutlined, { color: membershipAccent }]}>Cambiar plan</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.platinumButtonSolid, { backgroundColor: membershipAccent }]}
+                    onPress={() => navigation.navigate('Suscripción')}
+                  >
+                    <Text style={styles.platinumButtonTextSolid}>Administrar membresía</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
             </LinearGradient>
           </View>
         )}
@@ -976,7 +981,7 @@ const styles = StyleSheet.create({
   headerAvatarWrapper: { width: 64, height: 64, borderRadius: 32, position: 'relative', marginRight: 4 },
   headerAvatar: { width: '100%', height: '100%', borderRadius: 32, borderWidth: 2, borderColor: '#5B3DF5' },
   headerAvatarPlaceholder: { width: '100%', height: '100%', borderRadius: 32, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#5B3DF5' },
-  avatarEditBadge: { position: 'absolute', bottom: 0, right: 0, backgroundColor: '#5B3DF5', width: 20, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#FFFFFF' },
+  avatarEditBadge: { position: 'absolute', bottom: 0, right: 0, backgroundColor: '#000000', width: 20, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#FFFFFF' },
 
   statsSectionRow: { flexDirection: 'row', gap: 20, marginVertical: 24 },
   statsSectionStacked: { flexDirection: 'column', gap: 16, marginVertical: 24 },
@@ -999,7 +1004,6 @@ const styles = StyleSheet.create({
   platinumCardOuter: { borderRadius: 28, overflow: 'hidden', marginBottom: 24 },
   platinumCard: { borderRadius: 28, padding: 32, borderWidth: 1 },
   platinumHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  platinumTitle: { fontSize: 12, fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase' },
   platinumPlanName: { fontSize: 24, fontWeight: '800', color: '#5B3DF5', marginTop: 4, fontFamily: Platform.OS === 'web' ? 'Plus Jakarta Sans, sans-serif' : undefined },
   platinumBadge: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 99 },
   platinumBadgeText: { color: '#FFFFFF', fontSize: 10, fontWeight: '800', letterSpacing: 0.5 },

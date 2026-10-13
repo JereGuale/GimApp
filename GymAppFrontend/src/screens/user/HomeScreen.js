@@ -18,6 +18,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { CategoryService, BannerService, API_URL, PersistentCache } from '../../services/api';
+import { SubscriptionAPI } from '../../services/subscriptionService';
 import { useResponsive } from '../../hooks/useResponsive';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -61,8 +62,8 @@ export default function HomeScreen() {
     maps_url: 'https://maps.google.com/?q=-0.967601,-80.678922'
   });
   const [loading, setLoading] = useState(true);
-  const [favorites, setFavorites] = useState([]);
   const [searchText, setSearchText] = useState('');
+  const [membership, setMembership] = useState({ data: null, loading: true });
 
   // ── Catalog Integrated Filter States ──
   const [showFullCatalog, setShowFullCatalog] = useState(false);
@@ -72,7 +73,83 @@ export default function HomeScreen() {
   const [sortBy, setSortBy] = useState('default'); // 'default' | 'price_asc' | 'price_desc'
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
 
-  const borderColors = [theme.colors.primary, theme.colors.primary, theme.colors.primary, theme.colors.primary];
+  const membershipDaysRemaining = membership.data?.ends_at
+    ? Math.max(0, Math.ceil((new Date(membership.data.ends_at).getTime() - Date.now()) / 86400000))
+    : null;
+  const membershipProgress = (() => {
+    if (!membership.data?.ends_at) return 0;
+    const end = new Date(membership.data.ends_at).getTime();
+    const start = membership.data.starts_at
+      ? new Date(membership.data.starts_at).getTime()
+      : end - 30 * 86400000;
+    return Math.min(100, Math.max(0, Math.round(((Date.now() - start) / (end - start)) * 100)));
+  })();
+
+  const renderMembershipWidget = () => {
+    const isActive = membership.data?.status === 'active';
+
+    if (isActive) {
+      return (
+        <View style={[styles.membershipWidget, styles.membershipPlatinumOuter, { marginHorizontal: contentPadding }]}>
+          <LinearGradient
+            colors={theme.isDark ? ['#1E293B', '#0F172A'] : ['#F9FAFB', '#F3F4F6']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={[styles.membershipPlatinumCard, { borderColor: theme.colors.border }]}
+          >
+            <View style={styles.membershipWidgetHeader}>
+              <View>
+                <Text style={[styles.membershipWidgetEyebrow, { color: theme.colors.textSecondary }]}>MEMBRESÍA ACTIVA</Text>
+                <Text style={[styles.membershipPlatinumPlan, { color: theme.colors.text }]}>
+                  <Text style={{ color: membership.data.plan?.color || theme.colors.orange }}>★ </Text>
+                  {membership.data.plan?.name || 'Membresía Gym'}
+                </Text>
+              </View>
+              <View style={[styles.membershipStatusBadge, { backgroundColor: '#10B981' }]}>
+                <Text style={styles.membershipStatusText}>ACTIVA</Text>
+              </View>
+            </View>
+
+            <View style={styles.membershipPlatinumBody}>
+              <View style={styles.membershipPriceRow}>
+                <Text style={[styles.membershipPrice, { color: theme.colors.text }]}>
+                  ${membership.data.price ? Number(membership.data.price).toFixed(0) : '—'}
+                </Text>
+                <Text style={[styles.membershipPeriod, { color: theme.colors.textSecondary }]}>/mes</Text>
+              </View>
+            </View>
+
+            <View style={[styles.membershipProgressTrack, { backgroundColor: theme.isDark ? '#334155' : '#E5E7EB' }]}>
+              <View style={[styles.membershipProgressFill, { width: `${membershipProgress}%`, backgroundColor: theme.colors.primary }]} />
+            </View>
+            <Text style={[styles.membershipProgressText, { color: theme.colors.textSecondary }]}>
+              Renueva en {membershipDaysRemaining} días
+            </Text>
+          </LinearGradient>
+        </View>
+      );
+    }
+
+    return null;
+  };
+
+  useEffect(() => {
+    if (!token) {
+      setMembership({ data: null, loading: false });
+      return undefined;
+    }
+
+    let isMounted = true;
+    SubscriptionAPI.getMySubscription().then((result) => {
+      if (isMounted) {
+        setMembership({
+          data: result.success ? result.data : null,
+          loading: false,
+        });
+      }
+    });
+    return () => { isMounted = false; };
+  }, [token]);
 
   // Fallback banners
   const fallbackBanners = [
@@ -244,14 +321,6 @@ export default function HomeScreen() {
     setCurrentBannerIndex(index);
   }, [bannerWidth]);
 
-  const toggleFavorite = (productId) => {
-    setFavorites((prev) =>
-      prev.includes(productId)
-        ? prev.filter((id) => id !== productId)
-        : [...prev, productId]
-    );
-  };
-
   const handleBannerPress = (banner) => {
     if (!banner) return;
     const action = banner.button_action;
@@ -319,7 +388,6 @@ export default function HomeScreen() {
 
   // Render Product Card
   const renderProductCard = ({ item: product, index }) => {
-    const isFavorite = favorites.includes(product.id);
     const imageRaw = product.images && product.images.length > 0 ? product.images[0] : product.image;
 
     let imageUri = null;
@@ -399,18 +467,6 @@ export default function HomeScreen() {
           </View>
         </TouchableOpacity>
 
-        {/* Favorite */}
-        <TouchableOpacity
-          style={[styles.heartButton, { top: productImageHeight - 48 }]}
-          onPress={() => toggleFavorite(product.id)}
-          activeOpacity={0.7}
-        >
-          <Ionicons
-            name={isFavorite ? 'heart' : 'heart-outline'}
-            size={18}
-            color="#000000"
-          />
-        </TouchableOpacity>
       </View>
     );
   };
@@ -739,6 +795,9 @@ export default function HomeScreen() {
         )}
       </View>
 
+      {/* Membership summary */}
+      {token && renderMembershipWidget()}
+
       {/* Featured Products */}
       <View style={[styles.featuredProductsHeader, { paddingHorizontal: contentPadding }]}>
         <Text style={[styles.featuredProductsSubtitle, { color: '#FF6A1A' }]}>
@@ -920,6 +979,141 @@ const styles = StyleSheet.create({
   // ─── Banner Carousel ───
   bannerSection: {
     marginBottom: 20,
+  },
+  membershipWidget: {
+    borderWidth: 1,
+    borderRadius: 18,
+    overflow: 'hidden',
+    marginBottom: 24,
+  },
+  membershipWidgetGradient: {
+    padding: 18,
+  },
+  membershipPlatinumOuter: {
+    borderRadius: 22,
+    overflow: 'hidden',
+    borderWidth: 0,
+  },
+  membershipPlatinumCard: {
+    borderRadius: 22,
+    padding: 22,
+    borderWidth: 1,
+  },
+  membershipPlatinumPlan: {
+    color: '#5B3DF5',
+    fontSize: 20,
+    fontWeight: '800',
+    marginTop: 4,
+  },
+  membershipPlatinumBody: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    marginVertical: 20,
+    gap: 16,
+  },
+  membershipPriceRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+  },
+  membershipPrice: {
+    fontSize: 42,
+    fontWeight: '800',
+  },
+  membershipPeriod: {
+    fontSize: 13,
+    fontWeight: '600',
+    marginLeft: 2,
+  },
+  membershipDetails: {
+    gap: 8,
+    alignItems: 'flex-end',
+  },
+  membershipDetailText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  membershipProgressTrack: {
+    height: 7,
+    borderRadius: 4,
+    width: '100%',
+  },
+  membershipProgressFill: {
+    height: '100%',
+    borderRadius: 4,
+    backgroundColor: '#5B3DF5',
+  },
+  membershipProgressText: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 8,
+  },
+  membershipWidgetHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  membershipWidgetHeading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  membershipWidgetIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  membershipWidgetEyebrow: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1.2,
+    marginBottom: 4,
+  },
+  membershipWidgetTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  membershipWidgetDate: {
+    fontSize: 13,
+  },
+  membershipWidgetMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 14,
+  },
+  membershipDays: {
+    fontSize: 12,
+    fontWeight: '800',
+    marginLeft: 'auto',
+  },
+  membershipStatusBadge: {
+    borderRadius: 99,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+  },
+  membershipStatusText: {
+    color: '#FFF',
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  membershipWidgetButton: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginTop: 14,
+  },
+  membershipWidgetButtonText: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: '800',
   },
   bannerSlide: {
     position: 'relative',
@@ -1129,24 +1323,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  heartButton: {
-    position: 'absolute',
-    bottom: 12,
-    right: 12,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
   },
   productInfo: {
     padding: 14,

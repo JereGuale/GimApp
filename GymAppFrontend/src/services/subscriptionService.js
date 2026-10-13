@@ -135,10 +135,18 @@ export const SubscriptionAPI = {
             if (Platform.OS === 'web') {
                 // En web, convertimos la URI a Blob y luego a File
                 const res = await fetch(imageUri);
+                if (!res.ok) {
+                    throw new Error(`No se pudo leer la imagen seleccionada (${res.status})`);
+                }
                 const blob = await res.blob();
-                const fileObj = new File([blob], `receipt_${Date.now()}.${fileExtension}`, { type: mimeType });
+                const fileObj = typeof File !== 'undefined'
+                    ? new File([blob], `receipt_${Date.now()}.${fileExtension}`, { type: mimeType })
+                    : blob;
                 formData.append('receipt', fileObj);
             } else {
+                if (!imageUri) {
+                    throw new Error('No se seleccionó una imagen');
+                }
                 formData.append('receipt', {
                     uri: imageUri,
                     type: mimeType,
@@ -176,7 +184,13 @@ export const SubscriptionAPI = {
 
             return {
                 success: false,
-                error: error.response?.data?.message || error.response?.data?.errors?.receipt?.[0] || error.message || 'Error al subir comprobante'
+                error: error.response?.data?.message
+                    || error.response?.data?.errors?.receipt?.[0]
+                    || (error.response?.status >= 500
+                        ? 'El servidor no pudo procesar el comprobante. Intenta con una imagen JPG o PNG menor a 5 MB.'
+                        : null)
+                    || error.message
+                    || 'Error al subir comprobante'
             };
         }
     }

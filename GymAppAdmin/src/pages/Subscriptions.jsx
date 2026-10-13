@@ -551,7 +551,7 @@ export default function Subscriptions() {
 
   const fetchSubs = () => {
     setLoading(true);
-    apiFetch('/trainer/subscriptions')
+    return apiFetch('/trainer/subscriptions')
       .then(d => setSubs(Array.isArray(d) ? d : []))
       .catch(() => setSubs([]))
       .finally(() => setLoading(false));
@@ -568,6 +568,18 @@ export default function Subscriptions() {
   useEffect(() => {
     setCurrentPage(1);
   }, [search, filter]);
+
+  useEffect(() => {
+    if (!success) return undefined;
+    const timeoutId = window.setTimeout(() => setSuccess(''), 4000);
+    return () => window.clearTimeout(timeoutId);
+  }, [success]);
+
+  useEffect(() => {
+    if (!error) return undefined;
+    const timeoutId = window.setTimeout(() => setError(''), 5000);
+    return () => window.clearTimeout(timeoutId);
+  }, [error]);
 
   // Close active dropdown when clicking outside
   useEffect(() => {
@@ -619,7 +631,9 @@ export default function Subscriptions() {
       s.billing_email?.toLowerCase().includes(query) ||
       (s.billing_phone && s.billing_phone.includes(query)) ||
       (s.user?.phone && s.user.phone.includes(query)) ||
-      (s.resolved_phone && s.resolved_phone.includes(query));
+      (s.resolved_phone && s.resolved_phone.includes(query)) ||
+      (s.billing_id_number && s.billing_id_number.toLowerCase().includes(query)) ||
+      (s.user?.billing_id_number && s.user.billing_id_number.toLowerCase().includes(query));
 
     return matchFilter && matchSearch;
   });
@@ -645,8 +659,8 @@ export default function Subscriptions() {
     setError(''); setSuccess('');
     try {
       await apiFetch(`/trainer/subscriptions/${id}/approve`, { method: 'POST' });
+      await fetchSubs();
       setSuccess('Suscripción aprobada exitosamente');
-      fetchSubs();
     } catch (e) { setError(e.message); }
     finally { setActionLoading(null); }
   };
@@ -667,8 +681,8 @@ export default function Subscriptions() {
         method: 'POST',
         body: JSON.stringify({ reason: rejectionReason || 'Comprobante no válido' })
       });
+      await fetchSubs();
       setSuccess('Suscripción rechazada');
-      fetchSubs();
     } catch (e) { setError(e.message); }
     finally { setActionLoading(null); }
   };
@@ -684,9 +698,9 @@ export default function Subscriptions() {
     setError(''); setSuccess('');
     try {
       await apiFetch(`/trainer/subscriptions/${id}`, { method: 'DELETE' });
-      setSuccess('Suscripción eliminada exitosamente');
       setDeleteModal(null);
-      fetchSubs();
+      await fetchSubs();
+      setSuccess('Suscripción eliminada exitosamente');
     } catch (e) {
       setError(e.message || 'Error al eliminar la suscripción');
     } finally {
@@ -708,8 +722,8 @@ export default function Subscriptions() {
     setError(''); setSuccess('');
     try {
       await apiFetch(`/trainer/subscriptions/${id}/renew`, { method: 'POST' });
+      await fetchSubs();
       setSuccess('Suscripción renovada exitosamente');
-      fetchSubs();
     } catch (e) {
       setError(e.message || 'Error al renovar la suscripción');
     } finally {

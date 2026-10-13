@@ -7,7 +7,6 @@ import {
   Plus, 
   Loader2, 
   CreditCard, 
-  Sparkles, 
   Pencil, 
   Trash2, 
   X 
@@ -29,7 +28,6 @@ export default function SubscriptionPlans() {
   const [featuresText, setFeaturesText] = useState('');
   const [icon, setIcon] = useState('barbell-outline');
   const [color, setColor] = useState('#22D3EE');
-  const [isBestValue, setIsBestValue] = useState(false);
   const [status, setStatus] = useState('active');
 
   const [error, setError] = useState('');
@@ -41,7 +39,7 @@ export default function SubscriptionPlans() {
 
   const fetchPlans = () => {
     setLoading(true);
-    apiFetch('/admin/subscription-plans')
+    return apiFetch('/admin/subscription-plans')
       .then(d => setPlans(Array.isArray(d) ? d : (d?.data || [])))
       .catch(() => setPlans([]))
       .finally(() => setLoading(false));
@@ -56,6 +54,15 @@ export default function SubscriptionPlans() {
     setCurrentPage(1);
   }, [plans.length]);
 
+  useEffect(() => {
+    if (!success && !error) return undefined;
+    const timer = setTimeout(() => {
+      setSuccess('');
+      setError('');
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, [success, error]);
+
   const handleOpenAdd = () => {
     setEditId(null);
     setName('');
@@ -65,7 +72,6 @@ export default function SubscriptionPlans() {
     setFeaturesText('');
     setIcon('barbell-outline');
     setColor('#22D3EE');
-    setIsBestValue(false);
     setStatus('active');
     setError('');
     setSuccess('');
@@ -94,7 +100,6 @@ export default function SubscriptionPlans() {
     setFeaturesText(featStr);
     setIcon(p.icon || 'barbell-outline');
     setColor(p.color || '#22D3EE');
-    setIsBestValue(!!p.is_best_value);
     setStatus(p.status || 'active');
     setError('');
     setSuccess('');
@@ -121,7 +126,7 @@ export default function SubscriptionPlans() {
       features: feats,
       icon,
       color,
-      is_best_value: isBestValue,
+      is_best_value: false,
       status,
     };
 
@@ -142,7 +147,7 @@ export default function SubscriptionPlans() {
         setSuccess('Plan creado con éxito');
       }
       setModalOpen(false);
-      fetchPlans();
+      await fetchPlans();
     } catch (err) {
       setError(err.message || 'Error al guardar el plan');
     }
@@ -159,7 +164,8 @@ export default function SubscriptionPlans() {
     try {
       await apiFetch(`/admin/subscription-plans/${p.id}`, { method: 'DELETE' });
       setSuccess('Plan eliminado correctamente');
-      fetchPlans();
+      setDeleteConfirm({ isOpen: false, plan: null });
+      await fetchPlans();
     } catch (err) {
       setError(err.message || 'No se pudo eliminar el plan');
     }
@@ -226,11 +232,6 @@ export default function SubscriptionPlans() {
       ) : viewMode === 'cards' ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(310px, 1fr))', gap: 24, margin: '20px 0' }}>
           {sortedPlans.map(plan => {
-            let category = 'ESTÁNDAR';
-            const nameLower = (plan.name || '').toLowerCase();
-            if (nameLower.includes('estudiantil') || nameLower.includes('flex')) category = 'FLEXIBILIDAD';
-            else if (nameLower.includes('elite') || nameLower.includes('premium')) category = 'EXPERIENCIA PREMIUM';
-
             let featuresList = [];
             if (Array.isArray(plan.features)) {
               featuresList = plan.features;
@@ -243,88 +244,44 @@ export default function SubscriptionPlans() {
               }
             }
 
-            const accentColor = plan.color || (category === 'FLEXIBILIDAD' ? '#00C2FF' : category === 'EXPERIENCIA PREMIUM' ? '#5B3DF5' : '#F97316');
-            const isBest = plan.is_best_value;
-            const isPremium = category === 'EXPERIENCIA PREMIUM';
-
+            const accentColor = plan.color || '#5B3DF5';
             return (
               <div 
                 key={plan.id} 
                 style={{
                   position: 'relative',
-                  backgroundColor: '#111827',
+                  backgroundColor: 'var(--card)',
                   borderRadius: 20,
-                  border: isBest ? `2px solid ${accentColor}` : isPremium ? `2px solid ${accentColor}` : '1px solid rgba(255,255,255,0.08)',
+                  border: `3px solid ${accentColor}`,
                   padding: 24,
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
-                  boxShadow: isBest ? `0 8px 30px ${accentColor}25` : '0 4px 20px rgba(0,0,0,0.2)'
+                  boxShadow: 'var(--shadow-md)'
                 }}
               >
-                {isBest && (
-                  <div style={{
-                    position: 'absolute',
-                    top: -12,
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    backgroundColor: accentColor,
-                    color: '#FFF',
-                    fontSize: 11,
-                    fontWeight: 800,
-                    padding: '4px 14px',
-                    borderRadius: 20,
-                    letterSpacing: 0.8,
-                    boxShadow: `0 4px 12px ${accentColor}50`
-                  }}>
-                    MÁS POPULAR
-                  </div>
-                )}
-
-                {isPremium && !isBest && (
-                  <div style={{
-                    position: 'absolute',
-                    top: -12,
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    backgroundColor: accentColor,
-                    color: '#FFF',
-                    fontSize: 11,
-                    fontWeight: 800,
-                    padding: '4px 14px',
-                    borderRadius: 20,
-                    letterSpacing: 0.8
-                  }}>
-                    ★ PREMIUM
-                  </div>
-                )}
-
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1.2, color: accentColor, marginBottom: 8 }}>
-                    {category}
-                  </div>
-
-                  <h3 style={{ fontSize: 24, fontWeight: 800, color: '#F3F4F6', margin: '0 0 8px 0' }}>
+                  <h3 style={{ fontSize: 24, fontWeight: 800, color: 'var(--text)', margin: '0 0 8px 0', minHeight: 58 }}>
                     {plan.name}
                   </h3>
 
-                  <p style={{ fontSize: 13, color: '#9CA3AF', lineHeight: 1.5, minHeight: 40, margin: '0 0 20px 0' }}>
+                  <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5, minHeight: 62, margin: '0 0 20px 0' }}>
                     {plan.description || 'Sin descripción disponible.'}
                   </p>
 
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 24 }}>
-                    <span style={{ fontSize: 38, fontWeight: 900, color: '#FFFFFF' }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, minHeight: 58, marginBottom: 24 }}>
+                    <span style={{ fontSize: 38, fontWeight: 900, color: 'var(--text)' }}>
                       ${Number(plan.price).toFixed(0)}
                     </span>
-                    <span style={{ fontSize: 14, color: '#9CA3AF' }}>
+                    <span style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
                       /{plan.duration === 'monthly' ? 'mes' : plan.duration}
                     </span>
                   </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 28 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minHeight: 180, marginBottom: 28 }}>
                     {featuresList.map((feat, fIdx) => (
-                      <div key={fIdx} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13.5, color: '#E5E7EB' }}>
-                        <CheckCircle2 size={16} color="#22C55E" style={{ flexShrink: 0 }} />
+                      <div key={fIdx} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13.5, color: 'var(--text)' }}>
+                        <CheckCircle2 size={16} color="var(--success)" style={{ flexShrink: 0 }} />
                         <span>{feat}</span>
                       </div>
                     ))}
@@ -334,7 +291,7 @@ export default function SubscriptionPlans() {
                 <div style={{ display: 'flex', gap: 10, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
                   <button 
                     className="btn btn--primary" 
-                    style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: accentColor, borderColor: accentColor }}
+                    style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: 'var(--primary)', borderColor: 'var(--primary)' }}
                     onClick={() => handleOpenEdit(plan)}
                   >
                     <Pencil size={14} />
@@ -363,7 +320,6 @@ export default function SubscriptionPlans() {
                   <th>Precio</th>
                   <th>Duración</th>
                   <th>Estado</th>
-                  <th>Destacado</th>
                   <th>Acciones</th>
                 </tr>
               </thead>
@@ -377,7 +333,7 @@ export default function SubscriptionPlans() {
                             width: 12, 
                             height: 12, 
                             borderRadius: '50%', 
-                            backgroundColor: plan.color || '#22D3EE', 
+                            backgroundColor: 'var(--border)',
                             display: 'inline-block' 
                           }} 
                         />
@@ -397,16 +353,6 @@ export default function SubscriptionPlans() {
                       <span className={`badge badge--${plan.status === 'active' ? 'green' : 'gray'}`}>
                         {plan.status === 'active' ? 'Activo' : 'Inactivo'}
                       </span>
-                    </td>
-                    <td>
-                      {plan.is_best_value ? (
-                        <span className="badge badge--yellow" style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
-                          <Sparkles size={10} />
-                          <span>Sí</span>
-                        </span>
-                      ) : (
-                        <span style={{ color: 'var(--text-secondary)' }}>No</span>
-                      )}
                     </td>
                     <td>
                       <div style={{ display: 'flex', gap: 8 }}>
@@ -511,27 +457,42 @@ export default function SubscriptionPlans() {
                 </div>
               </div>
 
-              <div className="form-grid-2">
-                <div className="form-group">
-                  <label>Nombre Icono (Ionicons)</label>
-                  <input
-                    type="text"
-                    value={icon}
-                    onChange={e => setIcon(e.target.value)}
-                    placeholder="Ej. barbell-outline, school-outline"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Color Identificador</label>
-                  <div style={{ display: 'flex', gap: 8 }}>
+              <div className="form-group">
+                <label>Color del plan</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
+                  {['#8B5CF6', '#F97316', '#00C2FF', '#22C55E', '#EC4899', '#EAB308'].map(preset => (
+                    <button
+                      key={preset}
+                      type="button"
+                      aria-label={`Elegir color ${preset}`}
+                      onClick={() => setColor(preset)}
+                      style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: '50%',
+                        backgroundColor: preset,
+                        border: color.toLowerCase() === preset.toLowerCase() ? '3px solid #FFFFFF' : '2px solid transparent',
+                        boxShadow: color.toLowerCase() === preset.toLowerCase() ? `0 0 0 2px ${preset}` : 'none',
+                        cursor: 'pointer'
+                      }}
+                    />
+                  ))}
+                  <label
+                    title="Elegir un color personalizado"
+                    style={{ width: 32, height: 32, borderRadius: '50%', overflow: 'hidden', cursor: 'pointer', border: '2px solid var(--border)' }}
+                  >
                     <input
                       type="color"
                       value={color}
                       onChange={e => setColor(e.target.value)}
-                      style={{ width: '100%', height: 38, padding: '2px', cursor: 'pointer', border: '1px solid var(--border)', borderRadius: '6px', backgroundColor: 'transparent' }}
+                      aria-label="Elegir color personalizado"
+                      style={{ width: '150%', height: '150%', margin: '-25%', cursor: 'pointer' }}
                     />
-                  </div>
+                  </label>
                 </div>
+                <small style={{ color: 'var(--text-secondary)', marginTop: 6 }}>
+                  Este color identifica el plan en las tarjetas de la app.
+                </small>
               </div>
 
               <div className="form-group">
@@ -542,19 +503,6 @@ export default function SubscriptionPlans() {
                   placeholder="Ej:&#10;Acceso total al gimnasio&#10;Uso de máquinas y pesas&#10;Soporte de entrenadores"
                   rows={4}
                 />
-              </div>
-
-              <div className="form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: 8, display: 'flex', marginTop: 4 }}>
-                <input
-                  type="checkbox"
-                  id="isBestValue"
-                  checked={isBestValue}
-                  onChange={e => setIsBestValue(e.target.checked)}
-                  style={{ width: 'auto', cursor: 'pointer' }}
-                />
-                <label htmlFor="isBestValue" style={{ margin: 0, cursor: 'pointer', userSelect: 'none', color: 'var(--text)' }}>
-                  Destacar plan como el de "Mejor Valor" (Best Value)
-                </label>
               </div>
 
               <div className="modal-actions" style={{ marginTop: 12 }}>

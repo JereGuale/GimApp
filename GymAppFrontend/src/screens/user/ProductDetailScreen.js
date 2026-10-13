@@ -101,6 +101,10 @@ export default function ProductDetailScreen() {
   }, [product]);
   const [activeImage, setActiveImage] = useState(images[0] || null);
 
+  useEffect(() => {
+    setActiveImage(images[0] || null);
+  }, [images]);
+
   if (!product) {
     return (
       <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
@@ -150,6 +154,7 @@ export default function ProductDetailScreen() {
             }
           ]}>
             <Image
+              key={`${product.id || product.name}-${activeImage || 'placeholder'}`}
               source={{ uri: activeImage || images[0] || 'https://via.placeholder.com/400' }}
               style={styles.mainImage}
               contentFit="contain"

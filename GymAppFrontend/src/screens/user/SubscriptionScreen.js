@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, RefreshControl, Platform, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { SubscriptionAPI, SubscriptionPlanAPI } from '../../services/subscriptionService';
@@ -15,13 +14,6 @@ import { useResponsive } from '../../hooks/useResponsive';
 import BillingModal from '../../components/BillingModal';
 import { ProfileAPI } from '../../services/notificationService';
 import { PersistentCache } from '../../services/api';
-
-const getPlanCategory = (planName) => {
-  const name = planName.toLowerCase();
-  if (name.includes('estudiantil') || name.includes('student')) return 'FLEXIBILIDAD';
-  if (name.includes('elite') || name.includes('premium')) return 'EXPERIENCIA PREMIUM';
-  return 'ESTÁNDAR';
-};
 
 export default function SubscriptionScreen() {
   const { theme } = useTheme();
@@ -46,6 +38,7 @@ export default function SubscriptionScreen() {
   // Suscripción existente
   const [existingSub, setExistingSub] = useState(null);
   const [loadingSub, setLoadingSub] = useState(true);
+  const [showPlans, setShowPlans] = useState(false);
 
   // Planes dinámicos
   const [plans, setPlans] = useState([]);
@@ -65,8 +58,12 @@ export default function SubscriptionScreen() {
     const result = await SubscriptionAPI.getMySubscription();
     if (result.success && result.data && ['active', 'pending'].includes(result.data.status)) {
       setExistingSub(result.data);
+      if (result.data.status === 'active') {
+        setShowPlans(false);
+      }
     } else {
       setExistingSub(null);
+      setShowPlans(false);
     }
     setLoadingSub(false);
   };
@@ -300,6 +297,7 @@ export default function SubscriptionScreen() {
         <Text style={[styles.existingSubNote, { color: theme.colors.textSecondary }]}>
           Podrás elegir un nuevo plan cuando termine tu periodo actual.
         </Text>
+
       </View>
     );
   };
@@ -309,11 +307,6 @@ export default function SubscriptionScreen() {
     .sort((a, b) => parseFloat(a.price || 0) - parseFloat(b.price || 0));
 
   const mappedPlans = sortedPlans.map((plan) => {
-    let category = 'ESTÁNDAR';
-    const nameLower = (plan.name || '').toLowerCase();
-    if (nameLower.includes('estudiantil') || nameLower.includes('flex')) category = 'FLEXIBILIDAD';
-    else if (nameLower.includes('elite') || nameLower.includes('premium')) category = 'EXPERIENCIA PREMIUM';
-
     let featuresList = [];
     if (Array.isArray(plan.features)) {
       featuresList = plan.features;
@@ -330,19 +323,13 @@ export default function SubscriptionScreen() {
       featuresList = [plan.description];
     }
 
-    let badge = null;
-    if (plan.is_best_value) badge = 'MÁS POPULAR';
-    else if (category === 'EXPERIENCIA PREMIUM') badge = 'PREMIUM';
-
-    const accentColor = plan.color || (category === 'FLEXIBILIDAD' ? '#00C2FF' : category === 'EXPERIENCIA PREMIUM' ? '#5B3DF5' : '#F97316');
+    const accentColor = plan.color || theme.colors.border;
 
     return {
       ...plan,
       displayName: plan.name,
       displayPrice: plan.price ? Number(plan.price).toFixed(0) : '0',
-      category: category,
       accentColor: accentColor,
-      badge: badge,
       description: plan.description || '',
       features: featuresList
     };
@@ -367,9 +354,7 @@ export default function SubscriptionScreen() {
           <Ionicons name="arrow-back" size={24} color={textMain} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: textMain }]}>Suscripciones</Text>
-        <TouchableOpacity style={styles.helpButton} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-          <Ionicons name="help-circle-outline" size={24} color={textMuted} />
-        </TouchableOpacity>
+        <View style={styles.headerRightSpacer} />
       </View>
 
       <ScrollView
@@ -388,24 +373,45 @@ export default function SubscriptionScreen() {
 
         {loadingSub || loadingPlans ? (
           <View style={{ alignItems: 'center', paddingVertical: 80 }}>
-            <ActivityIndicator size="large" color="#5B3DF5" />
+            <ActivityIndicator size="large" color={theme.colors.primary} />
           </View>
         ) : (
           <>
             {renderExistingSubscriptionBanner()}
 
-            <ScrollView
-              horizontal={isSmallScreen}
-              showsHorizontalScrollIndicator={false}
-              snapToInterval={isSmallScreen ? (CARD_WIDTH_MOBILE + 20) : null}
-              snapToAlignment="center"
-              decelerationRate="fast"
-              contentContainerStyle={!isSmallScreen ? styles.plansWebRow : styles.plansMobileColHorizontal}
-              style={isSmallScreen ? { marginHorizontal: -16, marginBottom: 32 } : null}
-            >
-              {mappedPlans.map((plan) => {
-                const isElite = plan.badge === 'PREMIUM';
+            {existingSub?.status === 'active' && (
+              <TouchableOpacity
+                style={[styles.viewPlansButton, { backgroundColor: theme.colors.orange }]}
+                onPress={() => setShowPlans((visible) => !visible)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.viewPlansButtonText}>
+                  {showPlans ? 'Ocultar planes' : 'Ver Planes'}
+                </Text>
+                <Ionicons
+                  name={showPlans ? 'chevron-up' : 'chevron-down'}
+                  size={16}
+                  color="#FFFFFF"
+                />
+              </TouchableOpacity>
+            )}
+
+            {(!existingSub || existingSub.status !== 'active' || showPlans) && (
+              <ScrollView
+                horizontal={isSmallScreen}
+                showsHorizontalScrollIndicator={false}
+                snapToInterval={isSmallScreen ? (CARD_WIDTH_MOBILE + 20) : null}
+                snapToAlignment="center"
+                decelerationRate="fast"
+                contentContainerStyle={!isSmallScreen ? styles.plansWebRow : styles.plansMobileColHorizontal}
+                style={isSmallScreen ? { marginHorizontal: -16, marginBottom: 32 } : null}
+              >
+                {mappedPlans.map((plan) => {
                 const cardColor = plan.accentColor;
+                const buttonColor = existingSub
+                  ? '#9CA3AF'
+                  : cardColor;
+                const buttonTextColor = '#FFFFFF';
 
                 const cardContent = (
                   <View style={[
@@ -413,18 +419,7 @@ export default function SubscriptionScreen() {
                     { backgroundColor: cardBg },
                     existingSub && { opacity: 0.6 }
                   ]}>
-                    {/* Badge header */}
-                    {plan.badge && (
-                      <View style={[styles.badge, { backgroundColor: cardColor }]}>
-                        {isElite && <Ionicons name="star" size={12} color="#FFFFFF" style={{ marginRight: 4 }} />}
-                        <Text style={styles.badgeText}>{plan.badge}</Text>
-                      </View>
-                    )}
-
-                    <View>
-                      <Text style={[styles.planCategory, { color: cardColor }]}>
-                        {plan.category}
-                      </Text>
+                    <View style={styles.planHeader}>
                       <Text style={[styles.planName, { color: textMain }]}>
                         {plan.displayName}
                       </Text>
@@ -442,18 +437,16 @@ export default function SubscriptionScreen() {
 
                     <View style={styles.features}>
                       {plan.features.map((feature, index) => {
-                        const isFirstEliteFeature = isElite && index === 0;
                         return (
                           <View key={index} style={styles.featureRow}>
                             <Ionicons
-                              name={isFirstEliteFeature ? 'star' : 'checkmark-sharp'}
+                              name="checkmark-sharp"
                               size={18}
                               color={cardColor}
                             />
                             <Text style={[
                               styles.featureText,
                               { color: textMain },
-                              isFirstEliteFeature && { fontWeight: '700' }
                             ]}>
                               {feature}
                             </Text>
@@ -463,16 +456,12 @@ export default function SubscriptionScreen() {
                     </View>
 
                     <TouchableOpacity
-                      style={
-                        existingSub
-                          ? [styles.planButton, { backgroundColor: '#9CA3AF' }]
-                          : [styles.planButton, { backgroundColor: cardColor }]
-                      }
+                      style={[styles.planButton, { backgroundColor: buttonColor }]}
                       onPress={() => handlePlanPress(plan)}
                       activeOpacity={existingSub ? 1 : 0.8}
                       disabled={!!existingSub}
                     >
-                      <Text style={styles.planButtonText}>
+                      <Text style={[styles.planButtonText, { color: existingSub ? '#FFFFFF' : buttonTextColor }]}>
                         {existingSub ? 'NO DISPONIBLE' : 'Seleccionar'}
                       </Text>
                     </TouchableOpacity>
@@ -480,19 +469,20 @@ export default function SubscriptionScreen() {
                 );
 
                 return (
-                  <View key={plan.id} style={[styles.cardOuter, isSmallScreen ? { width: CARD_WIDTH_MOBILE } : { width: CARD_WIDTH_DESKTOP, marginHorizontal: 12 }]}>
-                    <LinearGradient
-                      colors={['#5B3DF5', '#00C2FF']}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={styles.eliteCardGradient}
-                    >
-                      {cardContent}
-                    </LinearGradient>
+                  <View
+                    key={plan.id}
+                    style={[
+                      styles.cardOuter,
+                      { borderColor: cardColor, borderWidth: 3 },
+                      isSmallScreen ? { width: CARD_WIDTH_MOBILE } : { width: CARD_WIDTH_DESKTOP, marginHorizontal: 12 }
+                    ]}
+                  >
+                    {cardContent}
                   </View>
                 );
-              })}
-            </ScrollView>
+                })}
+              </ScrollView>
+            )}
 
 
           </>
@@ -561,9 +551,8 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontFamily: Platform.OS === 'web' ? 'Plus Jakarta Sans, sans-serif' : undefined,
   },
-  helpButton: {
-    padding: 8,
-    borderRadius: 99,
+  headerRightSpacer: {
+    width: 24,
   },
   content: {
     padding: 24,
@@ -611,14 +600,6 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     elevation: 3,
   },
-  eliteCardGradient: {
-    padding: 2,
-    borderRadius: 28,
-  },
-  standardCardBorder: {
-    borderWidth: 1,
-    borderRadius: 28,
-  },
   planCardInner: {
     borderRadius: 26,
     paddingHorizontal: 32,
@@ -627,33 +608,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     position: 'relative',
   },
-  badge: {
-    position: 'absolute',
-    top: -14,
-    alignSelf: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 99,
-    flexDirection: 'row',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 3,
-    zIndex: 10,
-  },
-  badgeText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1,
-  },
-  planCategory: {
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 1.5,
-    marginBottom: 8,
+  planHeader: {
+    minHeight: 120,
   },
   planName: {
     fontSize: 26,
@@ -671,6 +627,7 @@ const styles = StyleSheet.create({
   priceContainer: {
     flexDirection: 'row',
     alignItems: 'baseline',
+    minHeight: 78,
     marginVertical: 16,
   },
   priceBig: {
@@ -686,6 +643,8 @@ const styles = StyleSheet.create({
   },
   features: {
     gap: 12,
+    flex: 1,
+    minHeight: 190,
     marginVertical: 16,
   },
   featureRow: {
@@ -790,5 +749,21 @@ const styles = StyleSheet.create({
     marginTop: 12,
     textAlign: 'center',
     fontFamily: Platform.OS === 'web' ? 'Plus Jakarta Sans, sans-serif' : undefined,
-  }
+  },
+  viewPlansButton: {
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderRadius: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 11,
+    marginTop: 18,
+  },
+  viewPlansButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '800',
+  },
 });

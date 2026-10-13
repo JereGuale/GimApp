@@ -16,8 +16,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { authRegister } from '../../services/api';
 import { performGoogleSignIn } from '../../services/googleAuth';
+import { useTheme } from '../../context/ThemeContext';
 
 export default function RegisterScreen({ navigation }) {
+  const { theme } = useTheme();
   const [accepted, setAccepted] = useState(false);
   const [fullName, setFullName] = useState('');
   const [username, setUsername] = useState('');
@@ -155,10 +157,10 @@ export default function RegisterScreen({ navigation }) {
   return (
     <ImageBackground
       source={{ uri: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=1600&auto=format&fit=crop' }}
-      style={styles.container}
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
       resizeMode="cover"
     >
-      <View style={styles.backdrop} />
+      <View style={[styles.backdrop, { backgroundColor: theme.isDark ? 'rgba(8, 10, 14, 0.55)' : 'rgba(255, 255, 255, 0.72)' }]} />
 
       {toastVisible && (
         <View style={styles.toast}>
@@ -173,34 +175,34 @@ export default function RegisterScreen({ navigation }) {
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.content}>
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          <View style={styles.card}>
+          <View style={[styles.card, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
             <View style={styles.cardHeader}>
               <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                <Ionicons name="arrow-back" size={26} color="#FFFFFF" />
+                <Ionicons name="arrow-back" size={26} color={theme.colors.text} />
               </TouchableOpacity>
-              <Text style={styles.brand}>APP FITNESS</Text>
+              <Text style={[styles.brand, { color: theme.colors.text }]}>APP FITNESS</Text>
             </View>
 
-            <Text style={styles.title}>Crear cuenta</Text>
+            <Text style={[styles.title, { color: theme.colors.text }]}>Crear cuenta</Text>
 
             <View style={styles.formRow}>
-              <View style={[styles.inputWrapper, inputHalfStyle]}>
+              <View style={[styles.inputWrapper, inputHalfStyle, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
                 <Ionicons name="person-outline" size={18} color="#9CA3AF" style={styles.inputIcon} />
                 <TextInput
                   placeholder="Nombre completo"
                   placeholderTextColor="#9CA3AF"
-                  style={styles.inputWithIcon}
+                  style={[styles.inputWithIcon, { color: theme.colors.text }]}
                   autoCapitalize="words"
                   value={fullName}
                   onChangeText={setFullName}
                 />
               </View>
-              <View style={[styles.inputWrapper, inputHalfStyle]}>
+              <View style={[styles.inputWrapper, inputHalfStyle, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
                 <Ionicons name="mail-outline" size={18} color="#9CA3AF" style={styles.inputIcon} />
                 <TextInput
                   placeholder="Correo electrónico"
                   placeholderTextColor="#9CA3AF"
-                  style={styles.inputWithIcon}
+                  style={[styles.inputWithIcon, { color: theme.colors.text }]}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   value={email}
@@ -210,24 +212,24 @@ export default function RegisterScreen({ navigation }) {
             </View>
 
             <View style={styles.formRow}>
-              <View style={[styles.inputWrapper, inputHalfStyle]}>
+              <View style={[styles.inputWrapper, inputHalfStyle, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
                 <Ionicons name="at-outline" size={18} color="#9CA3AF" style={styles.inputIcon} />
                 <TextInput
                   placeholder="Usuario"
                   placeholderTextColor="#9CA3AF"
-                  style={styles.inputWithIcon}
+                  style={[styles.inputWithIcon, { color: theme.colors.text }]}
                   autoCapitalize="none"
                   autoCorrect={false}
                   value={username}
                   onChangeText={(t) => setUsername(t.replace(/\s/g, ''))}
                 />
               </View>
-              <View style={[styles.inputWrapper, inputHalfStyle]}>
+              <View style={[styles.inputWrapper, inputHalfStyle, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
                 <Ionicons name="call-outline" size={18} color="#9CA3AF" style={styles.inputIcon} />
                 <TextInput
                   placeholder="Teléfono (opcional)"
                   placeholderTextColor="#9CA3AF"
-                  style={styles.inputWithIcon}
+                  style={[styles.inputWithIcon, { color: theme.colors.text }]}
                   keyboardType="phone-pad"
                   value={phone}
                   onChangeText={setPhone}
@@ -236,23 +238,23 @@ export default function RegisterScreen({ navigation }) {
             </View>
 
             <View style={styles.formRow}>
-              <View style={[styles.inputWrapper, inputHalfStyle]}>
+              <View style={[styles.inputWrapper, inputHalfStyle, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
                 <Ionicons name="lock-closed-outline" size={18} color="#9CA3AF" style={styles.inputIcon} />
                 <TextInput
                   placeholder="Contraseña"
                   placeholderTextColor="#9CA3AF"
-                  style={styles.inputWithIcon}
+                  style={[styles.inputWithIcon, { color: theme.colors.text }]}
                   secureTextEntry
                   value={password}
                   onChangeText={setPassword}
                 />
               </View>
-              <View style={[styles.inputWrapper, inputHalfStyle]}>
+              <View style={[styles.inputWrapper, inputHalfStyle, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
                 <Ionicons name="lock-closed-outline" size={18} color="#9CA3AF" style={styles.inputIcon} />
                 <TextInput
                   placeholder="Confirmar contraseña"
                   placeholderTextColor="#9CA3AF"
-                  style={styles.inputWithIcon}
+                  style={[styles.inputWithIcon, { color: theme.colors.text }]}
                   secureTextEntry
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
@@ -261,13 +263,13 @@ export default function RegisterScreen({ navigation }) {
             </View>
 
             <TouchableOpacity style={styles.checkRow} onPress={() => setAccepted(!accepted)}>
-              <View style={[styles.checkbox, accepted && styles.checkboxChecked]}>
+              <View style={[styles.checkbox, { borderColor: theme.colors.border }, accepted && { backgroundColor: theme.colors.orange, borderColor: theme.colors.orange }]}>
                 {accepted ? <Text style={styles.checkboxTick}>✓</Text> : null}
               </View>
-              <Text style={styles.checkText}>Acepto términos y condiciones</Text>
+              <Text style={[styles.checkText, { color: theme.colors.textSecondary || theme.colors.secondaryText }]}>Acepto términos y condiciones</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={[styles.btn, (loading || googleLoading) && styles.btnDisabled]} onPress={handleRegister} disabled={loading || googleLoading}>
+            <TouchableOpacity style={[styles.btn, { backgroundColor: theme.colors.orange, borderColor: theme.colors.orange }, (loading || googleLoading) && styles.btnDisabled]} onPress={handleRegister} disabled={loading || googleLoading}>
               {loading
                 ? <ActivityIndicator color="#FFFFFF" />
                 : <Text style={styles.btnText}>REGISTRARSE</Text>
@@ -277,7 +279,7 @@ export default function RegisterScreen({ navigation }) {
             {/* Divider */}
             <View style={styles.dividerRow}>
               <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>o bien</Text>
+              <Text style={[styles.dividerText, { color: theme.colors.textSecondary || theme.colors.secondaryText }]}>o bien</Text>
               <View style={styles.dividerLine} />
             </View>
 

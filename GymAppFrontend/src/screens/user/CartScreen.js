@@ -211,7 +211,7 @@ export default function CartScreen() {
   const renderItem = ({ item }) => {
     const img = getImage(item.product);
     return (
-      <View style={[styles.cartItem, { backgroundColor: theme.colors.surface, borderColor: theme.isDark ? '#374151' : '#E5E7EB' }]}>
+      <View style={[styles.cartItem, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
         {/* Product image */}
         <View style={styles.itemImageWrap}>
           {img ? (

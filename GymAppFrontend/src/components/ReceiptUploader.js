@@ -305,8 +305,8 @@ export default function ReceiptUploader({ visible, onClose, onUpload }) {
                                 styles.uploadBtn,
                                 {
                                     backgroundColor: !selectedImage || uploading
-                                        ? (isDark ? '#1F2937' : '#D1D5DB')
-                                        : (isDark ? '#FFFFFF' : '#000000'),
+                                        ? (isDark ? '#374151' : '#D1D5DB')
+                                        : theme.colors.orange,
                                 }
                             ]}
                             onPress={handleUpload}
@@ -314,25 +314,21 @@ export default function ReceiptUploader({ visible, onClose, onUpload }) {
                             activeOpacity={0.85}
                         >
                             {uploading ? (
-                                <ActivityIndicator size="small" color={isDark ? '#000' : '#FFF'} />
+                                <ActivityIndicator size="small" color="#FFFFFF" />
                             ) : (
                                 <Ionicons
                                     name="cloud-upload-outline"
                                     size={20}
-                                    color={!selectedImage
-                                        ? (isDark ? '#374151' : '#9CA3AF')
-                                        : (isDark ? '#000' : '#FFF')}
+                                    color={!selectedImage ? '#9CA3AF' : '#FFFFFF'}
                                 />
                             )}
                             <Text style={[
                                 styles.uploadBtnText,
                                 {
-                                    color: !selectedImage || uploading
-                                        ? (isDark ? '#374151' : '#9CA3AF')
-                                        : (isDark ? '#000000' : '#FFFFFF'),
+                                    color: !selectedImage || uploading ? '#9CA3AF' : '#FFFFFF',
                                 }
                             ]}>
-                                {uploading ? 'Subiendo...' : 'Subir Comprobante'}
+                                {uploading ? 'Enviando...' : 'Enviar comprobante'}
                             </Text>
                         </TouchableOpacity>
 

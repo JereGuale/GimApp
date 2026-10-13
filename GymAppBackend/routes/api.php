@@ -4,7 +4,6 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CatalogController;
 use App\Http\Controllers\Api\CategoryController;
-use App\Http\Controllers\Api\CheckinController;
 use App\Http\Controllers\Api\HomeController;
 use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\Api\OfferController;
@@ -21,11 +20,6 @@ use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\PasswordResetController;
 use App\Http\Controllers\Api\OrderController;
-
-Route::get('/dev/revert', function() {
-    $out = shell_exec('git status 2>&1');
-    return response()->json(['output' => $out]);
-});
 
 Route::post('/login', [AuthController::class , 'login']);
 
@@ -69,7 +63,6 @@ Route::get('/settings/public', [SettingController::class, 'indexPublic']);
 
 Route::middleware('auth:sanctum')->group(function () {
     // Gestión de roles y usuarios (AdminPanelRoles)
-    Route::get('/admin/users', [\App\Http\Controllers\AdminPanelRolesController::class , 'listUsers']);
     Route::get('/admin/roles', [\App\Http\Controllers\AdminPanelRolesController::class , 'listRoles']);
     Route::post('/admin/users/{user}/role', [\App\Http\Controllers\AdminPanelRolesController::class , 'changeUserRole']);
     Route::get('/admin/roles/permissions', [\App\Http\Controllers\AdminPanelRolesController::class , 'rolesPermissionsMatrix']);
@@ -77,7 +70,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/subscription/my', [SubscriptionController::class , 'my']);
     Route::post('/subscription/subscribe', [SubscriptionController::class , 'store']);
     Route::post('/subscription/{id}/upload-receipt', [SubscriptionController::class , 'uploadReceipt']);
-    Route::post('/checkins', [CheckinController::class , 'store']);
 
     // Profile photo upload
     Route::post('/profile/photo', [AuthController::class , 'uploadPhoto']);
@@ -148,7 +140,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/admin/metrics', [SuperAdminMetricsController::class , 'index']);
 
         Route::middleware('super_admin')->group(function () {
-            Route::get('/admin/users', [SuperAdminUserController::class , 'index']);
             Route::put('/admin/users/{id}', [SuperAdminUserController::class , 'update']);
             Route::post('/admin/users/{id}/cancel-subscription', [SuperAdminUserController::class , 'cancelSubscription']);
             Route::apiResource('admin/locations', LocationController::class);
@@ -158,7 +149,3 @@ Route::middleware('auth:sanctum')->group(function () {
         }
         );
     });
-
-Route::get('/debug/products', function () {
-    return response()->json(\App\Models\Product::orderBy('id', 'desc')->take(5)->get());
-});

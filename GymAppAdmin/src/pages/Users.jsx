@@ -103,11 +103,15 @@ export default function Users() {
   // ── data ─────────────────────────────────────────────────────────────────────
   const fetchUsers = useCallback(() => {
     setLoading(true);
-    apiFetch('/admin/users')
+    const query = search.trim();
+    const endpoint = query
+      ? `/admin/users?all=true&search=${encodeURIComponent(query)}`
+      : '/admin/users?all=true';
+    apiFetch(endpoint)
       .then(d => setUsers(Array.isArray(d) ? d : (d?.data || [])))
       .catch(() => setUsers([]))
       .finally(() => setLoading(false));
-  }, []);
+  }, [search]);
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
   useEffect(() => { setCurrentPage(1); }, [search]);
@@ -192,7 +196,9 @@ export default function Users() {
   const filtered = users.filter(u =>
     u.name?.toLowerCase().includes(search.toLowerCase()) ||
     u.email?.toLowerCase().includes(search.toLowerCase()) ||
-    u.username?.toLowerCase().includes(search.toLowerCase())
+    u.username?.toLowerCase().includes(search.toLowerCase()) ||
+    u.phone?.toLowerCase().includes(search.toLowerCase()) ||
+    u.billing_id_number?.toLowerCase().includes(search.toLowerCase())
   );
   const totalPages     = Math.ceil(filtered.length / itemsPerPage);
   const paginatedItems = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
@@ -229,7 +235,7 @@ export default function Users() {
           <Search className="search-icon-left" size={16}/>
           <input
             className="search-input-premium"
-            placeholder="Buscar por nombre o usuario..."
+            placeholder="Buscar por nombre, cédula o teléfono..."
             value={search}
             onChange={e => setSearch(e.target.value)}
           />

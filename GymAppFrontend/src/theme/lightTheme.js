@@ -11,7 +11,7 @@ export const LightTheme = {
     card: '#FFFFFF',
     text: '#181818', // Negro suave
     primary: '#000000', // Negro puro para contraste
-    border: '#E5E5E5',
+    border: '#CBD5E1',
     surface: '#FFFFFF',
     secondaryText: '#6B6B6B', // Gris medio
     accent: '#000000', // Negro puro

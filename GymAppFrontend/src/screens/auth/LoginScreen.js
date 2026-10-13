@@ -5,8 +5,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { authLogin } from '../../services/api';
 import { performGoogleSignIn } from '../../services/googleAuth';
+import { useTheme } from '../../context/ThemeContext';
 
 export default function LoginScreen({ navigation }) {
+  const { theme } = useTheme();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [keepLoggedIn, setKeepLoggedIn] = useState(true);
@@ -78,12 +80,12 @@ export default function LoginScreen({ navigation }) {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <Image
         source={require('../../../assets/images/fitnesgim.png')}
         style={styles.bgImage}
       />
-      <View style={styles.backdrop} />
+      <View style={[styles.backdrop, { backgroundColor: theme.isDark ? 'rgba(8, 10, 14, 0.55)' : 'rgba(255, 255, 255, 0.72)' }]} />
 
       {toastVisible && (
         <View style={styles.toast}>
@@ -100,22 +102,22 @@ export default function LoginScreen({ navigation }) {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.content}
       >
-        <View style={styles.card}>
+        <View style={[styles.card, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
           <View style={styles.logoHeader}>
             <View style={styles.logoIconWrapper}>
-              <Ionicons name="barbell" size={32} color="#2E8BFF" />
+              <Ionicons name="barbell" size={32} color={theme.colors.orange} />
             </View>
-            <Text style={styles.logo}>APP FITNESS</Text>
-            <Text style={styles.subtitle}>Tu gimnasio en tu mano</Text>
+            <Text style={[styles.logo, { color: theme.colors.text }]}>APP FITNESS</Text>
+            <Text style={[styles.subtitle, { color: theme.colors.textSecondary || theme.colors.secondaryText }]}>Tu gimnasio en tu mano</Text>
           </View>
 
           <View style={styles.inputGroup}>
-            <View style={styles.inputWrapper}>
+            <View style={[styles.inputWrapper, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
               <Ionicons name="person-outline" size={20} color="#9CA3AF" style={styles.inputIcon} />
               <TextInput
                 placeholder="Correo electrónico o usuario"
                 placeholderTextColor="#9CA3AF"
-                style={styles.inputWithIcon}
+                style={[styles.inputWithIcon, { color: theme.colors.text }]}
                 autoCapitalize="none"
                 autoCorrect={false}
                 value={username}
@@ -123,12 +125,12 @@ export default function LoginScreen({ navigation }) {
               />
             </View>
 
-            <View style={styles.inputWrapper}>
+            <View style={[styles.inputWrapper, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
               <Ionicons name="lock-closed-outline" size={20} color="#9CA3AF" style={styles.inputIcon} />
               <TextInput
                 placeholder="Contraseña"
                 placeholderTextColor="#9CA3AF"
-                style={styles.inputWithIcon}
+                style={[styles.inputWithIcon, { color: theme.colors.text }]}
                 secureTextEntry
                 value={password}
                 onChangeText={setPassword}
@@ -141,13 +143,13 @@ export default function LoginScreen({ navigation }) {
             onPress={() => setKeepLoggedIn(!keepLoggedIn)}
             activeOpacity={0.8}
           >
-            <View style={[styles.checkbox, keepLoggedIn && styles.checkboxChecked]}>
+            <View style={[styles.checkbox, { borderColor: theme.colors.border }, keepLoggedIn && { backgroundColor: theme.colors.orange, borderColor: theme.colors.orange }]}>
               {keepLoggedIn && <Ionicons name="checkmark" size={14} color="#FFFFFF" />}
             </View>
-            <Text style={styles.checkboxLabel}>Guardar inicio de sesión</Text>
+            <Text style={[styles.checkboxLabel, { color: theme.colors.textSecondary || theme.colors.secondaryText }]}>Guardar inicio de sesión</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.btn, loading && { opacity: 0.6 }]} onPress={handleLogin} disabled={loading || googleLoading}>
+          <TouchableOpacity style={[styles.btn, { backgroundColor: theme.colors.orange, borderColor: theme.colors.orange }, loading && { opacity: 0.6 }]} onPress={handleLogin} disabled={loading || googleLoading}>
             {loading
               ? <ActivityIndicator color="#FFFFFF" />
               : <Text style={styles.btnText}>INICIAR SESIÓN</Text>
@@ -157,7 +159,7 @@ export default function LoginScreen({ navigation }) {
           {/* Divider */}
           <View style={styles.dividerRow}>
             <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>o bien</Text>
+            <Text style={[styles.dividerText, { color: theme.colors.textSecondary || theme.colors.secondaryText }]}>o bien</Text>
             <View style={styles.dividerLine} />
           </View>
 
@@ -189,11 +191,11 @@ export default function LoginScreen({ navigation }) {
 
           <View style={styles.roleButtonsContainer}>
             <TouchableOpacity
-              style={[styles.roleButton, { flex: 1 }]}
+              style={[styles.roleButton, { flex: 1, backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
               onPress={() => navigation.navigate('AdminLogin')}
             >
-              <Ionicons name="shield-checkmark" size={18} color="#22D3EE" />
-              <Text style={styles.roleButtonText}>Soy Administrador</Text>
+              <Ionicons name="shield-checkmark" size={18} color={theme.colors.orange} />
+              <Text style={[styles.roleButtonText, { color: theme.colors.text }]}>Soy Administrador</Text>
             </TouchableOpacity>
           </View>
         </View>

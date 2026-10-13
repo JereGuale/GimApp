@@ -35,9 +35,15 @@ class TrainerSubscriptionController extends Controller
 
         // Búsqueda por usuario
         if ($request->has('search')) {
-            $query->whereHas('user', function ($q) use ($request) {
-                $q->where('name', 'like', '%' . $request->search . '%')
-                    ->orWhere('email', 'like', '%' . $request->search . '%');
+            $search = trim((string) $request->input('search'));
+            $query->where(function ($subscriptionQuery) use ($search) {
+                $subscriptionQuery->where('billing_id_number', 'like', '%' . $search . '%')
+                    ->orWhereHas('user', function ($q) use ($search) {
+                        $q->where('name', 'like', '%' . $search . '%')
+                            ->orWhere('email', 'like', '%' . $search . '%')
+                            ->orWhere('phone', 'like', '%' . $search . '%')
+                            ->orWhere('billing_id_number', 'like', '%' . $search . '%');
+                    });
             });
         }
 

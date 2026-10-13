@@ -77,6 +77,10 @@ class SupabaseStorage
     public function uploadFile(\Illuminate\Http\UploadedFile $file, string $path): ?string
     {
         $data = file_get_contents($file->getRealPath());
+        if ($data === false) {
+            Log::error('Could not read uploaded file', ['path' => $path]);
+            return null;
+        }
         $mime = $file->getMimeType() ?? 'image/jpeg';
         return $this->uploadBinary($path, $data, $mime);
     }
