@@ -491,6 +491,56 @@
   margin-bottom: 24px;
 }
 
+.subscriptions-priority {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 18px;
+  margin: -8px 0 20px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--text);
+}
+
+.subscriptions-priority--attention {
+  border-color: rgba(245, 158, 11, 0.45);
+  background: rgba(245, 158, 11, 0.07);
+}
+
+.subscriptions-priority strong,
+.subscriptions-priority span {
+  display: block;
+}
+
+.subscriptions-priority strong {
+  font-size: 14px;
+}
+
+.subscriptions-priority span {
+  margin-top: 3px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.subscriptions-priority button {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: var(--card);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.subscriptions-priority--attention button {
+  border-color: #f59e0b;
+  color: #b45309;
+}
+
 .sub-stat-card {
   background: var(--card);
   border: 1px solid var(--border);
@@ -1007,6 +1057,27 @@
 
 .status-pill-icon {
   flex-shrink: 0;
+}
+
+/* Por vencer — ámbar */
+.status-pill--expiring {
+   background-color: rgba(245, 158, 11, 0.12);
+   color: #b45309;
+   border-color: rgba(245, 158, 11, 0.3);
+   box-shadow: 0 1px 3px rgba(245, 158, 11, 0.12);
+}
+
+.status-pill--expiring:hover {
+   background-color: rgba(245, 158, 11, 0.18);
+   border-color: rgba(245, 158, 11, 0.45);
+   box-shadow: 0 3px 10px rgba(245, 158, 11, 0.2);
+}
+
+:root.dark .status-pill--expiring {
+   background-color: rgba(245, 158, 11, 0.18);
+   color: #fbbf24;
+   border-color: rgba(245, 158, 11, 0.4);
+   box-shadow: 0 1px 3px rgba(245, 158, 11, 0.16);
 }
 
 /* Status variants */
@@ -2218,10 +2289,49 @@
   white-space: nowrap;
 }
 
+.btn-action-approve {
+  background: #16a34a;
+  color: #fff;
+}
+
+.btn-action-approve:hover {
+  background: #15803d;
+}
+
+.btn-action-reject {
+  background: #dc2626;
+  color: #fff;
+}
+
+.btn-action-reject:hover {
+  background: #b91c1c;
+}
+
 .btn-action-whatsapp {
   background: #25D366;
   color: #ffffff;
   box-shadow: 0 1px 3px rgba(37, 211, 102, 0.3);
+}
+
+.whatsapp-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  color: #25d366;
+}
+
+.whatsapp-icon--white {
+  color: #ffffff;
+}
+
+.whatsapp-icon svg {
+  display: block;
+}
+
+.btn-action-whatsapp .whatsapp-icon,
+.btn-whatsapp-reminder .whatsapp-icon {
+  color: #fff;
 }
 
 .btn-action-whatsapp:hover {
@@ -2242,6 +2352,68 @@
   color: var(--text);
   cursor: pointer;
   transition: all 0.15s ease;
+}
+
+.btn-eye-action {
+  width: 32px;
+  padding: 0;
+}
+
+.subscription-action-wrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.subscription-action-tooltip {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 20;
+  padding: 6px 9px;
+  border-radius: 6px;
+  background: var(--text);
+  color: var(--card);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-3px);
+  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s ease;
+}
+
+.subscription-action-tooltip::before {
+  content: "";
+  position: absolute;
+  right: 10px;
+  bottom: 100%;
+  border: 5px solid transparent;
+  border-bottom-color: var(--text);
+}
+
+.subscription-action-wrapper:hover .subscription-action-tooltip,
+.subscription-action-wrapper:focus-within .subscription-action-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.plan-note-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  margin-top: 5px;
+}
+
+@media (max-width: 900px) {
+  .subscriptions-priority {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }
 
 .btn-action-icon:hover {

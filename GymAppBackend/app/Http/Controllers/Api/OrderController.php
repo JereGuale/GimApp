@@ -26,7 +26,7 @@ class OrderController extends Controller
             'items.*.selected_option' => 'nullable|string',
             'payment_method' => 'required|in:transfer,card',
             'notes' => 'nullable|string|max:500',
-            'shipping_method' => 'nullable|string|in:local,delivery',
+            'shipping_method' => 'nullable|string|in:local',
             'billing_name' => 'nullable|string|max:255',
             'billing_email' => 'nullable|email',
             'billing_phone' => 'nullable|string|max:20',
@@ -86,7 +86,7 @@ class OrderController extends Controller
             'billing_id_number' => $request->input('billing_id_number') ?: $user->billing_id_number,
             'billing_city' => $request->input('billing_city') ?: $user->billing_city,
             'billing_address' => $request->input('billing_address') ?: $user->billing_address,
-            'shipping_method' => $request->input('shipping_method') ?: 'local',
+            'shipping_method' => 'local',
         ]);
 
         $order->load('user');
@@ -248,8 +248,8 @@ class OrderController extends Controller
             Notification::create([
                 'user_id' => $order->user_id,
                 'type' => 'order_approved',
-                'title' => '¡Pedido aprobado!',
-                'message' => "Tu pedido por \${$order->total} ha sido aprobado.",
+                'title' => '¡Compra lista para retirar!',
+                'message' => "Tu compra por \${$order->total} está lista para retirarla en el local de Gigafit Gim.",
                 'data' => [
                     'order_id' => $order->id,
                     'status' => 'approved',
@@ -340,10 +340,10 @@ class OrderController extends Controller
         try {
             $statusLabels = [
                 'pending' => 'Pago Pendiente de Verificación',
-                'approved' => 'Pago Aprobado',
-                'processing' => 'Compra en Proceso',
-                'shipped' => 'Compra Despachada a Destino',
-                'completed' => 'Compra Entregada',
+                'approved' => 'Listo para retirar',
+                'processing' => 'Listo para retirar',
+                'shipped' => 'Listo para retirar',
+                'completed' => 'Retirado',
                 'rejected' => 'Compra Rechazada'
             ];
             $statusLabel = $statusLabels[$request->status] ?? $request->status;

@@ -118,11 +118,9 @@ export default function CartScreen() {
 
     // Guardar todos los datos de facturación en el perfil para no pedirlos de nuevo
     try {
-      // 1) Persistir en el backend los campos que soporta (cédula, ciudad, dirección)
+      // Persistir los datos personales y de facturación necesarios para retirar en local.
       await ProfileAPI.updateProfile({
         billing_id_number: billingData.billing_id_number,
-        billing_city: billingData.billing_city,
-        billing_address: billingData.billing_address,
       });
 
       // 2) Actualizar el contexto local con TODOS los campos (nombre, email, phone, método envío, etc.)
@@ -136,10 +134,6 @@ export default function CartScreen() {
           phone: billingData.billing_phone || user?.phone,
           // Campos de facturación
           billing_id_number: billingData.billing_id_number,
-          billing_city: billingData.billing_city,
-          billing_address: billingData.billing_address,
-          // Método de entrega preferido
-          shipping_method: billingData.shipping_method,
         });
       }
     } catch (e) {

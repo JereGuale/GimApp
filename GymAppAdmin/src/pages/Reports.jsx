@@ -20,7 +20,6 @@ import {
   MoreVertical,
   Search,
   Download,
-  MessageCircle,
   Copy,
   Send,
   ExternalLink,
@@ -29,8 +28,11 @@ import {
   UserPlus,
   FileText,
   Mail,
-  User
+  User,
+  ShoppingBag,
+  Package
 } from 'lucide-react';
+import WhatsAppIcon from '../components/WhatsAppIcon';
 import '../components/Layout.css';
 import './Subscriptions.css';
 
@@ -148,6 +150,11 @@ export default function Reports() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  useEffect(() => {
+    if (!success) return undefined;
+    const timer = setTimeout(() => setSuccess(''), 4000);
+    return () => clearTimeout(timer);
+  }, [success]);
 
   // Custom Confirmation Modal
   const [confirmModal, setConfirmModal] = useState(null);
@@ -160,6 +167,12 @@ export default function Reports() {
   const [monthlySubs, setMonthlySubs] = useState([]);
   const [monthlyTotal, setMonthlyTotal] = useState(0);
   const [monthlySearch, setMonthlySearch] = useState('');
+
+  // ── Monthly Purchases Report State ──
+  const [orders, setOrders] = useState([]);
+  const [purchaseSearch, setPurchaseSearch] = useState('');
+  const [purchasePage, setPurchasePage] = useState(1);
+  const [purchaseItemsPerPage] = useState(10);
 
   // Pagination State for monthly memberships
   const [currentPage, setCurrentPage] = useState(1);
@@ -304,6 +317,11 @@ export default function Reports() {
   const [dailyEntryTime, setDailyEntryTime] = useState(getLocalTimeString());
   const [dailyError, setDailyError] = useState('');
   const [dailySuccess, setDailySuccess] = useState('');
+  useEffect(() => {
+    if (!dailySuccess) return undefined;
+    const timer = setTimeout(() => setDailySuccess(''), 4000);
+    return () => clearTimeout(timer);
+  }, [dailySuccess]);
   const [dailySubmitting, setDailySubmitting] = useState(false);
 
   // Load Monthly Report
@@ -316,6 +334,19 @@ export default function Reports() {
       setMonthlyTotal(res.total || 0);
     } catch (err) {
       setError(err.message || 'Error al obtener reporte mensual');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchOrdersReport = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await apiFetch('/admin/orders?status=all');
+      setOrders(Array.isArray(res) ? res : (res?.data || []));
+    } catch (err) {
+      setError(err.message || 'Error al obtener reporte de compras');
     } finally {
       setLoading(false);
     }
@@ -361,6 +392,8 @@ export default function Reports() {
   useEffect(() => {
     if (activeTab === 'suscripciones') {
       fetchMonthlyReport(selectedMonth, selectedYear);
+    } else if (activeTab === 'compras') {
+      fetchOrdersReport();
     } else if (activeTab === 'asistencias') {
       fetchDailyReport(selectedDailyDate);
     } else if (activeTab === 'tendencias') {
@@ -371,7 +404,8 @@ export default function Reports() {
   // Reset page when search or date changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [monthlySearch, selectedMonth, selectedYear]);
+    setPurchasePage(1);
+  }, [monthlySearch, purchaseSearch, selectedMonth, selectedYear]);
 
   // Filter monthly subscriptions list by search input
   const filteredSubs = monthlySubs.filter((sub) => {
@@ -387,6 +421,165 @@ export default function Reports() {
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
+
+  const purchaseStatusLabels = {
+    pending: 'Pendiente',
+    approved: 'Listo para retirar',
+    processing: 'Listo para retirar',
+    shipped: 'Listo para retirar',
+    completed: 'Retirado',
+    rejected: 'Rechazada'
+  };
+
+  const purchaseStatusTypes = {
+    pending: 'pending',
+    approved: 'active',
+    processing: 'active',
+    shipped: 'active',
+    completed: 'active',
+    rejected: 'rejected'
+  };
+
+  const filteredOrders = orders.filter((order) => {
+    const orderDate = order.created_at ? new Date(order.created_at) : null;
+    if (!orderDate || Number.isNaN(orderDate.getTime())) return false;
+    if (orderDate.getMonth() + 1 !== selectedMonth || orderDate.getFullYear() !== selectedYear) return false;
+
+    const term = purchaseSearch.trim().toLowerCase();
+    if (!term) return true;
+    const customer = [
+      order.user?.name,
+      order.user?.email,
+      order.billing_name,
+      order.billing_email,
+      order.billing_phone
+    ].filter(Boolean).join(' ').toLowerCase();
+    const products = (Array.isArray(order.items) ? order.items : [])
+      .map(item => `${item.name || ''} ${item.selected_option || ''}`)
+      .join(' ')
+      .toLowerCase();
+    return customer.includes(term) || products.includes(term);
+  });
+
+  const purchasesTotal = filteredOrders.reduce((sum, order) => sum + Number(order.total || 0), 0);
+  const purchaseTotalPages = Math.ceil(filteredOrders.length / purchaseItemsPerPage);
+  const paginatedOrders = filteredOrders.slice(
+    (purchasePage - 1) * purchaseItemsPerPage,
+    purchasePage * purchaseItemsPerPage
+  );
+
+  const formatPurchaseItems = (order) => {
+    const items = Array.isArray(order.items) ? order.items : [];
+    if (items.length === 0) return '—';
+    return items.map(item => {
+      const option = item.selected_option ? ` (${item.selected_option})` : '';
+      return `${item.name || 'Producto'}${option} x${item.quantity || 1} - $${Number(item.price || 0).toFixed(2)}`;
+    }).join(', ');
+  };
+
+  const formatPurchaseDate = (dateValue) => {
+    if (!dateValue) return '—';
+    const date = new Date(dateValue);
+    if (Number.isNaN(date.getTime())) return '—';
+    return date.toLocaleDateString('es-EC', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const downloadPurchasesReport = () => {
+    if (filteredOrders.length === 0) {
+      alert('No hay compras registradas para descargar en el mes seleccionado.');
+      return;
+    }
+
+    const monthNames = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    const monthName = monthNames[selectedMonth] || selectedMonth;
+    const now = new Date();
+    const emissionDate = now.toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const emissionTime = now.toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit', hour12: true });
+    const escapeHtml = (value) => String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+
+    const rowsHtml = filteredOrders.map((order, index) => {
+      const items = Array.isArray(order.items) ? order.items : [];
+      const products = items.length
+        ? items.map(item => {
+            const option = item.selected_option ? ` | ${item.selected_option}` : '';
+            return `${item.name || 'Producto'} | Cantidad: ${item.quantity || 1} | Precio: $${Number(item.price || 0).toFixed(2)}${option}`;
+          }).join('<br>')
+        : '—';
+      const rowBg = index % 2 === 0 ? '#ffffff' : '#f8fafc';
+      return `
+        <tr style="background-color: ${rowBg};">
+          <td style="border: 1px solid #cbd5e1; padding: 7px 10px; text-align: center; color: #64748b;">${index + 1}</td>
+          <td style="border: 1px solid #cbd5e1; padding: 7px 12px; font-weight: bold; color: #0f172a;">${escapeHtml(order.user?.name || order.billing_name || 'Cliente')}</td>
+          <td style="border: 1px solid #cbd5e1; padding: 7px 10px; color: #334155;">${escapeHtml(order.user?.email || order.billing_email || '—')}</td>
+          <td style="border: 1px solid #cbd5e1; padding: 7px 10px; color: #334155;">${escapeHtml(order.user?.phone || order.billing_phone || '—')}</td>
+          <td style="border: 1px solid #cbd5e1; padding: 7px 12px; color: #334155; line-height: 1.5;">${products}</td>
+          <td style="border: 1px solid #cbd5e1; padding: 7px 12px; text-align: right; font-weight: bold; color: #0f172a;">$ ${Number(order.total || 0).toFixed(2)}</td>
+          <td style="border: 1px solid #cbd5e1; padding: 7px 10px; text-align: center; color: #334155;">${escapeHtml(purchaseStatusLabels[order.status] || order.status || '—')}</td>
+          <td style="border: 1px solid #cbd5e1; padding: 7px 10px; text-align: center; color: #334155;">${escapeHtml(formatPurchaseDate(order.created_at))}</td>
+        </tr>
+      `;
+    }).join('');
+
+    const excelTemplate = `
+      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+      <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <!--[if gte mso 9]>
+        <xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet>
+          <x:Name>Compras ${escapeHtml(monthName)}</x:Name>
+          <x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>
+        </x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook>
+        <![endif]-->
+        <style>body { font-family: 'Segoe UI', Arial, sans-serif; } table { border-collapse: collapse; width: 100%; }</style>
+      </head>
+      <body>
+        <table>
+          <tr><th colspan="8" style="background-color: #1e3a8a; color: #ffffff; font-size: 15pt; font-weight: bold; text-align: center; padding: 14px;">GIGAFIT GIM - REPORTE MENSUAL DE COMPRAS</th></tr>
+          <tr style="background-color: #f1f5f9;"><td colspan="8" style="padding: 8px 12px; font-size: 10pt; color: #475569; text-align: center; border-bottom: 2px solid #cbd5e1;">
+            <strong>Período:</strong> ${escapeHtml(monthName)} de ${selectedYear} &nbsp;|&nbsp;
+            <strong>Total Compras:</strong> ${filteredOrders.length} &nbsp;|&nbsp;
+            <strong>Ventas Totales:</strong> $ ${purchasesTotal.toFixed(2)} &nbsp;|&nbsp;
+            <strong>Generado el:</strong> ${emissionDate} a las ${emissionTime}
+          </td></tr>
+          <tr><td colspan="8" style="height: 10px;"></td></tr>
+          <tr style="background-color: #2563eb; color: #ffffff;">
+            <th style="padding: 10px 8px;">#</th><th style="padding: 10px 12px; text-align: left;">Cliente</th>
+            <th style="padding: 10px 12px; text-align: left;">Correo Electrónico</th><th style="padding: 10px;">Teléfono</th>
+            <th style="padding: 10px 12px; text-align: left;">Productos comprados</th><th style="padding: 10px 12px; text-align: right;">Total ($)</th>
+            <th style="padding: 10px 12px;">Estado</th><th style="padding: 10px 12px;">Fecha de compra</th>
+          </tr>
+          ${rowsHtml}
+          <tr><td colspan="8" style="height: 6px;"></td></tr>
+          <tr style="background-color: #dbeafe; font-weight: bold; border-top: 2px solid #2563eb;">
+            <td colspan="5" style="padding: 10px 12px; text-align: right; color: #1e40af;">TOTAL VENDIDO EN EL MES:</td>
+            <td style="padding: 10px 12px; text-align: right; color: #1e40af;">$ ${purchasesTotal.toFixed(2)}</td>
+            <td colspan="2" style="padding: 10px 12px; text-align: center; color: #1e40af;">${filteredOrders.length} compras registradas</td>
+          </tr>
+        </table>
+      </body>
+      </html>
+    `;
+
+    const blob = new Blob(['\uFEFF' + excelTemplate], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Reporte_Compras_${monthName}_${selectedYear}.xls`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   // Render Helper for Charts
   const getMaxVal = (arr, key) => {
@@ -1135,6 +1328,14 @@ export default function Reports() {
           <span>Membresías del Mes</span>
         </button>
         <button
+          onClick={() => setActiveTab('compras')}
+          className={`tab-btn ${activeTab === 'compras' ? 'tab-btn--active' : ''}`}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+        >
+          <ShoppingBag size={14} />
+          <span>Compras de Clientes</span>
+        </button>
+        <button
           onClick={() => setActiveTab('asistencias')}
           className={`tab-btn ${activeTab === 'asistencias' ? 'tab-btn--active' : ''}`}
           style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
@@ -1334,7 +1535,7 @@ export default function Reports() {
                                           border: `1px solid ${status.type === 'expired' ? 'rgba(239, 68, 68, 0.25)' : 'rgba(37, 211, 102, 0.3)'}`
                                         }}
                                       >
-                                        <MessageCircle size={14} style={{ color: status.type === 'expired' ? '#dc2626' : '#25D366' }} />
+                                        <WhatsAppIcon size={15} />
                                         <span>Recordatorio</span>
                                       </button>
                                     )}
@@ -1373,7 +1574,214 @@ export default function Reports() {
             </div>
           )}
 
-          {/* TAB 2: ASISTENCIA DIARIA (NUEVO PANEL) */}
+          {/* TAB 2: COMPRAS DE CLIENTES */}
+          {activeTab === 'compras' && (
+            <div>
+              <div className="card">
+                <div className="page-header" style={{ marginBottom: 16 }}>
+                  <h3 style={{ margin: 0, fontSize: 16 }}>Filtros de Compras</h3>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--primary)' }}>
+                    Ventas de productos: ${purchasesTotal.toFixed(2)}
+                  </div>
+                </div>
+                <div className="inline-form">
+                  <div className="form-group" style={{ flex: 1, minWidth: 150 }}>
+                    <label style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Mes</label>
+                    <select value={selectedMonth} onChange={(e) => setSelectedMonth(parseInt(e.target.value, 10))}>
+                      <option value={1}>Enero</option>
+                      <option value={2}>Febrero</option>
+                      <option value={3}>Marzo</option>
+                      <option value={4}>Abril</option>
+                      <option value={5}>Mayo</option>
+                      <option value={6}>Junio</option>
+                      <option value={7}>Julio</option>
+                      <option value={8}>Agosto</option>
+                      <option value={9}>Septiembre</option>
+                      <option value={10}>Octubre</option>
+                      <option value={11}>Noviembre</option>
+                      <option value={12}>Diciembre</option>
+                    </select>
+                  </div>
+                  <div className="form-group" style={{ flex: 1, minWidth: 150 }}>
+                    <label style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Año</label>
+                    <select value={selectedYear} onChange={(e) => setSelectedYear(parseInt(e.target.value, 10))}>
+                      <option value={currentYear}>{currentYear}</option>
+                      <option value={currentYear - 1}>{currentYear - 1}</option>
+                      <option value={currentYear - 2}>{currentYear - 2}</option>
+                    </select>
+                  </div>
+                  <div className="form-group" style={{ flex: 2, minWidth: 200 }}>
+                    <label style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Buscar</label>
+                    <input
+                      type="text"
+                      placeholder="Buscar por cliente o producto..."
+                      value={purchaseSearch}
+                      onChange={(e) => setPurchaseSearch(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="card">
+                <div className="page-header" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <h3 style={{ margin: 0, fontSize: 16 }}>Compras Registradas</h3>
+                    <span className="badge badge--blue">{filteredOrders.length} compras</span>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn--secondary"
+                    onClick={downloadPurchasesReport}
+                    disabled={filteredOrders.length === 0}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13 }}
+                    title="Descargar reporte de compras del mes en Excel"
+                  >
+                    <Download size={15} />
+                    <span>Descargar Compras (Excel)</span>
+                  </button>
+                </div>
+
+                {filteredOrders.length === 0 ? (
+                  <div className="empty-state">
+                    <div className="empty-icon"><ShoppingBag size={40} /></div>
+                    <p>No se encontraron compras para el período seleccionado.</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="table-wrap">
+                      <table className="reports-premium-table">
+                        <thead>
+                          <tr>
+                            <th>Cliente</th>
+                            <th>Productos</th>
+                            <th>Total</th>
+                            <th>Estado</th>
+                            <th>Fecha de compra</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {paginatedOrders.map((order) => {
+                            const statusType = purchaseStatusTypes[order.status] || 'pending';
+                            return (
+                              <tr key={order.id}>
+                                <td>{renderUserCell(order.user || {
+                                  name: order.billing_name || 'Cliente',
+                                  email: order.billing_email || 'Cliente externo',
+                                  phone: order.billing_phone
+                                })}</td>
+                                <td style={{ minWidth: 280, maxWidth: 420 }}>
+                                  <div style={{ maxHeight: 150, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6, paddingRight: 4 }}>
+                                    {(Array.isArray(order.items) ? order.items : []).map((item, itemIndex) => (
+                                      (() => {
+                                        const itemImage = item.image;
+                                        const imageUrl = itemImage
+                                          ? (itemImage.startsWith('http') ? itemImage : `${API_BASE_URL.replace('/api', '')}/storage/${itemImage}`)
+                                          : null;
+                                        return (
+                                      <div
+                                        key={`${order.id}-${itemIndex}`}
+                                        style={{
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          gap: 10,
+                                          padding: '6px 8px',
+                                          border: '1px solid var(--border)',
+                                          borderRadius: 6,
+                                          background: 'var(--bg)',
+                                          maxWidth: 360
+                                        }}
+                                      >
+                                        <div style={{
+                                          width: 38,
+                                          height: 38,
+                                          borderRadius: 6,
+                                          overflow: 'hidden',
+                                          border: '1px solid var(--border)',
+                                          background: 'var(--card)',
+                                          flexShrink: 0,
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center'
+                                        }}>
+                                          {imageUrl ? (
+                                            <img
+                                              src={imageUrl}
+                                              alt={item.name || 'Producto'}
+                                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                            />
+                                          ) : (
+                                            <Package size={17} style={{ color: 'var(--text-secondary)' }} />
+                                          )}
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                                          <div style={{
+                                            fontWeight: 600,
+                                            color: 'var(--text)',
+                                            fontSize: 12,
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: 'nowrap'
+                                          }} title={item.name || 'Producto'}>
+                                            {item.name || 'Producto'}
+                                          </div>
+                                          <div style={{ marginTop: 2, color: 'var(--text-secondary)', fontSize: 10, fontWeight: 500 }}>
+                                            x{item.quantity || 1} · ${Number(item.price || 0).toFixed(2)}
+                                            {item.selected_option ? ` · ${['S', 'M', 'L', 'XL', 'XXL'].includes(item.selected_option) ? 'Talla' : 'Pres.'}: ${item.selected_option}` : ''}
+                                          </div>
+                                        </div>
+                                      </div>
+                                        );
+                                      })()
+                                    ))}
+                                    {(!Array.isArray(order.items) || order.items.length === 0) && (
+                                      <span style={{ color: 'var(--text-secondary)' }}>Sin detalle</span>
+                                    )}
+                                  </div>
+                                </td>
+                                <td style={{ fontWeight: 700, color: 'var(--primary)' }}>
+                                  ${Number(order.total || 0).toFixed(2)}
+                                </td>
+                                <td>
+                                  <span className={`badge-status badge-status--${statusType}`}>
+                                    <span className={`badge-status-dot badge-status-dot--${statusType}`} />
+                                    <span>{purchaseStatusLabels[order.status] || order.status || '—'}</span>
+                                  </span>
+                                </td>
+                                <td style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
+                                  {formatPurchaseDate(order.created_at)}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                    {filteredOrders.length > 0 && (
+                      <div className="pagination">
+                        <button
+                          className="btn btn--secondary"
+                          onClick={() => setPurchasePage(prev => Math.max(prev - 1, 1))}
+                          disabled={purchasePage === 1}
+                        >
+                          Anterior
+                        </button>
+                        <span className="pagination-info">Página {purchasePage} de {purchaseTotalPages || 1}</span>
+                        <button
+                          className="btn btn--secondary"
+                          onClick={() => setPurchasePage(prev => Math.min(prev + 1, purchaseTotalPages))}
+                          disabled={purchasePage === purchaseTotalPages || purchaseTotalPages === 0}
+                        >
+                          Siguiente
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: ASISTENCIA DIARIA (NUEVO PANEL) */}
           {activeTab === 'asistencias' && (
             <div>
               <div className="card">
@@ -2348,7 +2756,7 @@ export default function Reports() {
                   justifyContent: 'center',
                   boxShadow: '0 4px 12px rgba(37, 211, 102, 0.25)'
                 }}>
-                  <MessageCircle size={20} />
+                  <WhatsAppIcon size={20} />
                 </div>
                 <div>
                   <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: 'var(--text)' }}>

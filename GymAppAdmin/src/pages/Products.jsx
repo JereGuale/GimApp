@@ -61,6 +61,11 @@ export default function Products() {
 
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  useEffect(() => {
+    if (!success) return undefined;
+    const timer = setTimeout(() => setSuccess(''), 4000);
+    return () => clearTimeout(timer);
+  }, [success]);
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);

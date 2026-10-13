@@ -53,10 +53,10 @@ export default function OrderConfirmationModal({
 
     const isSubscription = type === "subscription";
 
-    const title   = isSubscription ? "¡Suscripción enviada!" : "¡Pedido recibido!";
+    const title   = isSubscription ? "¡Suscripción enviada!" : "¡Compra pendiente!";
     const mainMsg = isSubscription
         ? "Tu comprobante de pago fue enviado exitosamente."
-        : "Tu pedido fue registrado y el comprobante enviado con éxito.";
+        : "Tu comprobante fue enviado y está pendiente de aprobación.";
     const subMsg =
         "Pronto te enviaremos más detalles a tu WhatsApp una vez que el administrador lo revise y apruebe. ¡Gracias por tu preferencia!";
     const btnLabel = isSubscription ? "Ver mi suscripción" : "Ver mis compras";
@@ -70,12 +70,6 @@ export default function OrderConfirmationModal({
     const textSec = isDark ? "#6B7280" : "#6B6B6B";
     const accent  = isDark ? "#FB923C" : "#000000"; // orange in dark, black in light
     const accentFg = isDark ? "#000000" : "#FFFFFF";
-
-    const STEPS = [
-        { icon: "document-text-outline", label: isSubscription ? "Suscripción\nenviada" : "Pedido\nregistrado", done: true  },
-        { icon: "time-outline",           label: "En\nrevisión",        done: false },
-        { icon: "checkmark-circle-outline", label: "Aprobación\npendiente", done: false },
-    ];
 
     return (
         <Modal
@@ -138,42 +132,25 @@ export default function OrderConfirmationModal({
 
                         {/* ── WhatsApp notice ── */}
                         <View style={[styles.waBox, { backgroundColor: surface, borderColor: border }]}>
-                            <Ionicons name="logo-whatsapp" size={18} color="#25D366" />
+                            <View style={styles.whatsappLogoCircle}>
+                                <Ionicons name="logo-whatsapp" size={15} color="#FFFFFF" />
+                            </View>
                             <Text style={[styles.waText, { color: textSec }]}>{subMsg}</Text>
                         </View>
 
-                        {/* ── Steps ── */}
+                        {/* ── Current status ── */}
                         <View style={[styles.stepsCard, { backgroundColor: surface, borderColor: border }]}>
-                            {STEPS.map((step, i, arr) => (
-                                <React.Fragment key={i}>
-                                    <View style={styles.step}>
-                                        <View style={[
-                                            styles.stepIcon,
-                                            {
-                                                backgroundColor: step.done
-                                                    ? (isDark ? "rgba(251,146,60,0.12)" : "rgba(0,0,0,0.06)")
-                                                    : "transparent",
-                                                borderColor: step.done ? accent : border,
-                                            }
-                                        ]}>
-                                            <Ionicons
-                                                name={step.icon}
-                                                size={16}
-                                                color={step.done ? accent : (isDark ? "#374151" : "#CCCCCC")}
-                                            />
-                                        </View>
-                                        <Text style={[
-                                            styles.stepLabel,
-                                            { color: step.done ? textPri : textSec, fontWeight: step.done ? "800" : "500" }
-                                        ]}>
-                                            {step.label}
-                                        </Text>
-                                    </View>
-                                    {i < arr.length - 1 && (
-                                        <View style={[styles.stepLine, { backgroundColor: border }]} />
-                                    )}
-                                </React.Fragment>
-                            ))}
+                            <View style={[styles.stepIcon, { backgroundColor: "rgba(245,158,11,0.12)", borderColor: "#F59E0B" }]}>
+                                <Ionicons name="time-outline" size={18} color="#F59E0B" />
+                            </View>
+                            <View style={{ flex: 1 }}>
+                                <Text style={[styles.stepLabel, { color: textPri, fontWeight: "800" }]}>
+                                    {isSubscription ? "Suscripción pendiente" : "Pendiente de aprobación"}
+                                </Text>
+                                <Text style={[styles.statusDescription, { color: textSec }]}>
+                                    Te avisaremos cuando el pago sea aprobado.
+                                </Text>
+                            </View>
                         </View>
 
                         {/* ── Buttons ── */}
@@ -297,6 +274,15 @@ const styles = StyleSheet.create({
         marginBottom: 16,
         width: "100%",
     },
+    whatsappLogoCircle: {
+        width: 25,
+        height: 25,
+        borderRadius: 13,
+        backgroundColor: "#25D366",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+    },
     waText: {
         flex: 1,
         fontSize: 12,
@@ -344,6 +330,11 @@ const styles = StyleSheet.create({
         fontSize: 9,
         textAlign: "center",
         lineHeight: 13,
+    },
+    statusDescription: {
+        fontSize: 11,
+        lineHeight: 15,
+        marginTop: 3,
     },
     stepLine: {
         height: 1.5,

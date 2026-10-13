@@ -21,19 +21,19 @@ import { API_URL } from "../../services/api";
 const BASE_URL = API_URL.replace("/api", "");
 
 const STATUS_LABELS = {
-    pending: "Pago Pendiente",
-    approved: "Pago Aprobado",
-    processing: "Compra en Proceso",
-    shipped: "Despachada a Destino",
-    completed: "Compra Entregada",
+    pending: "Pendiente",
+    approved: "Listo para retirar",
+    processing: "Listo para retirar",
+    shipped: "Listo para retirar",
+    completed: "Retirado",
     rejected: "Rechazada",
 };
 
 const STATUS_COLORS = {
     pending: "#F59E0B",
     approved: "#10B981",
-    processing: "#8B5CF6",
-    shipped: "#3B82F6",
+    processing: "#10B981",
+    shipped: "#10B981",
     completed: "#10B981",
     rejected: "#EF4444",
 };
@@ -41,8 +41,8 @@ const STATUS_COLORS = {
 const STATUS_ICONS = {
     pending: "time-outline",
     approved: "checkmark-circle-outline",
-    processing: "cube-outline",
-    shipped: "bicycle-outline",
+    processing: "checkmark-circle-outline",
+    shipped: "checkmark-circle-outline",
     completed: "checkmark-done-circle-outline",
     rejected: "close-circle-outline",
 };

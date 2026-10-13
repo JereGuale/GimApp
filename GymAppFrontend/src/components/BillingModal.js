@@ -95,9 +95,6 @@ export default function BillingModal({ visible, onClose, onConfirm, initialData 
   const [billingEmail, setBillingEmail] = useState('');
   const [billingPhone, setBillingPhone] = useState('');
   const [billingId, setBillingId] = useState('');
-  const [billingCity, setBillingCity] = useState('');
-  const [billingAddress, setBillingAddress] = useState('');
-  const [shippingMethod, setShippingMethod] = useState('local');
   const [errorMsg, setErrorMsg] = useState('');
 
   // editMode: false = muestra resumen, true = muestra formulario completo
@@ -109,9 +106,7 @@ export default function BillingModal({ visible, onClose, onConfirm, initialData 
 
   // ¿Ya tiene datos guardados?
   const hasSavedData = !!(
-    (initialData?.billing_id_number || '') ||
-    (initialData?.billing_city || '') ||
-    (initialData?.billing_address || '')
+    initialData?.billing_id_number || ''
   );
 
   useEffect(() => {
@@ -124,16 +119,11 @@ export default function BillingModal({ visible, onClose, onConfirm, initialData 
       setBillingEmail(email);
       setBillingPhone(phone);
       setBillingId(initialData?.billing_id_number || '');
-      setBillingCity(initialData?.billing_city || '');
-      setBillingAddress(initialData?.billing_address || '');
-      setShippingMethod(initialData?.shipping_method || 'local');
       setErrorMsg('');
 
       // Si ya tiene datos → modo resumen; si no → modo edición directamente
       const alreadyHasData = !!(
-        (initialData?.billing_id_number || '') ||
-        (initialData?.billing_city || '') ||
-        (initialData?.billing_address || '')
+        initialData?.billing_id_number || ''
       );
       setEditMode(!alreadyHasData);
 
@@ -150,7 +140,7 @@ export default function BillingModal({ visible, onClose, onConfirm, initialData 
   const handleConfirmPress = () => {
     if (
       !billingName.trim() || !billingEmail.trim() || !billingPhone.trim() ||
-      !billingId.trim() || !billingCity.trim() || !billingAddress.trim()
+      !billingId.trim()
     ) {
       setErrorMsg('Todos los campos de facturación son obligatorios.');
       return;
@@ -161,9 +151,7 @@ export default function BillingModal({ visible, onClose, onConfirm, initialData 
       billing_email: billingEmail.trim(),
       billing_phone: billingPhone.trim(),
       billing_id_number: billingId.trim(),
-      billing_city: billingCity.trim(),
-      billing_address: billingAddress.trim(),
-      shipping_method: shippingMethod,
+      shipping_method: 'local',
     });
   };
 
@@ -174,9 +162,7 @@ export default function BillingModal({ visible, onClose, onConfirm, initialData 
       billing_email: billingEmail,
       billing_phone: billingPhone,
       billing_id_number: billingId,
-      billing_city: billingCity,
-      billing_address: billingAddress,
-      shipping_method: shippingMethod,
+      shipping_method: 'local',
     });
   };
 
@@ -188,9 +174,6 @@ export default function BillingModal({ visible, onClose, onConfirm, initialData 
   const textSec = isDark ? '#6B7280' : '#6B6B6B';
   const divider = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)';
   const accent  = isDark ? '#FB923C' : '#000000';
-
-  const shippingLabel = shippingMethod === 'local' ? 'Retiro en Local' : 'Envío a Domicilio';
-  const shippingIcon  = shippingMethod === 'local' ? 'storefront-outline' : 'bicycle-outline';
 
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
@@ -265,43 +248,6 @@ export default function BillingModal({ visible, onClose, onConfirm, initialData 
 
                     <SummaryRow icon="mail-outline"     value={billingEmail}   isDark={isDark} />
                     <SummaryRow icon="call-outline"     value={billingPhone}   isDark={isDark} />
-                    <SummaryRow icon="pin-outline"      value={billingCity}    isDark={isDark} />
-                    <SummaryRow icon="location-outline" value={billingAddress} isDark={isDark} />
-                  </View>
-
-                  {/* Método de entrega (siempre editable en resumen) */}
-                  <View style={[styles.fieldWrapper, { marginTop: 4 }]}>
-                    <Text style={[styles.label, { color: textSec }]}>Método de Entrega</Text>
-                    <View style={styles.methodToggleRow}>
-                      <TouchableOpacity
-                        style={[
-                          styles.methodButton,
-                          { borderColor: border },
-                          shippingMethod === 'local' && { backgroundColor: accent, borderColor: accent }
-                        ]}
-                        activeOpacity={0.8}
-                        onPress={() => setShippingMethod('local')}
-                      >
-                        <Ionicons name="storefront-outline" size={15} color={shippingMethod === 'local' ? (isDark ? '#000' : '#FFF') : theme.colors.text} />
-                        <Text style={[styles.methodButtonText, { color: shippingMethod === 'local' ? (isDark ? '#000' : '#FFF') : theme.colors.text }]}>
-                          Retiro en Local
-                        </Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[
-                          styles.methodButton,
-                          { borderColor: border },
-                          shippingMethod === 'delivery' && { backgroundColor: accent, borderColor: accent }
-                        ]}
-                        activeOpacity={0.8}
-                        onPress={() => setShippingMethod('delivery')}
-                      >
-                        <Ionicons name="bicycle-outline" size={15} color={shippingMethod === 'delivery' ? (isDark ? '#000' : '#FFF') : theme.colors.text} />
-                        <Text style={[styles.methodButtonText, { color: shippingMethod === 'delivery' ? (isDark ? '#000' : '#FFF') : theme.colors.text }]}>
-                          Envío a Domicilio
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
                   </View>
 
                 </ScrollView>
@@ -335,41 +281,6 @@ export default function BillingModal({ visible, onClose, onConfirm, initialData 
             ══════════════════════════════════════════════════ */
               <>
                 <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-
-                  {/* Método de Entrega */}
-                  <View style={styles.fieldWrapper}>
-                    <Text style={[styles.label, { color: textSec }]}>Método de Entrega</Text>
-                    <View style={styles.methodToggleRow}>
-                      <TouchableOpacity
-                        style={[
-                          styles.methodButton,
-                          { borderColor: border },
-                          shippingMethod === 'local' && { backgroundColor: accent, borderColor: accent }
-                        ]}
-                        activeOpacity={0.8}
-                        onPress={() => setShippingMethod('local')}
-                      >
-                        <Ionicons name="storefront-outline" size={15} color={shippingMethod === 'local' ? (isDark ? '#000' : '#FFF') : theme.colors.text} />
-                        <Text style={[styles.methodButtonText, { color: shippingMethod === 'local' ? (isDark ? '#000' : '#FFF') : theme.colors.text }]}>
-                          Retiro en Local
-                        </Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[
-                          styles.methodButton,
-                          { borderColor: border },
-                          shippingMethod === 'delivery' && { backgroundColor: accent, borderColor: accent }
-                        ]}
-                        activeOpacity={0.8}
-                        onPress={() => setShippingMethod('delivery')}
-                      >
-                        <Ionicons name="bicycle-outline" size={15} color={shippingMethod === 'delivery' ? (isDark ? '#000' : '#FFF') : theme.colors.text} />
-                        <Text style={[styles.methodButtonText, { color: shippingMethod === 'delivery' ? (isDark ? '#000' : '#FFF') : theme.colors.text }]}>
-                          Envío a Domicilio
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
 
                   <InputField
                     label="Nombre / Razón Social"
@@ -411,24 +322,6 @@ export default function BillingModal({ visible, onClose, onConfirm, initialData 
                     isDark={isDark}
                   />
 
-                  <InputField
-                    label="Ciudad de Domicilio"
-                    icon="pin-outline"
-                    value={billingCity}
-                    onChangeText={setBillingCity}
-                    placeholder="Ej: Manta"
-                    isDark={isDark}
-                  />
-
-                  <InputField
-                    label="Dirección Completa"
-                    icon="location-outline"
-                    value={billingAddress}
-                    onChangeText={setBillingAddress}
-                    placeholder="Ej: Calle 15 y Av. 24, Barrio Córdoba"
-                    multiline
-                    isDark={isDark}
-                  />
                 </ScrollView>
 
                 {/* Footer edición */}

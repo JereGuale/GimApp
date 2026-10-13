@@ -26,14 +26,13 @@ import {
   XCircle,
   AlertCircle,
   ShieldAlert,
-  MessageCircle,
   Send,
-  Copy,
   Phone,
   FileText,
   Mail,
   UserCheck
 } from 'lucide-react';
+import WhatsAppIcon from '../components/WhatsAppIcon';
 import '../components/Layout.css';
 import './Subscriptions.css';
 
@@ -55,6 +54,11 @@ export default function Subscriptions() {
   const dropdownRef = useRef(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  useEffect(() => {
+    if (!success) return undefined;
+    const timer = setTimeout(() => setSuccess(''), 4000);
+    return () => clearTimeout(timer);
+  }, [success]);
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -106,7 +110,7 @@ export default function Subscriptions() {
     endsAt.setHours(0, 0, 0, 0);
     today.setHours(0, 0, 0, 0);
     const diffDays = Math.ceil((endsAt - today) / (1000 * 60 * 60 * 24));
-    return diffDays >= 0 && diffDays <= 7;
+    return [5, 3, 1].includes(diffDays);
   };
 
   const getDaysRemainingNumber = (endsAtStr) => {
@@ -119,13 +123,13 @@ export default function Subscriptions() {
   };
 
   const getSubscriptionExpirationState = (sub) => {
-    if (!sub) return { eligible: false, isExpired: false, diffDays: null, label: 'Recordatorio WhatsApp' };
+    if (!sub) return { eligible: false, isExpired: false, diffDays: null, label: 'Contactar por WhatsApp' };
     if (isSubscriptionExpired(sub)) {
       const diffDays = getDaysRemainingNumber(sub.ends_at);
       return { eligible: true, isExpired: true, diffDays: diffDays !== null ? diffDays : -1, label: 'Recordatorio (Vencida)' };
     }
     if (sub.status === 'cancelled' || sub.status === 'rejected' || sub.status === 'pending') {
-      return { eligible: false, isExpired: false, diffDays: null, label: 'Recordatorio WhatsApp' };
+      return { eligible: false, isExpired: false, diffDays: null, label: 'Contactar por WhatsApp' };
     }
 
     if (sub.ends_at) {
@@ -133,12 +137,31 @@ export default function Subscriptions() {
       if (diffDays < 0) {
         return { eligible: true, isExpired: true, diffDays, label: 'Recordatorio (Vencida)' };
       }
-      if (diffDays <= 7) {
-        return { eligible: true, isExpired: false, diffDays, label: 'Recordatorio (Por vencer)' };
+      if ([5, 3, 1].includes(diffDays)) {
+        return { eligible: true, isExpired: false, diffDays, label: `Recordatorio (${diffDays} días)` };
       }
-      return { eligible: true, isExpired: false, diffDays, label: 'Recordatorio WhatsApp' };
+      return { eligible: false, isExpired: false, diffDays, label: 'Contactar por WhatsApp' };
     }
-    return { eligible: true, isExpired: false, diffDays: null, label: 'Recordatorio WhatsApp' };
+    return { eligible: false, isExpired: false, diffDays: null, label: 'Contactar por WhatsApp' };
+  };
+
+  const generateWelcomeMessage = (sub) => {
+    const clientName = sub?.user?.name || sub?.billing_name || 'Estimado/a cliente';
+    const planName = sub?.plan?.name || sub?.plan_id || 'Membresía del Gimnasio';
+    const startsAtDate = sub?.starts_at
+      ? new Date(sub.starts_at).toLocaleDateString('es-EC', { day: 'numeric', month: 'long', year: 'numeric' })
+      : 'hoy';
+    const endsAtDate = sub?.ends_at
+      ? new Date(sub.ends_at).toLocaleDateString('es-EC', { day: 'numeric', month: 'long', year: 'numeric' })
+      : 'la fecha indicada en tu aplicación';
+
+    return `¡Hola, *${clientName}*! 🎉\n\n` +
+      `¡Bienvenido/a a *Gigafit Gim*! Confirmamos tu comprobante de pago y tu membresía ya está activa.\n\n` +
+      `📋 *Detalles de tu membresía:*\n` +
+      `🔹 Plan contratado: *${planName}*\n` +
+      `🔹 Vigencia: del *${startsAtDate}* al *${endsAtDate}*\n\n` +
+      `Gracias por confiar en nosotros. Te esperamos para entrenar y alcanzar tus objetivos. 💪🔥\n\n` +
+      `Si necesitas ayuda, escríbenos por este medio.`;
   };
 
   const generateWhatsAppMessage = (sub) => {
@@ -147,18 +170,26 @@ export default function Subscriptions() {
     const expState = getSubscriptionExpirationState(sub);
     const endsAtDate = sub?.ends_at ? new Date(sub.ends_at).toLocaleDateString('es-EC', { day: 'numeric', month: 'long', year: 'numeric' }) : 'recientemente';
 
-    if (!expState.isExpired) {
-      const daysMsg = expState.diffDays === 0 ? '¡Vence hoy!' : (expState.diffDays === 1 ? '¡Queda solo 1 día!' : `¡Quedan ${expState.diffDays} días!`);
-      const statusVigencia = expState.diffDays <= 7 ? 'está próxima a vencer el' : 'se encuentra activa y tiene vigencia hasta el';
+    if (sub?.status === 'pending') {
+      return `¡Hola, *${clientName}*!\n\n` +
+        `Te informamos que tu comprobante de pago del plan *${planName}* está en revisión.\n` +
+        `Te avisaremos en cuanto validemos tu pago y activemos tu membresía.\n\n` +
+        `Si necesitas ayuda, escríbenos por este medio.`;
+    }
+
+    if (!expState.isExpired && [5, 3, 1].includes(expState.diffDays)) {
+      const daysMsg = expState.diffDays === 1 ? 'queda solo 1 día' : `quedan ${expState.diffDays} días`;
       return `¡Hola, *${clientName}*! 💪 Esperamos que te encuentres excelente.\n\n` +
         `Te saludamos cordialmente de parte del equipo de *Gigafit Gim*.\n` +
-        `Te recordamos atentamente que tu membresía (*${planName}*) ${statusVigencia} *${endsAtDate}* (${daysMsg}).\n\n` +
-        `Mantener la constancia y no perder tus días de entrenamiento es clave para tus metas físicas y de bienestar. ¡Tu disciplina hace la diferencia! 🔥\n\n` +
-        `📋 *Puedes renovar tu plan:*\n` +
-        `🔹 1. Directamente en recepción (Efectivo o Transferencia)\n` +
-        `🔹 2. Desde nuestra aplicación móvil\n\n` +
-        `Si tienes alguna pregunta o deseas consultar sobre promociones vigentes, escríbenos por aquí con gusto.\n\n` +
-        `¡Te esperamos en el gym para seguir entrenando con todo! 🥊`;
+        `Te recordamos que tu membresía (*${planName}*) vence el *${endsAtDate}*; ${daysMsg}.\n\n` +
+        `Queremos ayudarte a mantener tu continuidad de entrenamiento. Cuando desees renovar, puedes hacerlo en recepción o desde nuestra aplicación móvil.\n\n` +
+        `Si tienes alguna pregunta, escríbenos por aquí. ¡Te esperamos en el gym! 🥊`;
+    }
+
+    if (!expState.isExpired) {
+      return `¡Hola, *${clientName}*!\n\n` +
+        `Te saludamos de parte de *Gigafit Gim*. Tu membresía *${planName}* se encuentra activa hasta el *${endsAtDate}*.\n\n` +
+        `Si necesitas información sobre tu membresía o tienes alguna consulta, escríbenos por este medio.`;
     }
 
     return `¡Hola, *${clientName}*! 💪 Esperamos que te encuentres con la mejor energía.\n\n` +
@@ -181,6 +212,19 @@ export default function Subscriptions() {
       customMessage: generateWhatsAppMessage(sub),
       copied: false
     });
+  };
+
+  const openWhatsAppMessage = (sub, message) => {
+    const phone = sub?.billing_phone || sub?.user?.phone || sub?.resolved_phone || '';
+    const cleanDigits = phone.replace(/\D/g, '');
+    if (!cleanDigits) return false;
+
+    const normalizedPhone = cleanDigits.startsWith('0')
+      ? `593${cleanDigits.substring(1)}`
+      : (!cleanDigits.startsWith('593') && cleanDigits.length === 9 ? `593${cleanDigits}` : cleanDigits);
+    const encoded = encodeURIComponent((message || '').normalize('NFC'));
+    window.open(`https://api.whatsapp.com/send/?phone=${normalizedPhone}&text=${encoded}`, '_blank');
+    return true;
   };
 
   const sendWhatsAppMessage = async () => {
@@ -207,23 +251,7 @@ export default function Subscriptions() {
       }
     }
 
-    let cleanDigits = currentPhone.replace(/\D/g, '');
-    if (cleanDigits.startsWith('0')) {
-      cleanDigits = '593' + cleanDigits.substring(1);
-    } else if (!cleanDigits.startsWith('593') && cleanDigits.length === 9) {
-      cleanDigits = '593' + cleanDigits;
-    }
-    const normalizedMsg = (whatsappModal.customMessage || '').normalize('NFC');
-    const encoded = encodeURIComponent(normalizedMsg);
-    window.open(`https://api.whatsapp.com/send/?phone=${cleanDigits}&text=${encoded}`, '_blank');
-  };
-
-  const copyWhatsAppMessage = () => {
-    navigator.clipboard.writeText(whatsappModal.customMessage);
-    setWhatsappModal(prev => ({ ...prev, copied: true }));
-    setTimeout(() => {
-      setWhatsappModal(prev => ({ ...prev, copied: false }));
-    }, 2500);
+    openWhatsAppMessage({ billing_phone: currentPhone }, whatsappModal.customMessage);
   };
 
   const handleSaveNote = async () => {
@@ -482,7 +510,7 @@ export default function Subscriptions() {
       if (isExpiring) {
         return (
           <div className="status-pill-container">
-            <span className="status-pill status-pill--expiring" title="Vence dentro de los próximos 7 días">
+            <span className="status-pill status-pill--expiring" title="Vence en 5, 3 o 1 día">
               <Clock size={13} className="status-pill-icon" />
               <span>Por vencer ({days}d)</span>
             </span>
@@ -658,9 +686,13 @@ export default function Subscriptions() {
     setActionLoading(id + '_approve');
     setError(''); setSuccess('');
     try {
-      await apiFetch(`/trainer/subscriptions/${id}/approve`, { method: 'POST' });
+      const result = await apiFetch(`/trainer/subscriptions/${id}/approve`, { method: 'POST' });
       await fetchSubs();
       setSuccess('Suscripción aprobada exitosamente');
+      const approvedSubscription = result?.subscription;
+      if (approvedSubscription && !openWhatsAppMessage(approvedSubscription, generateWelcomeMessage(approvedSubscription))) {
+        setError('Suscripción aprobada, pero el cliente no tiene un teléfono registrado para enviar la bienvenida.');
+      }
     } catch (e) { setError(e.message); }
     finally { setActionLoading(null); }
   };
@@ -760,51 +792,8 @@ export default function Subscriptions() {
         </button>
       </div>
 
-      {/* SaaS Stats Grid */}
+      {/* Priority summary */}
       <div className="subscriptions-stats-grid">
-        <div className="sub-stat-card sub-stat-card--total" onClick={() => setFilter('all')}>
-          <div className="sub-stat-icon-wrapper active">
-            <Users size={20} />
-          </div>
-          <div className="sub-stat-content">
-            <span className="sub-stat-label">Total Suscriptores</span>
-            <span className="sub-stat-value">{subs.length}</span>
-          </div>
-        </div>
-
-        <div className="sub-stat-card sub-stat-card--active" onClick={() => setFilter('active')}>
-          <div className="sub-stat-icon-wrapper success">
-            <CheckCircle2 size={20} />
-          </div>
-          <div className="sub-stat-content">
-            <div className="sub-stat-label-row">
-              <span className="sub-stat-label">Activas</span>
-              <span className="live-dot" title="En curso"></span>
-            </div>
-            <span className="sub-stat-value text-success">{activeCount}</span>
-          </div>
-        </div>
-
-        <div className="sub-stat-card sub-stat-card--expiring" onClick={() => setFilter('expiring')}>
-          <div className="sub-stat-icon-wrapper warning">
-            <CalendarClock size={20} />
-          </div>
-          <div className="sub-stat-content">
-            <span className="sub-stat-label">Por Vencer (7d)</span>
-            <span className="sub-stat-value text-warning">{expiringCount}</span>
-          </div>
-        </div>
-
-        <div className="sub-stat-card sub-stat-card--expired" onClick={() => setFilter('expired')}>
-          <div className="sub-stat-icon-wrapper danger">
-            <XCircle size={20} />
-          </div>
-          <div className="sub-stat-content">
-            <span className="sub-stat-label">Expiradas</span>
-            <span className="sub-stat-value text-danger">{expiredCount}</span>
-          </div>
-        </div>
-
         <div className="sub-stat-card sub-stat-card--pending" onClick={() => setFilter('pending')}>
           <div className="sub-stat-icon-wrapper pending">
             <Clock size={20} />
@@ -814,6 +803,28 @@ export default function Subscriptions() {
             <span className="sub-stat-value text-pending">{pendingCount}</span>
           </div>
         </div>
+        <div className="sub-stat-card sub-stat-card--expiring" onClick={() => setFilter('expiring')}>
+          <div className="sub-stat-icon-wrapper warning"><CalendarClock size={20} /></div>
+          <div className="sub-stat-content">
+            <span className="sub-stat-label">Por vencer (7 días)</span>
+            <span className="sub-stat-value text-warning">{expiringCount}</span>
+          </div>
+        </div>
+        <div className="sub-stat-card sub-stat-card--active" onClick={() => setFilter('active')}>
+          <div className="sub-stat-icon-wrapper success"><CheckCircle2 size={20} /></div>
+          <div className="sub-stat-content">
+            <div className="sub-stat-label-row"><span className="sub-stat-label">Activas</span><span className="live-dot" title="En curso"></span></div>
+            <span className="sub-stat-value text-success">{activeCount}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className={`subscriptions-priority ${pendingCount > 0 ? 'subscriptions-priority--attention' : ''}`}>
+        <div>
+          <strong>{pendingCount > 0 ? `${pendingCount} solicitud${pendingCount === 1 ? '' : 'es'} requiere${pendingCount === 1 ? '' : 'n'} revisión` : 'No hay solicitudes pendientes'}</strong>
+          <span>{pendingCount > 0 ? 'Revisa el comprobante y decide si aprobar o rechazar.' : 'Las membresías están al día por ahora.'}</span>
+        </div>
+        <button type="button" onClick={() => setFilter('pending')}>Ver pendientes</button>
       </div>
 
       {/* Toolbar with Search and Segmented Filters */}
@@ -907,11 +918,10 @@ export default function Subscriptions() {
                 <thead>
                   <tr>
                     <th style={{ minWidth: 220 }}>Cliente</th>
-                    <th style={{ minWidth: 150 }}>Plan & Precio</th>
+                    <th style={{ minWidth: 170 }}>Plan</th>
                     <th>Estado</th>
-                    <th>Método</th>
                     <th style={{ minWidth: 180 }}>Vigencia</th>
-                    <th style={{ textAlign: 'right', minWidth: 160 }}>Acciones</th>
+                    <th style={{ textAlign: 'right', minWidth: 220 }}>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -927,40 +937,11 @@ export default function Subscriptions() {
                               ${s.price ? Number(s.price).toFixed(2) : (s.plan?.price ? Number(s.plan.price).toFixed(2) : '—')}
                               <small> / mes</small>
                             </span>
-                            {s.notes && (
-                              <div
-                                onClick={() => setNoteModal({ sub: s, note: s.notes || '', saving: false })}
-                                className="sub-note-badge"
-                                title={`Nota: ${s.notes} (Clic para editar)`}
-                              >
-                                <FileText size={11} style={{ flexShrink: 0 }} />
-                                <span>{s.notes}</span>
-                              </div>
-                            )}
+                            {s.notes && <span className="plan-note-indicator"><FileText size={11} /> Nota disponible</span>}
                           </div>
                         </td>
                         <td>
                           {renderStatusCell(s)}
-                        </td>
-                        <td>
-                          <span className={`payment-method-pill ${s.payment_method === 'transfer' ? 'payment-method--transfer' : s.payment_method === 'card' ? 'payment-method--card' : 'payment-method--manual'}`}>
-                            {s.payment_method === 'transfer' ? (
-                              <>
-                                <Building size={12} />
-                                <span>Transferencia</span>
-                              </>
-                            ) : s.payment_method === 'card' ? (
-                              <>
-                                <CreditCard size={12} />
-                                <span>Tarjeta</span>
-                              </>
-                            ) : (
-                              <>
-                                <UserCheck size={12} />
-                                <span>Manual</span>
-                              </>
-                            )}
-                          </span>
                         </td>
                         <td>
                           {s.starts_at && s.ends_at ? (
@@ -1007,29 +988,40 @@ export default function Subscriptions() {
                         </td>
                         <td style={{ textAlign: 'right' }}>
                           <div className="table-actions-container">
-                            {/* WhatsApp Direct Action Button */}
-                            {getSubscriptionExpirationState(s).eligible && (
-                              <button
-                                type="button"
-                                className="btn-action-quick btn-action-whatsapp"
-                                onClick={() => handleOpenWhatsAppReminder(s)}
-                                title="Enviar recordatorio por WhatsApp"
-                              >
-                                <MessageCircle size={14} />
-                                <span>WhatsApp</span>
-                              </button>
+                            {s.status === 'pending' && (
+                              <>
+                                <button type="button" className="btn-action-quick btn-action-approve" onClick={() => handleApprove(s.id)}>
+                                  <Check size={14} /> Aprobar
+                                </button>
+                                <button type="button" className="btn-action-quick btn-action-reject" onClick={() => handleReject(s.id)}>
+                                  <X size={14} /> Rechazar
+                                </button>
+                              </>
                             )}
+                            {/* WhatsApp Direct Action Button */}
+                            <button
+                              type="button"
+                              className="btn-action-quick btn-action-whatsapp"
+                              onClick={() => handleOpenWhatsAppReminder(s)}
+                              title="Contactar por WhatsApp"
+                            >
+                              <WhatsAppIcon size={15} />
+                              <span>Contactar</span>
+                            </button>
 
                             {/* View Receipt Button */}
                             {getReceiptUrl(s) && (
-                              <button
-                                type="button"
-                                className="btn-action-icon btn-eye-action"
-                                onClick={() => handleOpenReceiptModal(s)}
-                                title="Ver comprobante de pago"
-                              >
-                                <Eye size={15} />
-                              </button>
+                              <div className="subscription-action-wrapper">
+                                <button
+                                  type="button"
+                                  className="btn-action-icon btn-eye-action"
+                                  onClick={() => handleOpenReceiptModal(s)}
+                                  aria-label="Ver comprobante"
+                                >
+                                  <Eye size={15} />
+                                </button>
+                                <span className="subscription-action-tooltip">Ver Comprobante</span>
+                              </div>
                             )}
 
                             {/* Actions Dropdown */}
@@ -1141,7 +1133,7 @@ export default function Subscriptions() {
                                       setActiveDropdown(null);
                                     }}
                                   >
-                                    <MessageCircle size={14} style={{ color: expState.isExpired ? '#dc2626' : '#25D366' }} />
+                                    <WhatsAppIcon size={15} />
                                     <span style={{ color: expState.isExpired ? '#dc2626' : '#16a34a', fontWeight: 600 }}>
                                       {expState.label}
                                     </span>
@@ -1726,7 +1718,7 @@ Estamos validando tu comprobante de pago para activar tu membresía de inmediato
                 {/* Warning 1 */}
                 <div className="delete-warning-box delete-warning-box--red">
                   <AlertTriangle size={16} />
-                  <span>Esta acción <strong>eliminará permanentemente</strong> el registro de la base de datos. No se puede deshacer.</span>
+                  <span>Esta acción <strong>eliminará permanentemente</strong> este registro. No se puede deshacer.</span>
                 </div>
 
                 <div className="delete-modal-actions">
@@ -1833,7 +1825,7 @@ Estamos validando tu comprobante de pago para activar tu membresía de inmediato
                   justifyContent: 'center',
                   boxShadow: '0 4px 12px rgba(37, 211, 102, 0.25)'
                 }}>
-                  <MessageCircle size={20} />
+                  <WhatsAppIcon size={20} className="whatsapp-icon--white" />
                 </div>
                 <div>
                   <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: 'var(--text)' }}>
@@ -1924,15 +1916,6 @@ Estamos validando tu comprobante de pago para activar tu membresía de inmediato
               <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
                 <button
                   type="button"
-                  className="btn btn--secondary"
-                  onClick={copyWhatsAppMessage}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
-                >
-                  {whatsappModal.copied ? <Check size={15} style={{ color: 'var(--success)' }} /> : <Copy size={15} />}
-                  <span>{whatsappModal.copied ? '¡Copiado!' : 'Copiar Texto'}</span>
-                </button>
-                <button
-                  type="button"
                   className="btn"
                   onClick={sendWhatsAppMessage}
                   style={{
@@ -1946,8 +1929,8 @@ Estamos validando tu comprobante de pago para activar tu membresía de inmediato
                     boxShadow: '0 2px 8px rgba(37, 211, 102, 0.3)'
                   }}
                 >
-                  <Send size={15} />
-                  <span>Abrir WhatsApp</span>
+                  <WhatsAppIcon size={15} className="whatsapp-icon--white" />
+                  <span>Enviar</span>
                 </button>
               </div>
             </div>
@@ -2352,14 +2335,7 @@ Estamos validando tu comprobante de pago para activar tu membresía de inmediato
               className="dropdown-item"
               onClick={() => {
                 setActiveDropdown(null);
-                setEditClientModal({
-                  sub: s,
-                  name: s.user?.name || s.billing_name || '',
-                  phone: s.user?.phone || s.billing_phone || '',
-                  email: s.user?.email || s.billing_email || '',
-                  notes: s.notes || '',
-                  saving: false
-                });
+                handleOpenEditClient(s);
               }}
             >
               <User size={14} /> <span>Detalles del cliente</span>

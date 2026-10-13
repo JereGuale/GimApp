@@ -22,17 +22,16 @@ import {
   RotateCw,
   XCircle,
   AlertCircle,
-  Truck
 } from 'lucide-react';
 import '../components/Layout.css';
 import './Orders.css';
 
 const STATUS_LABELS = { 
-  pending: 'Pago Pendiente', 
-  approved: 'Pago Aprobado (Preparando)', 
-  processing: 'Compra en Proceso', 
-  shipped: 'Despachada a Destino', 
-  completed: 'Compra Entregada', 
+  pending: 'Pendiente', 
+  approved: 'Listo para retirar', 
+  processing: 'Listo para retirar', 
+  shipped: 'Listo para retirar', 
+  completed: 'Retirado', 
   rejected: 'Rechazado' 
 };
 const STATUS_BADGE = { 
@@ -51,11 +50,17 @@ export default function Orders() {
   const [filter, setFilter] = useState('all');
   const [actionLoading, setActionLoading] = useState(null);
   const [receiptModal, setReceiptModal] = useState(null); // stores the entire order object
+  const [rejectionReasonModal, setRejectionReasonModal] = useState(null);
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  useEffect(() => {
+    if (!success) return undefined;
+    const timer = setTimeout(() => setSuccess(''), 4000);
+    return () => clearTimeout(timer);
+  }, [success]);
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -128,10 +133,8 @@ export default function Orders() {
     let IconComponent = Clock;
     if (o.status === 'approved') {
       IconComponent = CheckCircle2;
-    } else if (o.status === 'processing') {
-      IconComponent = Package;
-    } else if (o.status === 'shipped') {
-      IconComponent = Truck;
+    } else if (o.status === 'processing' || o.status === 'shipped') {
+      IconComponent = CheckCircle2;
     } else if (o.status === 'completed') {
       IconComponent = CheckCircle2;
     } else if (o.status === 'rejected') {
@@ -146,16 +149,6 @@ export default function Orders() {
             <span>{STATUS_LABELS[o.status] || o.status}</span>
           </span>
         </div>
-        {o.status === 'rejected' && o.rejection_reason && (
-          <div className="status-rejection-info">
-            <AlertCircle size={12} className="status-rejection-info-icon" />
-            <span className="rejection-text-truncated">Motivo: {o.rejection_reason}</span>
-            <div className="tooltip-bubble">
-              <div style={{ fontWeight: 700, color: 'var(--primary)', marginBottom: 4 }}>Motivo del Rechazo</div>
-              <div>{o.rejection_reason}</div>
-            </div>
-          </div>
-        )}
       </div>
     );
   };
@@ -208,18 +201,34 @@ export default function Orders() {
     setActionLoading(id + '_approve');
     setError(''); setSuccess('');
     try {
-      await apiFetch(`/admin/orders/${id}/approve`, { method: 'POST' });
+      const result = await apiFetch(`/admin/orders/${id}/approve`, { method: 'POST' });
       setSuccess('Pedido aprobado exitosamente');
       fetchOrders();
+
+      const approvedOrder = result?.order;
+      const clientPhone = approvedOrder?.billing_phone || approvedOrder?.user?.phone || '';
+      const cleanPhone = clientPhone.replace(/\D/g, '');
+      if (approvedOrder && cleanPhone) {
+        const phone = cleanPhone.startsWith('0')
+          ? `593${cleanPhone.substring(1)}`
+          : (!cleanPhone.startsWith('593') && cleanPhone.length === 9 ? `593${cleanPhone}` : cleanPhone);
+        const itemsSummary = Array.isArray(approvedOrder.items) && approvedOrder.items.length > 0
+          ? approvedOrder.items.map(item => `• ${item.name} x${item.quantity}`).join('\n')
+          : '• Productos varios';
+        const message = `¡Hola ${approvedOrder.billing_name || approvedOrder.user?.name || 'Cliente'}! 🎉\n\n` +
+          `Tu pago fue aprobado y tu pedido en *Gigafit Gim* está confirmado.\n\n` +
+          `🛒 *Productos:*\n${itemsSummary}\n\n` +
+          `📍 Puedes retirar tu compra en el local de Gigafit Gim.\n\n` +
+          `Te esperamos. ¡Gracias por tu compra! 💪`;
+        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
+      }
     } catch (e) { setError(e.message); }
     finally { setActionLoading(null); }
   };
 
   const handleUpdateStatus = (id, newStatus) => {
     const statusLabels = {
-      processing: 'Compra en Proceso',
-      shipped: 'Despachada a Destino',
-      completed: 'Compra Entregada'
+      completed: 'Retirado'
     };
     const label = statusLabels[newStatus] || newStatus;
     setConfirmModal({
@@ -569,8 +578,7 @@ export default function Orders() {
                           
                           {/* Actions dropdown slot */}
                           <div style={{ width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            {o.status !== 'completed' && (
-                              <div className="actions-dropdown-wrapper">
+                            <div className="actions-dropdown-wrapper">
                                 <button 
                                   type="button"
                                   className={`actions-dropdown-trigger ${activeDropdown === o.id ? 'active' : ''}`}
@@ -612,33 +620,7 @@ export default function Orders() {
                                         </button>
                                       </>
                                     )}
-                                    {o.status === 'approved' && (
-                                      <button 
-                                        type="button"
-                                        className="actions-dropdown-item"
-                                        onClick={() => {
-                                          handleUpdateStatus(o.id, 'processing');
-                                          setActiveDropdown(null);
-                                        }}
-                                      >
-                                        <Package size={14} style={{ color: '#7c3aed' }} />
-                                        <span style={{ color: '#7c3aed', fontWeight: 600 }}>Poner en Proceso</span>
-                                      </button>
-                                    )}
-                                    {o.status === 'processing' && (
-                                      <button 
-                                        type="button"
-                                        className="actions-dropdown-item"
-                                        onClick={() => {
-                                          handleUpdateStatus(o.id, 'shipped');
-                                          setActiveDropdown(null);
-                                        }}
-                                      >
-                                        <Truck size={14} style={{ color: '#2563eb' }} />
-                                        <span style={{ color: '#2563eb', fontWeight: 600 }}>Despachar a Destino</span>
-                                      </button>
-                                    )}
-                                    {o.status === 'shipped' && (
+                                    {(o.status === 'approved' || o.status === 'processing' || o.status === 'shipped') && (
                                       <button 
                                         type="button"
                                         className="actions-dropdown-item"
@@ -648,26 +630,36 @@ export default function Orders() {
                                         }}
                                       >
                                         <CheckCircle2 size={14} style={{ color: '#16a34a' }} />
-                                        <span style={{ color: '#16a34a', fontWeight: 600 }}>Marcar como Entregado</span>
+                                        <span style={{ color: '#16a34a', fontWeight: 600 }}>Marcar como Retirado</span>
                                       </button>
                                     )}
-                                    {o.status === 'rejected' && (
-                                      <button 
+                                    {o.status === 'rejected' && o.rejection_reason && (
+                                      <button
                                         type="button"
-                                        className="actions-dropdown-item actions-dropdown-item--danger"
+                                        className="actions-dropdown-item"
                                         onClick={() => {
-                                          handleDeleteClick(o.id);
+                                          setRejectionReasonModal(o);
                                           setActiveDropdown(null);
                                         }}
                                       >
-                                        <Trash2 size={14} />
-                                        <span>Eliminar registro</span>
+                                        <AlertCircle size={14} style={{ color: '#dc2626' }} />
+                                        <span style={{ color: '#dc2626', fontWeight: 600 }}>Ver motivo del rechazo</span>
                                       </button>
                                     )}
+                                    <button
+                                      type="button"
+                                      className="actions-dropdown-item actions-dropdown-item--danger"
+                                      onClick={() => {
+                                        handleDeleteClick(o.id);
+                                        setActiveDropdown(null);
+                                      }}
+                                    >
+                                      <Trash2 size={14} />
+                                      <span>Eliminar registro</span>
+                                    </button>
                                   </div>
                                 )}
                               </div>
-                            )}
                           </div>
                         </div>
                       </td>
@@ -725,33 +717,7 @@ export default function Orders() {
                               </button>
                             </>
                           )}
-                          {o.status === 'approved' && (
-                            <button 
-                              type="button"
-                              className="actions-dropdown-item"
-                              onClick={() => {
-                                handleUpdateStatus(o.id, 'processing');
-                                setActiveDropdown(null);
-                              }}
-                            >
-                              <Package size={14} style={{ color: '#7c3aed' }} />
-                              <span style={{ color: '#7c3aed', fontWeight: 600 }}>Poner en Proceso</span>
-                            </button>
-                          )}
-                          {o.status === 'processing' && (
-                            <button 
-                              type="button"
-                              className="actions-dropdown-item"
-                              onClick={() => {
-                                handleUpdateStatus(o.id, 'shipped');
-                                setActiveDropdown(null);
-                              }}
-                            >
-                              <Truck size={14} style={{ color: '#2563eb' }} />
-                              <span style={{ color: '#2563eb', fontWeight: 600 }}>Despachar a Destino</span>
-                            </button>
-                          )}
-                          {o.status === 'shipped' && (
+                          {(o.status === 'approved' || o.status === 'processing' || o.status === 'shipped') && (
                             <button 
                               type="button"
                               className="actions-dropdown-item"
@@ -761,7 +727,7 @@ export default function Orders() {
                               }}
                             >
                               <CheckCircle2 size={14} style={{ color: '#16a34a' }} />
-                              <span style={{ color: '#16a34a', fontWeight: 600 }}>Marcar como Entregado</span>
+                              <span style={{ color: '#16a34a', fontWeight: 600 }}>Marcar como Retirado</span>
                             </button>
                           )}
                           {getReceiptUrl(o) && (
@@ -778,19 +744,30 @@ export default function Orders() {
                             </button>
                           )}
                           
-                          {o.status === 'rejected' && (
-                            <button 
+                          {o.status === 'rejected' && o.rejection_reason && (
+                            <button
                               type="button"
-                              className="actions-dropdown-item actions-dropdown-item--danger"
+                              className="actions-dropdown-item"
                               onClick={() => {
-                                  handleDeleteClick(o.id);
-                                  setActiveDropdown(null);
-                                }}
+                                setRejectionReasonModal(o);
+                                setActiveDropdown(null);
+                              }}
                             >
-                              <Trash2 size={14} />
-                              <span>Eliminar registro</span>
+                              <AlertCircle size={14} style={{ color: '#dc2626' }} />
+                              <span style={{ color: '#dc2626', fontWeight: 600 }}>Ver motivo del rechazo</span>
                             </button>
                           )}
+                          <button
+                            type="button"
+                            className="actions-dropdown-item actions-dropdown-item--danger"
+                            onClick={() => {
+                              handleDeleteClick(o.id);
+                              setActiveDropdown(null);
+                            }}
+                          >
+                            <Trash2 size={14} />
+                            <span>Eliminar registro</span>
+                          </button>
                         </div>
                       )}
                     </div>
@@ -951,10 +928,6 @@ export default function Orders() {
                           ? receiptModal.items.map(item => `• ${item.name} x${item.quantity}${item.selected_option ? ` [${item.selected_option}]` : ''} ($${Number(item.price * item.quantity).toFixed(2)})`).join('\n')
                           : '• Productos varios';
 
-                        const shippingText = receiptModal.shipping_method === 'delivery'
-                          ? `Envío a domicilio (${receiptModal.billing_city || 'Manta'}${receiptModal.billing_address ? ` - ${receiptModal.billing_address}` : ''})`
-                          : 'Retiro en local';
-
                         const message = `¡Hola ${clientName}! 👋 Gracias por tu compra en Gigafit Gim.
 
 Hemos recibido tu comprobante de pago. Detalles del pedido:
@@ -963,7 +936,7 @@ Hemos recibido tu comprobante de pago. Detalles del pedido:
 ${itemsSummary}
 
 💰 *Total:* $${Number(receiptModal.total).toFixed(2)}
-📍 *Entrega:* ${shippingText}
+📍 *Retiro:* En el local de Gigafit Gim
 
 Estamos validando tu pago y nos comunicaremos contigo de inmediato. ¡Gracias por tu preferencia! 💪🔥`;
 
@@ -1003,9 +976,7 @@ Estamos validando tu pago y nos comunicaremos contigo de inmediato. ¡Gracias po
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-secondary)' }}>Cédula:</span><span style={{ fontWeight: 600 }}>{receiptModal.billing_id_number || receiptModal.user?.billing_id_number || '—'}</span></div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-secondary)' }}>Email:</span><span style={{ fontWeight: 600 }}>{receiptModal.billing_email || receiptModal.user?.email || '—'}</span></div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-secondary)' }}>Teléfono:</span><span style={{ fontWeight: 600 }}>{receiptModal.billing_phone || receiptModal.user?.phone || '—'}</span></div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-secondary)' }}>Método de Entrega:</span><span style={{ fontWeight: 700, color: receiptModal.shipping_method === 'delivery' ? 'var(--primary)' : 'var(--success-text)' }}>{receiptModal.shipping_method === 'delivery' ? 'Envío a Domicilio' : 'Retiro en Local'}</span></div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-secondary)' }}>Ciudad:</span><span style={{ fontWeight: 600 }}>{receiptModal.billing_city || receiptModal.user?.billing_city || '—'}</span></div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}><span style={{ color: 'var(--text-secondary)' }}>Dirección:</span><span style={{ fontWeight: 600, wordBreak: 'break-all', marginTop: 4 }}>{receiptModal.billing_address || receiptModal.user?.billing_address || '—'}</span></div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-secondary)' }}>Entrega:</span><span style={{ fontWeight: 700, color: 'var(--success-text)' }}>Retiro en Local</span></div>
                   </div>
                 </div>
 
@@ -1080,21 +1051,55 @@ Estamos validando tu pago y nos comunicaremos contigo de inmediato. ¡Gracias po
         </div>
       )}
 
+      {rejectionReasonModal && (
+        <div className="modal-overlay" onClick={() => setRejectionReasonModal(null)}>
+          <div className="modal order-reason-view-modal" onClick={e => e.stopPropagation()}>
+            <div className="order-reason-view-header">
+              <div className="order-rejection-icon"><AlertCircle size={20} /></div>
+              <div>
+                <h3>Motivo del rechazo</h3>
+              </div>
+              <button
+                type="button"
+                className="btn btn--ghost order-rejection-close"
+                aria-label="Cerrar"
+                onClick={() => setRejectionReasonModal(null)}
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div className="order-reason-view-content">
+              {rejectionReasonModal.rejection_reason}
+            </div>
+            <div className="order-reason-view-actions">
+              <button type="button" className="btn btn--secondary" onClick={() => setRejectionReasonModal(null)}>
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Custom Prompt Modal for Rejecting Orders */}
       {rejectModal && (
         <div className="modal-overlay" onClick={() => setRejectModal(null)}>
-          <div className="modal" style={{ maxWidth: 420, padding: 28 }} onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Rechazar Pedido</h3>
-              <button className="btn btn--ghost" style={{ padding: 6, borderRadius: '50%' }} onClick={() => setRejectModal(null)}><X size={16} /></button>
+          <div className="modal order-rejection-modal" onClick={e => e.stopPropagation()}>
+            <div className="order-rejection-header">
+              <div className="order-rejection-title-group">
+                <div className="order-rejection-icon"><AlertCircle size={20} /></div>
+                <div>
+                  <h3>Rechazar pedido</h3>
+                  <p>Indica por qué no se puede aprobar esta compra.</p>
+                </div>
+              </div>
+              <button className="btn btn--ghost order-rejection-close" aria-label="Cerrar" onClick={() => setRejectModal(null)}><X size={16} /></button>
             </div>
-            <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 16px 0', lineHeight: 1.4 }}>
-              Ingresa el motivo del rechazo para notificar al usuario. Este se guardará en los registros del pedido:
-            </p>
             
             <form onSubmit={executeReject}>
-              <div className="form-group" style={{ marginBottom: 12 }}>
+              <div className="order-rejection-field">
+                <label htmlFor="order-rejection-reason">Motivo del rechazo</label>
                 <textarea 
+                  id="order-rejection-reason"
                   value={rejectionReason}
                   onChange={e => {
                     const val = e.target.value;
@@ -1106,45 +1111,24 @@ Estamos validando tu pago y nos comunicaremos contigo de inmediato. ¡Gracias po
                   placeholder="Ej. Comprobante de pago borroso o stock de producto no disponible."
                   rows={3}
                   className="rejection-textarea"
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    borderRadius: '8px',
-                    border: '1px solid var(--border)',
-                    backgroundColor: 'var(--bg)',
-                    color: 'var(--text)',
-                    fontSize: '14px',
-                    fontFamily: 'inherit',
-                    resize: 'vertical'
-                  }}
                   required
                   autoFocus
                 />
-                <div style={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
-                  fontSize: '11px', 
-                  color: 'var(--text-secondary)',
-                  marginTop: '4px' 
-                }}>
+                <div className="order-rejection-meta">
                   <span>Máximo 100 palabras</span>
-                  <span style={{ 
-                    fontWeight: 'bold',
-                    color: (rejectionReason.trim() === '' ? 0 : rejectionReason.trim().split(/\s+/).length) >= 100 ? '#ef4444' : 'var(--text-secondary)'
-                  }}>
+                  <span className={(rejectionReason.trim() === '' ? 0 : rejectionReason.trim().split(/\s+/).length) >= 100 ? 'is-limit' : ''}>
                     {rejectionReason.trim() === '' ? 0 : rejectionReason.trim().split(/\s+/).length} / 100
                   </span>
                 </div>
               </div>
-              <div className="modal-actions" style={{ display: 'flex', gap: 12 }}>
-                <button type="button" className="btn btn--ghost" style={{ flex: 1 }} onClick={() => setRejectModal(null)}>Cancelar</button>
+              <div className="order-rejection-actions">
+                <button type="button" className="btn btn--ghost" onClick={() => setRejectModal(null)}>Cancelar</button>
                 <button 
                   type="submit" 
                   className="btn btn--danger" 
-                  style={{ flex: 1 }}
                   disabled={rejectionReason.trim().length < 3 || (rejectionReason.trim() === '' ? 0 : rejectionReason.trim().split(/\s+/).length) > 100}
                 >
-                  Rechazar Pedido
+                  Rechazar pedido
                 </button>
               </div>
             </form>

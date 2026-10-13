@@ -842,70 +842,167 @@
   border-color: rgba(239, 68, 68, 0.25);
 }
 
-/* Rejection reason visual hierarchy */
-.status-rejection-info {
+.order-rejection-modal {
+  width: min(92vw, 460px);
+  padding: 0;
+  overflow: hidden;
+}
+
+.order-rejection-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px 24px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.order-rejection-title-group {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.order-rejection-icon {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  color: var(--text-secondary);
-  opacity: 0.85;
-  margin-top: 2px;
-  position: relative;
-  cursor: help;
+  justify-content: center;
+  border-radius: 50%;
+  color: #dc2626;
+  background: rgba(239, 68, 68, 0.12);
 }
 
-.rejection-text-truncated {
-  max-width: 140px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.tooltip-bubble {
-  visibility: hidden;
-  opacity: 0;
-  position: absolute;
-  bottom: 130%;
-  left: 50%;
-  transform: translateX(-50%) translateY(4px);
-  background: var(--card);
-  border: 1px solid var(--border);
+.order-rejection-title-group h3 {
+  margin: 1px 0 4px;
   color: var(--text);
-  padding: 10px 14px;
-  border-radius: 10px;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.08);
-  z-index: 999;
-  width: 250px;
-  white-space: normal;
-  text-align: left;
-  line-height: 1.4;
+  font-size: 18px;
+  line-height: 1.25;
+}
+
+.order-rejection-title-group p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.order-rejection-close {
+  flex: 0 0 auto;
+  padding: 6px;
+  border-radius: 50%;
+}
+
+.order-rejection-modal form {
+  padding: 20px 24px 24px;
+}
+
+.order-rejection-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.order-rejection-field label {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.order-rejection-field .rejection-textarea {
+  width: 100%;
+  min-height: 96px;
+  box-sizing: border-box;
+  padding: 11px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.45;
+  resize: vertical;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.order-rejection-field .rejection-textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.order-rejection-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--text-secondary);
   font-size: 11px;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  pointer-events: none;
-  font-weight: 500;
 }
 
-.tooltip-bubble::after {
-  content: "";
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  margin-left: -5px;
-  border-width: 5px;
-  border-style: solid;
-  border-color: var(--border) transparent transparent transparent;
+.order-rejection-meta span:last-child {
+  font-weight: 700;
 }
 
-.status-rejection-info:hover .tooltip-bubble {
-  visibility: visible;
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
-}
-
-.status-rejection-info-icon {
+.order-rejection-meta .is-limit {
   color: #ef4444;
-  flex-shrink: 0;
+}
+
+.order-rejection-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.order-rejection-actions .btn {
+  min-width: 120px;
+}
+
+.order-reason-view-modal {
+  width: min(92vw, 440px);
+  padding: 22px 24px 24px;
+}
+
+.order-reason-view-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.order-reason-view-header > div:nth-child(2) {
+  flex: 1;
+}
+
+.order-reason-view-header h3 {
+  margin: 1px 0 4px;
+  color: var(--text);
+  font-size: 17px;
+}
+
+.order-reason-view-header p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.order-reason-view-content {
+  margin-top: 20px;
+  padding: 14px;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.06);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.order-reason-view-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
 }
 
 /* User Profile Cell & Avatar circles */
@@ -961,4 +1058,3 @@
   overflow: hidden;
   white-space: nowrap;
 }
-
