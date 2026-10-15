@@ -19,12 +19,20 @@ class SubscriptionController extends Controller
      */
     public function my(Request $request)
     {
-        Subscription::updateExpiredStatus();
+        // Throttle global expired check to once every 10 minutes to eliminate DB latency
+        \Illuminate\Support\Facades\Cache::remember('subs_expired_checked', 600, function () {
+            return Subscription::updateExpiredStatus();
+        });
 
         $subscription = Subscription::with(['plan', 'approvedBy'])
             ->where('user_id', $request->user()->id)
             ->orderByDesc('created_at')
             ->first();
+
+        if ($subscription && $subscription->status === 'active' && $subscription->ends_at && $subscription->ends_at->isPast()) {
+            $subscription->update(['status' => 'expired']);
+            $subscription->status = 'expired';
+        }
 
         return response()->json($subscription);
     }

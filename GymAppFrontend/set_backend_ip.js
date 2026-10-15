@@ -37,7 +37,21 @@ if (!ip) {
 }
 
 const envPath = path.join(__dirname, '.env.js');
-const content = `// .env.js\n// Archivo generado automáticamente\n\nexport const DEV_BACKEND_IP = '${ip}'; // Detectado automáticamente\n`;
+let existingGoogleClientId = '';
+if (fs.existsSync(envPath)) {
+  const currentContent = fs.readFileSync(envPath, 'utf8');
+  const match = currentContent.match(/export const GOOGLE_WEB_CLIENT_ID = ['"]([^'"]*)['"]/);
+  if (match) {
+    existingGoogleClientId = match[1];
+  }
+}
+
+const content = `// .env.js
+// Archivo generado automáticamente
+
+export const DEV_BACKEND_IP = '${ip}'; // Detectado automáticamente
+export const GOOGLE_WEB_CLIENT_ID = '${existingGoogleClientId}';
+`;
 
 fs.writeFileSync(envPath, content);
 console.log(`IP local detectada: ${ip}`);

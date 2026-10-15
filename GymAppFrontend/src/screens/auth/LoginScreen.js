@@ -39,9 +39,7 @@ export default function LoginScreen({ navigation }) {
       setLoading(true);
       const { user, token } = await authLogin(username.trim(), password);
       showToast('¡Inicio de sesión exitoso!', 'success');
-      setTimeout(async () => {
-        await login(user, token, keepLoggedIn);
-      }, 1000);
+      await login(user, token, keepLoggedIn);
     } catch (error) {
       const msg = error.message || '';
       if (msg.includes('401') || msg.includes('credentials') || msg.includes('Invalid')) {
@@ -64,9 +62,7 @@ export default function LoginScreen({ navigation }) {
       if (!res) return;
       if (res.user && res.token) {
         showToast(`¡Bienvenido, ${res.user.name || 'Cliente'}!`, 'success');
-        setTimeout(async () => {
-          await login(res.user, res.token, keepLoggedIn);
-        }, 800);
+        await login(res.user, res.token, keepLoggedIn);
       }
     } catch (error) {
       if (error.message === 'GOOGLE_CONFIG_MISSING') {

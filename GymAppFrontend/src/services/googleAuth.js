@@ -49,8 +49,18 @@ export const performGoogleSignIn = async () => {
       // Extraer parámetros hash (#access_token=... o #id_token=...)
       const urlPart = result.url.split('#')[1] || result.url.split('?')[1] || '';
       const params = new URLSearchParams(urlPart);
+      
+      if (params.get('error')) {
+        const errorDesc = params.get('error_description') || params.get('error');
+        throw new Error(`Google OAuth error: ${errorDesc}`);
+      }
+
       const idToken = params.get('id_token');
       const accessToken = params.get('access_token');
+
+      if (!idToken && !accessToken) {
+        throw new Error('Google no devolvió token. Verifica que el redirect_uri esté autorizado en Google Cloud Console.');
+      }
 
       let userInfo = null;
       if (accessToken) {

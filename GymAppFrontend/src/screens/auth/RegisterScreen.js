@@ -104,10 +104,7 @@ export default function RegisterScreen({ navigation }) {
       setLoading(true);
       const { user, token } = await authRegister(fullName, username, email, password, confirmPassword, phone);
       showToast('¡Cuenta creada con éxito!', 'success');
-
-      setTimeout(async () => {
-        await login(user, token);
-      }, 1500);
+      await login(user, token);
 
     } catch (error) {
       console.error('Register error:', error);

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class SettingController extends Controller
 {
@@ -23,7 +24,9 @@ class SettingController extends Controller
     public function indexPublic()
     {
         // Only return settings with scope 'public'
-        $settings = Setting::where('scope', 'public')->get();
+        $settings = Cache::remember('settings_public', 300, function () {
+            return Setting::where('scope', 'public')->get();
+        });
         return response()->json($settings);
     }
 
@@ -41,6 +44,8 @@ class SettingController extends Controller
             ['scope' => $scope, 'key' => $validated['key']],
             ['value' => $validated['value']]
         );
+
+        Cache::forget('settings_public');
 
         return response()->json($setting);
     }

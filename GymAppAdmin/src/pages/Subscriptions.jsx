@@ -1004,9 +1004,9 @@ export default function Subscriptions() {
                               className="btn-action-quick btn-action-whatsapp"
                               onClick={() => handleOpenWhatsAppReminder(s)}
                               title="Contactar por WhatsApp"
+                              aria-label="Contactar por WhatsApp"
                             >
-                              <WhatsAppIcon size={15} />
-                              <span>Contactar</span>
+                              <WhatsAppIcon size={16} />
                             </button>
 
                             {/* View Receipt Button */}
@@ -1035,9 +1035,14 @@ export default function Subscriptions() {
                                     return;
                                   }
                                   const rect = e.currentTarget.getBoundingClientRect();
+                                  const dropdownHeight = 240;
+                                  const spaceBelow = window.innerHeight - rect.bottom;
+                                  const openUp = spaceBelow < dropdownHeight && rect.top > dropdownHeight;
                                   setDropdownPos({
-                                    top: rect.bottom + 6,
-                                    right: window.innerWidth - rect.right,
+                                    top: openUp
+                                      ? Math.max(10, rect.top - dropdownHeight - 6)
+                                      : Math.min(rect.bottom + 6, window.innerHeight - dropdownHeight - 10),
+                                    right: Math.max(10, window.innerWidth - rect.right),
                                   });
                                   setActiveDropdown(s.id);
                                 }}
@@ -2302,6 +2307,8 @@ Estamos validando tu comprobante de pago para activar tu membresía de inmediato
               right: dropdownPos.right,
               zIndex: 9999,
               minWidth: 190,
+              maxHeight: 'calc(100vh - 30px)',
+              overflowY: 'auto',
             }}
           >
             {s.status === 'pending' ? (

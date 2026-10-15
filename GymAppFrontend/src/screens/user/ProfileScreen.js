@@ -15,7 +15,7 @@ import AuthModal from '../../components/AuthModal';
 import CustomAlertModal from '../../components/CustomAlertModal';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_URL } from '../../services/api';
+import { API_URL, PersistentCache } from '../../services/api';
 const BASE_URL = API_URL.replace('/api', '');
 
 export default function ProfileScreen() {
@@ -103,6 +103,29 @@ export default function ProfileScreen() {
   useFocusEffect(
     useCallback(() => {
       let mounted = true;
+
+      // 1. Hidratación instantánea desde caché (0ms)
+      const hydrateCache = async () => {
+        try {
+          const [cachedSub, cachedOrders] = await Promise.all([
+            PersistentCache.get('my_subscription'),
+            PersistentCache.get('my_orders')
+          ]);
+          if (!mounted) return;
+          if (cachedSub) {
+            setSubscription({ data: cachedSub, loading: false });
+          }
+          if (Array.isArray(cachedOrders) && cachedOrders.length > 0) {
+            const allRejected = cachedOrders.filter(order => order.status === 'rejected');
+            const validRecent = cachedOrders.filter(order => order.status !== 'rejected').slice(0, 5);
+            setRejectedOrders(allRejected);
+            setRecentOrders(validRecent);
+          }
+        } catch (e) {}
+      };
+      hydrateCache();
+
+      // 2. Sincronización en segundo plano con el servidor
       const fetchProfileData = async () => {
         const [subscriptionResult, ordersResult] = await Promise.all([
           SubscriptionAPI.getMySubscription(),
@@ -110,13 +133,16 @@ export default function ProfileScreen() {
         ]);
 
         if (mounted) {
-          setSubscription({
-            data: subscriptionResult.success ? subscriptionResult.data : null,
-            loading: false
-          });
+          if (subscriptionResult.success && subscriptionResult.data) {
+            setSubscription({ data: subscriptionResult.data, loading: false });
+            PersistentCache.set('my_subscription', subscriptionResult.data);
+          } else {
+            setSubscription({ data: null, loading: false });
+          }
 
-          if (ordersResult.success) {
-            const allOrders = ordersResult.data || [];
+          if (ordersResult.success && Array.isArray(ordersResult.data)) {
+            const allOrders = ordersResult.data;
+            PersistentCache.set('my_orders', allOrders);
             const allRejected = allOrders.filter(order => order.status === 'rejected');
             const validRecent = allOrders.filter(order => order.status !== 'rejected').slice(0, 5);
             setRejectedOrders(allRejected);
@@ -127,11 +153,6 @@ export default function ProfileScreen() {
           }
         }
       };
-
-      // Keep loader on when refreshing on focus
-      if (!subscription.data) {
-        setSubscription(prev => ({ ...prev, loading: true }));
-      }
 
       fetchProfileData();
       return () => { mounted = false; };

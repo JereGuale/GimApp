@@ -54,15 +54,31 @@ export default function SubscriptionScreen() {
   }, [user]);
 
   const fetchExistingSubscription = async () => {
-    if (!existingSub) setLoadingSub(true);
+    // 1. Hidratación instantánea desde caché (0ms)
+    try {
+      const cached = await PersistentCache.get('my_subscription');
+      if (cached) {
+        setExistingSub(cached);
+        if (cached.status === 'active') setShowPlans(false);
+        setLoadingSub(false);
+      } else if (!existingSub) {
+        setLoadingSub(true);
+      }
+    } catch (e) {
+      if (!existingSub) setLoadingSub(true);
+    }
+
+    // 2. Sincronización en segundo plano
     const result = await SubscriptionAPI.getMySubscription();
     if (result.success && result.data && ['active', 'pending'].includes(result.data.status)) {
       setExistingSub(result.data);
+      PersistentCache.set('my_subscription', result.data);
       if (result.data.status === 'active') {
         setShowPlans(false);
       }
     } else {
       setExistingSub(null);
+      PersistentCache.remove('my_subscription');
       setShowPlans(false);
     }
     setLoadingSub(false);

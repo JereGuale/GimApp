@@ -1,5 +1,8 @@
 {
   "expo": {
+    "name": "GymApp",
+    "slug": "gymapp",
+    "scheme": "gymapp",
     "extra": {
       "DEV_BACKEND_IP": "127.0.0.1"
     },

@@ -5,12 +5,15 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\SubscriptionPlan;
+use Illuminate\Support\Facades\Cache;
 
 class CatalogController extends Controller
 {
     public function categories()
     {
-        $categories = Category::with('products')->get();
+        $categories = Cache::remember('catalog_categories_with_products', 300, function () {
+            return Category::with('products')->get();
+        });
 
         return response()->json($categories);
     }
@@ -25,7 +28,9 @@ class CatalogController extends Controller
 
     public function subscriptionPlans()
     {
-        $plans = SubscriptionPlan::where('status', 'active')->get();
+        $plans = Cache::remember('catalog_subscription_plans', 300, function () {
+            return SubscriptionPlan::where('status', 'active')->get();
+        });
         return response()->json($plans);
     }
 }

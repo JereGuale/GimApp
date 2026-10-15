@@ -16,7 +16,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { useTheme } from "../../context/ThemeContext";
 import { OrderAPI } from "../../services/orderService";
-import { API_URL } from "../../services/api";
+import { API_URL, PersistentCache } from "../../services/api";
 
 const BASE_URL = API_URL.replace("/api", "");
 
@@ -73,9 +73,10 @@ export default function MyPurchasesScreen() {
 
     const loadOrders = async () => {
         const result = await OrderAPI.getMyOrders();
-        if (result.success) {
-            setOrders(Array.isArray(result.data) ? result.data : []);
-        } else {
+        if (result.success && Array.isArray(result.data)) {
+            setOrders(result.data);
+            PersistentCache.set('my_orders', result.data);
+        } else if (!result.success && orders.length === 0) {
             setOrders([]);
         }
         setLoading(false);
@@ -83,12 +84,21 @@ export default function MyPurchasesScreen() {
 
     useFocusEffect(
         useCallback(() => {
-            // Solo mostrar loader de pantalla completa si aún no hay órdenes en memoria
-            if (orders.length === 0) {
-                setLoading(true);
-            }
+            // 1. Hidratación instantánea desde caché
+            PersistentCache.get('my_orders').then(cached => {
+                if (Array.isArray(cached) && cached.length > 0) {
+                    setOrders(cached);
+                    setLoading(false);
+                } else if (orders.length === 0) {
+                    setLoading(true);
+                }
+            }).catch(() => {
+                if (orders.length === 0) setLoading(true);
+            });
+
+            // 2. Sincronización en segundo plano
             loadOrders();
-        }, [orders.length])
+        }, [])
     );
 
     const onRefresh = async () => {

@@ -11,7 +11,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { useResponsive } from '../../hooks/useResponsive';
-import { CategoryService, API_URL } from '../../services/api';
+import { CategoryService, API_URL, PersistentCache } from '../../services/api';
 
 const BASE_URL = API_URL.replace('/api', '');
 
@@ -53,10 +53,23 @@ export default function CategoriesScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const loadCategories = async () => {
+    // 1. Hidratación instantánea desde caché
+    try {
+      const cached = await PersistentCache.get('home_categories');
+      if (Array.isArray(cached) && cached.length > 0) {
+        setCategories(cached);
+        setLoading(false);
+      }
+    } catch (e) {}
+
+    // 2. Sincronización en segundo plano
     try {
       const data = await CategoryService.getAll(token);
       const list = Array.isArray(data) ? data : (data?.data || []);
-      setCategories(list);
+      if (list.length > 0) {
+        setCategories(list);
+        PersistentCache.set('home_categories', list);
+      }
     } catch (error) {
       console.error('Error loading categories:', error);
     } finally {

@@ -35,6 +35,8 @@ class CategoryController extends Controller
         ]);
 
         $category = Category::create($validated);
+        Cache::forget('categories_with_products');
+        Cache::forget('catalog_categories_with_products');
         return response()->json($category, 201);
     }
 
@@ -62,6 +64,8 @@ class CategoryController extends Controller
         ]);
 
         $category->update($validated);
+        Cache::forget('categories_with_products');
+        Cache::forget('catalog_categories_with_products');
         return response()->json($category);
     }
 
@@ -72,6 +76,8 @@ class CategoryController extends Controller
     {
         $category = Category::findOrFail($id);
         $category->delete();
+        Cache::forget('categories_with_products');
+        Cache::forget('catalog_categories_with_products');
         return response()->json(['message' => 'Category deleted successfully'], 200);
     }
 }

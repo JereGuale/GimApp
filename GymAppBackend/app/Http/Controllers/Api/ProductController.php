@@ -166,6 +166,7 @@ class ProductController extends Controller
 
         $product = Product::create($validated);
         $product->image_url = $product->image_url;
+        Cache::forget('catalog_categories_with_products');
         return response()->json($product->load('category'), 201);
     }
 
@@ -261,6 +262,7 @@ class ProductController extends Controller
 
         $product->update($validated);
         $product->image_url = $product->image_url;
+        Cache::forget('catalog_categories_with_products');
         return response()->json($product->load('category'));
     }
 
@@ -273,6 +275,7 @@ class ProductController extends Controller
             return response()->json(['message' => 'Product not found (ID: ' . $id . ')'], 404);
         }
         $product->delete();
+        Cache::forget('catalog_categories_with_products');
         Log::info('Product deleted successfully', ['id' => $id]);
         return response()->json(['message' => 'Product deleted successfully'], 200);
     }

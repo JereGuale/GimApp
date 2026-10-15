@@ -7,6 +7,7 @@ use App\Models\PromotionalBanner;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Cache;
 
 class BannerController extends Controller
 {
@@ -16,9 +17,11 @@ class BannerController extends Controller
     public function getActiveBanners()
     {
         try {
-            $banners = PromotionalBanner::where('is_active', true)
-                ->orderBy('display_order', 'asc')
-                ->get();
+            $banners = Cache::remember('active_promotional_banners', 300, function () {
+                return PromotionalBanner::where('is_active', true)
+                    ->orderBy('display_order', 'asc')
+                    ->get();
+            });
 
             return response()->json([
                 'success' => true,
@@ -112,6 +115,7 @@ class BannerController extends Controller
 
             $banner->save();
 
+            Cache::forget('active_promotional_banners');
             return response()->json([
                 'success' => true,
                 'message' => 'Banner actualizado exitosamente',
@@ -251,6 +255,7 @@ class BannerController extends Controller
 
             $banner->save();
 
+            Cache::forget('active_promotional_banners');
             return response()->json([
                 'success' => true,
                 'message' => 'Banner creado exitosamente',
@@ -283,6 +288,7 @@ class BannerController extends Controller
             }
 
             $banner->delete();
+            Cache::forget('active_promotional_banners');
 
             return response()->json([
                 'success' => true,

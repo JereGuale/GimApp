@@ -30,7 +30,9 @@ class AuthController extends Controller
             'phone'    => $request->input('phone'),
         ]);
 
-        $userRole = \App\Models\Role::where('name', 'user')->first();
+        $userRole = \Illuminate\Support\Facades\Cache::rememberForever('role_user', function () {
+            return \App\Models\Role::where('name', 'user')->first();
+        });
         if ($userRole)
             $user->assignRole($userRole);
 
