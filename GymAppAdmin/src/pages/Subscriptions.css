@@ -2047,20 +2047,23 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 2px 7px;
-  background: rgba(245, 158, 11, 0.1);
-  color: #d97706;
-  border: 1px solid rgba(245, 158, 11, 0.25);
+  padding: 3px 8px;
+  background: rgba(245, 158, 11, 0.12);
+  color: #b45309;
+  border: 1px solid rgba(245, 158, 11, 0.28);
   border-radius: 6px;
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 500;
-  max-width: 170px;
+  max-width: 250px;
   cursor: pointer;
+  margin-top: 3px;
+  transition: all 0.15s ease;
+}
+
+.sub-note-badge .sub-note-text {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-top: 2px;
-  transition: background 0.15s ease;
 }
 
 :root.dark .sub-note-badge {
@@ -2071,6 +2074,44 @@
 
 .sub-note-badge:hover {
   background: rgba(245, 158, 11, 0.22);
+  border-color: rgba(245, 158, 11, 0.5);
+  transform: translateY(-1px);
+}
+
+.sub-mobile-note-card-box {
+  margin: 6px 0;
+  padding: 8px 10px;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.22);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+:root.dark .sub-mobile-note-card-box {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.sub-mobile-note-header {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #b45309;
+  margin-bottom: 2px;
+}
+
+:root.dark .sub-mobile-note-header {
+  color: #fbbf24;
+}
+
+.sub-mobile-note-body {
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.35;
+  word-break: break-word;
 }
 
 /* Status cell */

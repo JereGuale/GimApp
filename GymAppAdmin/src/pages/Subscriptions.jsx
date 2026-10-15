@@ -39,10 +39,13 @@ import './Subscriptions.css';
 const STATUS_LABELS = { active: 'Activa', pending: 'Pendiente', cancelled: 'Cancelada', expired: 'Expirada', rejected: 'Rechazado' };
 const STATUS_BADGE = { active: 'active', pending: 'pending', cancelled: 'cancelled', expired: 'expired', rejected: 'rejected' };
 
+let cachedSubs = null;
+let cachedPlans = null;
+
 export default function Subscriptions() {
-  const [subs, setSubs] = useState([]);
-  const [plans, setPlans] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [subs, setSubs] = useState(() => cachedSubs || []);
+  const [plans, setPlans] = useState(() => cachedPlans || []);
+  const [loading, setLoading] = useState(() => !cachedSubs);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
   const [actionLoading, setActionLoading] = useState(null);
@@ -577,19 +580,33 @@ export default function Subscriptions() {
   };
 
 
-  const fetchSubs = () => {
-    setLoading(true);
+  const fetchSubs = (background = false) => {
+    if (!background && !cachedSubs) {
+      setLoading(true);
+    }
     return apiFetch('/trainer/subscriptions')
-      .then(d => setSubs(Array.isArray(d) ? d : []))
-      .catch(() => setSubs([]))
+      .then(d => {
+        const list = Array.isArray(d) ? d : [];
+        cachedSubs = list;
+        setSubs(list);
+      })
+      .catch(() => {
+        if (!cachedSubs) setSubs([]);
+      })
       .finally(() => setLoading(false));
   };
 
   useEffect(() => { 
-    fetchSubs(); 
-    apiFetch('/admin/subscription-plans')
-      .then(d => setPlans(Array.isArray(d) ? d : (d?.data || [])))
-      .catch(() => {});
+    fetchSubs(Boolean(cachedSubs)); 
+    if (!cachedPlans) {
+      apiFetch('/admin/subscription-plans')
+        .then(d => {
+          const list = Array.isArray(d) ? d : (d?.data || []);
+          cachedPlans = list;
+          setPlans(list);
+        })
+        .catch(() => {});
+    }
   }, []);
 
   // Reset pagination when searching or filtering
@@ -937,7 +954,19 @@ export default function Subscriptions() {
                               ${s.price ? Number(s.price).toFixed(2) : (s.plan?.price ? Number(s.plan.price).toFixed(2) : '—')}
                               <small> / mes</small>
                             </span>
-                            {s.notes && <span className="plan-note-indicator"><FileText size={11} /> Nota disponible</span>}
+                            {s.notes && (
+                              <div
+                                className="sub-note-badge"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setNoteModal({ sub: s, note: s.notes || '', saving: false });
+                                }}
+                                title={`Nota: ${s.notes} (Clic para editar)`}
+                              >
+                                <FileText size={11} style={{ flexShrink: 0 }} />
+                                <span className="sub-note-text">{s.notes}</span>
+                              </div>
+                            )}
                           </div>
                         </td>
                         <td>
@@ -1195,14 +1224,18 @@ export default function Subscriptions() {
                     </div>
 
                     {s.notes && (
-                      <div className="sub-mobile-card-row" style={{ alignItems: 'flex-start', cursor: 'pointer' }} onClick={() => setNoteModal({ sub: s, note: s.notes || '', saving: false })}>
-                        <span className="sub-mobile-card-label" style={{ marginTop: '2px', color: '#b45309' }}>
-                          <FileText size={13} style={{ opacity: 0.9, color: '#d97706' }} />
-                          <span>Nota</span>
-                        </span>
-                        <span className="sub-mobile-card-val" style={{ color: '#b45309', fontStyle: 'italic', fontSize: '12px', textAlign: 'right' }}>
+                      <div 
+                        className="sub-mobile-note-card-box" 
+                        onClick={() => setNoteModal({ sub: s, note: s.notes || '', saving: false })}
+                        title="Clic para editar nota"
+                      >
+                        <div className="sub-mobile-note-header">
+                          <FileText size={12} style={{ color: '#d97706', flexShrink: 0 }} />
+                          <span>Nota administrativa:</span>
+                        </div>
+                        <div className="sub-mobile-note-body">
                           {s.notes}
-                        </span>
+                        </div>
                       </div>
                     )}
 

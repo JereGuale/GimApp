@@ -36,6 +36,13 @@ import WhatsAppIcon from '../components/WhatsAppIcon';
 import '../components/Layout.css';
 import './Subscriptions.css';
 
+const reportsCache = {
+  monthly: {}, // key: `${month}_${year}` -> { data, total }
+  orders: null,
+  daily: {},   // key: date -> { data, total }
+  metrics: null,
+};
+
 export default function Reports() {
   const [activeTab, setActiveTab] = useState('suscripciones');
 
@@ -164,12 +171,13 @@ export default function Reports() {
   const currentMonth = new Date().getMonth() + 1;
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const [selectedYear, setSelectedYear] = useState(currentYear);
-  const [monthlySubs, setMonthlySubs] = useState([]);
-  const [monthlyTotal, setMonthlyTotal] = useState(0);
+  const initialMonthly = reportsCache.monthly[`${currentMonth}_${currentYear}`];
+  const [monthlySubs, setMonthlySubs] = useState(() => initialMonthly?.data || []);
+  const [monthlyTotal, setMonthlyTotal] = useState(() => initialMonthly?.total || 0);
   const [monthlySearch, setMonthlySearch] = useState('');
 
   // ── Monthly Purchases Report State ──
-  const [orders, setOrders] = useState([]);
+  const [orders, setOrders] = useState(() => reportsCache.orders || []);
   const [purchaseSearch, setPurchaseSearch] = useState('');
   const [purchasePage, setPurchasePage] = useState(1);
   const [purchaseItemsPerPage] = useState(10);
@@ -179,7 +187,7 @@ export default function Reports() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // General Metrics State (Trends)
-  const [metrics, setMetrics] = useState(null);
+  const [metrics, setMetrics] = useState(() => reportsCache.metrics || null);
 
   // ── Manual Membership Registration State ──
   const [manualSubModalOpen, setManualSubModalOpen] = useState(false);
@@ -306,8 +314,9 @@ export default function Reports() {
   // ── Daily Attendance State ──
   const todayStr = getLocalDateString();
   const [selectedDailyDate, setSelectedDailyDate] = useState(todayStr);
-  const [dailyIncomes, setDailyIncomes] = useState([]);
-  const [dailyTotal, setDailyTotal] = useState(0);
+  const initialDaily = reportsCache.daily[todayStr];
+  const [dailyIncomes, setDailyIncomes] = useState(() => initialDaily?.data || []);
+  const [dailyTotal, setDailyTotal] = useState(() => initialDaily?.total || 0);
 
   // Form for daily visits
   const [dailyModalOpen, setDailyModalOpen] = useState(false);
@@ -325,57 +334,91 @@ export default function Reports() {
   const [dailySubmitting, setDailySubmitting] = useState(false);
 
   // Load Monthly Report
-  const fetchMonthlyReport = async (month, year) => {
-    setLoading(true);
+  const fetchMonthlyReport = async (month, year, background = false) => {
+    const key = `${month}_${year}`;
+    const cached = reportsCache.monthly[key];
+    if (cached) {
+      setMonthlySubs(cached.data);
+      setMonthlyTotal(cached.total);
+    }
+    if (!cached && !background) {
+      setLoading(true);
+    }
     setError('');
     try {
       const res = await apiFetch(`/admin/reports/monthly?month=${month}&year=${year}`);
-      setMonthlySubs(res.data || []);
-      setMonthlyTotal(res.total || 0);
+      const data = res.data || [];
+      const total = res.total || 0;
+      reportsCache.monthly[key] = { data, total };
+      setMonthlySubs(data);
+      setMonthlyTotal(total);
     } catch (err) {
-      setError(err.message || 'Error al obtener reporte mensual');
+      if (!cached) setError(err.message || 'Error al obtener reporte mensual');
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchOrdersReport = async () => {
-    setLoading(true);
+  const fetchOrdersReport = async (background = false) => {
+    if (reportsCache.orders) {
+      setOrders(reportsCache.orders);
+    }
+    if (!reportsCache.orders && !background) {
+      setLoading(true);
+    }
     setError('');
     try {
       const res = await apiFetch('/admin/orders?status=all');
-      setOrders(Array.isArray(res) ? res : (res?.data || []));
+      const data = Array.isArray(res) ? res : (res?.data || []);
+      reportsCache.orders = data;
+      setOrders(data);
     } catch (err) {
-      setError(err.message || 'Error al obtener reporte de compras');
+      if (!reportsCache.orders) setError(err.message || 'Error al obtener reporte de compras');
     } finally {
       setLoading(false);
     }
   };
 
   // Load Daily Attendance/Visits Report
-  const fetchDailyReport = async (date) => {
-    setLoading(true);
+  const fetchDailyReport = async (date, background = false) => {
+    const cached = reportsCache.daily[date];
+    if (cached) {
+      setDailyIncomes(cached.data);
+      setDailyTotal(cached.total);
+    }
+    if (!cached && !background) {
+      setLoading(true);
+    }
     setError('');
     try {
       const res = await apiFetch(`/admin/reports/daily?date=${date}`);
-      setDailyIncomes(res.data || []);
-      setDailyTotal(res.total || 0);
+      const data = res.data || [];
+      const total = res.total || 0;
+      reportsCache.daily[date] = { data, total };
+      setDailyIncomes(data);
+      setDailyTotal(total);
     } catch (err) {
-      setError(err.message || 'Error al obtener reporte diario');
+      if (!cached) setError(err.message || 'Error al obtener reporte diario');
     } finally {
       setLoading(false);
     }
   };
 
   // Load Metrics/Trends
-  const fetchMetrics = async () => {
-    setLoading(true);
+  const fetchMetrics = async (background = false) => {
+    if (reportsCache.metrics) {
+      setMetrics(reportsCache.metrics);
+    }
+    if (!reportsCache.metrics && !background) {
+      setLoading(true);
+    }
     setError('');
     try {
       const res = await apiFetch('/admin/metrics?months=6');
+      reportsCache.metrics = res;
       setMetrics(res);
     } catch (err) {
-      setError(err.message || 'Error al obtener métricas');
+      if (!reportsCache.metrics) setError(err.message || 'Error al obtener métricas');
     } finally {
       setLoading(false);
     }
@@ -391,13 +434,16 @@ export default function Reports() {
   // Trigger loads based on active tab
   useEffect(() => {
     if (activeTab === 'suscripciones') {
-      fetchMonthlyReport(selectedMonth, selectedYear);
+      const key = `${selectedMonth}_${selectedYear}`;
+      const cached = reportsCache.monthly[key];
+      fetchMonthlyReport(selectedMonth, selectedYear, Boolean(cached));
     } else if (activeTab === 'compras') {
-      fetchOrdersReport();
+      fetchOrdersReport(Boolean(reportsCache.orders));
     } else if (activeTab === 'asistencias') {
-      fetchDailyReport(selectedDailyDate);
+      const cached = reportsCache.daily[selectedDailyDate];
+      fetchDailyReport(selectedDailyDate, Boolean(cached));
     } else if (activeTab === 'tendencias') {
-      fetchMetrics();
+      fetchMetrics(Boolean(reportsCache.metrics));
     }
   }, [activeTab, selectedMonth, selectedYear, selectedDailyDate]);
 
@@ -1092,6 +1138,8 @@ export default function Reports() {
         resolved_phone: editClientModal.phone.trim() || s.resolved_phone
       } : s));
 
+      reportsCache.monthly = {};
+      reportsCache.metrics = null;
       setEditClientModal(null);
     } catch (err) {
       alert(err.message || 'Error al guardar los datos del cliente');
@@ -1227,6 +1275,8 @@ export default function Reports() {
         })
       });
 
+      reportsCache.monthly = {};
+      reportsCache.metrics = null;
       setManualSubSuccess('¡Membresía creada y activada exitosamente!');
       setTimeout(() => {
         setManualSubModalOpen(false);
@@ -1274,6 +1324,8 @@ export default function Reports() {
           entry_date: combinedDateTime
         })
       });
+      reportsCache.daily = {};
+      reportsCache.metrics = null;
       setDailySuccess('Asistencia de cliente registrada exitosamente.');
       setTimeout(() => {
         setDailyModalOpen(false);
@@ -1296,6 +1348,8 @@ export default function Reports() {
         setError(''); setSuccess('');
         try {
           await apiFetch(`/admin/reports/daily/${income.id}`, { method: 'DELETE' });
+          reportsCache.daily = {};
+          reportsCache.metrics = null;
           setSuccess('Asistencia eliminada correctamente');
           fetchDailyReport(selectedDailyDate);
         } catch (err) {
@@ -1357,15 +1411,37 @@ export default function Reports() {
       {error && <div className="alert alert--error"><AlertTriangle size={16} /> <span>{error}</span></div>}
       {success && <div className="alert alert--success"><CheckCircle2 size={16} /> <span>{success}</span></div>}
 
-      {/* Loading state indicator */}
-      {loading && (
-        <div className="loading-state">
-          <Loader2 className="spin" size={24} /> <span>Cargando información...</span>
+      {/* Loading state indicator only when the active tab has NO data yet */}
+      {(
+        (activeTab === 'suscripciones' && monthlySubs.length === 0 && loading) ||
+        (activeTab === 'compras' && orders.length === 0 && loading) ||
+        (activeTab === 'asistencias' && dailyIncomes.length === 0 && loading) ||
+        (activeTab === 'tendencias' && !metrics && loading)
+      ) ? (
+        <div className="card loading-state" style={{ padding: '48px 24px', textAlign: 'center' }}>
+          <Loader2 className="spin" size={28} style={{ color: 'var(--primary)', marginBottom: 8 }} />
+          <div style={{ fontWeight: 600, color: 'var(--text)' }}>Cargando información...</div>
+          <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>Obteniendo los datos más recientes...</div>
         </div>
-      )}
-
-      {!loading && (
+      ) : (
         <>
+          {loading && (
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              background: 'rgba(59, 130, 246, 0.1)',
+              color: '#3b82f6',
+              padding: '4px 10px',
+              borderRadius: 20,
+              fontSize: 12,
+              fontWeight: 500,
+              marginBottom: 12
+            }}>
+              <Loader2 className="spin" size={13} />
+              <span>Sincronizando datos...</span>
+            </div>
+          )}
           {/* TAB 1: MEMBRESÍAS DEL MES */}
           {activeTab === 'suscripciones' && (
             <div>

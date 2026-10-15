@@ -52,6 +52,24 @@ class TrainerSubscriptionController extends Controller
             $query->limit((int)$request->limit);
         }
 
+        $isDefaultQuery = !$request->has('search') && (!$request->has('status') || $request->status === 'all') && !$request->has('plan_id') && !$request->has('limit');
+
+        if ($isDefaultQuery) {
+            $subscriptions = \Illuminate\Support\Facades\Cache::remember('trainer_subscriptions_all', 30, function () use ($query) {
+                $subs = $query->orderByDesc('created_at')->get();
+                foreach ($subs as $sub) {
+                    if (empty($sub->billing_phone)) {
+                        $sub->billing_phone = $sub->resolved_phone;
+                    }
+                    if ($sub->user && empty($sub->user->phone) && !empty($sub->resolved_phone)) {
+                        $sub->user->phone = $sub->resolved_phone;
+                    }
+                }
+                return $subs;
+            });
+            return response()->json($subscriptions);
+        }
+
         $subscriptions = $query->orderByDesc('created_at')->get();
 
         foreach ($subscriptions as $sub) {
@@ -64,6 +82,13 @@ class TrainerSubscriptionController extends Controller
         }
 
         return response()->json($subscriptions);
+    }
+
+    protected function invalidateSubscriptionCaches(): void
+    {
+        \Illuminate\Support\Facades\Cache::forget('trainer_subscriptions_all');
+        \Illuminate\Support\Facades\Cache::forget('admin_dashboard_metrics_v2');
+        \Illuminate\Support\Facades\Cache::forget('subs_expired_checked');
     }
 
     /**
@@ -94,6 +119,8 @@ class TrainerSubscriptionController extends Controller
 
         // Notificar al usuario que su suscripción fue aprobada
         Notification::notifyUser($subscription, 'active');
+
+        $this->invalidateSubscriptionCaches();
 
         return response()->json([
             'message' => 'Suscripción aprobada exitosamente',
@@ -127,6 +154,8 @@ class TrainerSubscriptionController extends Controller
 
         // Notificar al usuario que su suscripción fue rechazada
         Notification::notifyUser($subscription, 'rejected');
+
+        $this->invalidateSubscriptionCaches();
 
         return response()->json([
             'message' => 'Suscripción rechazada',
@@ -225,6 +254,8 @@ class TrainerSubscriptionController extends Controller
             $subscription->save();
         }
 
+        $this->invalidateSubscriptionCaches();
+
         return response()->json([
             'message' => 'Suscripción creada exitosamente',
             'subscription' => $subscription->refresh()->load(['user', 'plan'])
@@ -252,6 +283,8 @@ class TrainerSubscriptionController extends Controller
             'approved_at' => now()
         ]);
 
+        $this->invalidateSubscriptionCaches();
+
         return response()->json([
             'message' => 'Suscripción renovada exitosamente',
             'subscription' => $subscription->load(['user', 'plan'])
@@ -265,6 +298,8 @@ class TrainerSubscriptionController extends Controller
     {
         $subscription = Subscription::findOrFail($id);
         $subscription->delete();
+
+        $this->invalidateSubscriptionCaches();
 
         return response()->json([
             'message' => 'Suscripción eliminada exitosamente'
@@ -301,6 +336,8 @@ class TrainerSubscriptionController extends Controller
             $subscription->billing_address = !empty($note) ? ('[NOTA]: ' . $note) : null;
         }
         $subscription->save();
+
+        $this->invalidateSubscriptionCaches();
 
         return response()->json([
             'message' => 'Nota administrativa actualizada',
@@ -376,6 +413,8 @@ class TrainerSubscriptionController extends Controller
         }
 
         $subscription->refresh()->load(['user', 'plan']);
+
+        $this->invalidateSubscriptionCaches();
 
         return response()->json([
             'message' => 'Datos del cliente actualizados exitosamente',

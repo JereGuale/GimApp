@@ -22,10 +22,10 @@ class SuperAdminMetricsController extends Controller
         try {
             $monthsToFetch = max(1, (int)$request->query('months', 6));
 
-            // Short cache of 15 seconds to keep dashboard fresh and responsive
+            // Cache for 2 minutes to keep dashboard fresh without hammering remote DB on every tab click
             $cacheKey = "superadmin_metrics_v5_{$monthsToFetch}";
 
-            $metrics = Cache::remember($cacheKey, 15, function () use ($monthsToFetch) {
+            $metrics = Cache::remember($cacheKey, 120, function () use ($monthsToFetch) {
                 $tz = config('app.timezone', 'America/Guayaquil');
                 $now = Carbon::now($tz);
                 $todayStr = $now->toDateString();

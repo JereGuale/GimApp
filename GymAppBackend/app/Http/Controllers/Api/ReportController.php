@@ -71,14 +71,19 @@ class ReportController extends Controller
         $tz = config('app.timezone', 'America/Guayaquil');
         $date = $request->query('date', Carbon::today($tz)->toDateString());
 
-        $incomes = DailyIncome::whereDate('entry_date', $date)
-            ->orderBy('entry_date', 'desc')
-            ->get();
+        $cacheKey = "report_daily_{$date}";
+        $result = Cache::remember($cacheKey, 60, function () use ($date) {
+            $incomes = DailyIncome::whereDate('entry_date', $date)
+                ->orderBy('entry_date', 'desc')
+                ->get();
 
-        return response()->json([
-            'data' => $incomes,
-            'total' => $incomes->sum('amount')
-        ]);
+            return [
+                'data' => $incomes,
+                'total' => $incomes->sum('amount')
+            ];
+        });
+
+        return response()->json($result);
     }
 
     public function storeDaily(Request $request)
@@ -118,6 +123,9 @@ class ReportController extends Controller
             'entry_date' => $entryDate
         ]);
 
+        Cache::forget("report_daily_{$income->entry_date->toDateString()}");
+        Cache::forget('admin_dashboard_metrics_v2');
+
         return response()->json(['message' => 'Ingreso registrado', 'data' => $income], 201);
     }
 
@@ -126,25 +134,30 @@ class ReportController extends Controller
         $month = $request->query('month', Carbon::now()->month);
         $year = $request->query('year', Carbon::now()->year);
 
-        $subscriptions = Subscription::with(['user', 'plan'])
-            ->whereMonth('starts_at', $month)
-            ->whereYear('starts_at', $year)
-            ->orderBy('starts_at', 'desc')
-            ->get();
+        $cacheKey = "report_monthly_{$year}_{$month}";
+        $result = Cache::remember($cacheKey, 60, function () use ($month, $year) {
+            $subscriptions = Subscription::with(['user', 'plan'])
+                ->whereMonth('starts_at', $month)
+                ->whereYear('starts_at', $year)
+                ->orderBy('starts_at', 'desc')
+                ->get();
 
-        foreach ($subscriptions as $sub) {
-            if (empty($sub->billing_phone)) {
-                $sub->billing_phone = $sub->resolved_phone;
+            foreach ($subscriptions as $sub) {
+                if (empty($sub->billing_phone)) {
+                    $sub->billing_phone = $sub->resolved_phone;
+                }
+                if ($sub->user && empty($sub->user->phone) && !empty($sub->resolved_phone)) {
+                    $sub->user->phone = $sub->resolved_phone;
+                }
             }
-            if ($sub->user && empty($sub->user->phone) && !empty($sub->resolved_phone)) {
-                $sub->user->phone = $sub->resolved_phone;
-            }
-        }
 
-        return response()->json([
-            'data' => $subscriptions,
-            'total' => $subscriptions->sum('price')
-        ]);
+            return [
+                'data' => $subscriptions,
+                'total' => $subscriptions->sum('price')
+            ];
+        });
+
+        return response()->json($result);
     }
 
     public function deleteDaily($id)
@@ -155,7 +168,13 @@ class ReportController extends Controller
             return response()->json(['message' => 'Ingreso no encontrado'], 404);
         }
 
+        $entryDateStr = $income->entry_date ? Carbon::parse($income->entry_date)->toDateString() : null;
         $income->delete();
+
+        if ($entryDateStr) {
+            Cache::forget("report_daily_{$entryDateStr}");
+        }
+        Cache::forget('admin_dashboard_metrics_v2');
 
         return response()->json(['message' => 'Ingreso eliminado correctamente']);
     }

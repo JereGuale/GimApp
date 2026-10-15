@@ -124,10 +124,21 @@ class Subscription extends Model
 
     /**
      * Update active subscriptions whose ends_at is in the past to expired status
+     * Throttled via Cache to avoid repeated remote DB updates on every request
      */
-    public static function updateExpiredStatus(): int
+    public static function updateExpiredStatus(bool $force = false): int
     {
-        return static::where('status', 'active')
+        if (!$force) {
+            return (int) \Illuminate\Support\Facades\Cache::remember('subs_expired_checked', 300, function () {
+                return static::where('status', 'active')
+                    ->whereNotNull('ends_at')
+                    ->where('ends_at', '<', now())
+                    ->update(['status' => 'expired']);
+            });
+        }
+
+        \Illuminate\Support\Facades\Cache::forget('subs_expired_checked');
+        return (int) static::where('status', 'active')
             ->whereNotNull('ends_at')
             ->where('ends_at', '<', now())
             ->update(['status' => 'expired']);
