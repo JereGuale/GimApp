@@ -136,6 +136,15 @@ export default function SubscriptionPlans() {
     };
 
     setError(''); setSuccess('');
+    const prev = plans;
+    if (editId) {
+      // Optimistic edit
+      setPlans(p => p.map(x => x.id === editId ? { ...x, ...body } : x));
+    } else {
+      // Optimistic create
+      setPlans(p => [...p, { id: Date.now() * -1, ...body }]);
+    }
+    setModalOpen(false);
 
     try {
       if (editId) {
@@ -151,9 +160,9 @@ export default function SubscriptionPlans() {
         });
         setSuccess('Plan creado con éxito');
       }
-      setModalOpen(false);
-      await fetchPlans();
+      await fetchPlans(); // background refresh
     } catch (err) {
+      setPlans(prev); // revert
       setError(err.message || 'Error al guardar el plan');
     }
   };
@@ -166,12 +175,16 @@ export default function SubscriptionPlans() {
     const p = deleteConfirm.plan;
     if (!p) return;
     setError(''); setSuccess('');
+    // Optimistic delete
+    const prev = plans;
+    setPlans(ps => ps.filter(x => x.id !== p.id));
+    setDeleteConfirm({ isOpen: false, plan: null });
     try {
       await apiFetch(`/admin/subscription-plans/${p.id}`, { method: 'DELETE' });
       setSuccess('Plan eliminado correctamente');
-      setDeleteConfirm({ isOpen: false, plan: null });
-      await fetchPlans();
+      await fetchPlans(); // silent background refresh
     } catch (err) {
+      setPlans(prev); // revert
       setError(err.message || 'No se pudo eliminar el plan');
     }
   };

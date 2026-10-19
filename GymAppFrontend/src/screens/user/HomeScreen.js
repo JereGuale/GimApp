@@ -44,32 +44,6 @@ export default function HomeScreen() {
     : (winWidth - 44) / 2; // Exact 2-column layout width
   const productImageHeight = productCardWidth * 1.1;
 
-  // Banner carousel state
-  const [banners, setBanners] = useState([]);
-  const [bannersLoading, setBannersLoading] = useState(true);
-  const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
-  const bannerFlatListRef = useRef(null);
-  const autoScrollTimer = useRef(null);
-
-  // Products & Categories states
-  const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]); // Saved category state
-  const [gymLocation, setGymLocation] = useState({
-    name: 'Gigafit Gim',
-    address: 'Calle J-1 y Calle 31, Costa Azul, Manta, Ecuador',
-    description: 'Fácil acceso, estacionamiento cercano y una zona segura para que entrenar sea parte natural de tu rutina.',
-    maps_url: 'https://maps.google.com/?q=-0.967601,-80.678922'
-  });
-  const [loading, setLoading] = useState(true);
-  const [searchText, setSearchText] = useState('');
-
-  // ── Catalog Integrated Filter States ──
-  const [showFullCatalog, setShowFullCatalog] = useState(false);
-  const [selectedCategories, setSelectedCategories] = useState([]);
-  const [minPrice, setMinPrice] = useState('');
-  const [maxPrice, setMaxPrice] = useState('');
-  const [sortBy, setSortBy] = useState('default'); // 'default' | 'price_asc' | 'price_desc'
-  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
   const fallbackBanners = [
     {
       id: 'fallback-1',
@@ -90,6 +64,67 @@ export default function HomeScreen() {
       button_action: 'subscription',
     },
   ];
+
+  // Banner carousel state: hidratación síncrona instantánea (0ms)
+  const [banners, setBanners] = useState(() => {
+    const cached = PersistentCache.getSync('home_banners');
+    if (Array.isArray(cached) && cached.length > 0) return cached;
+    return fallbackBanners;
+  });
+  const [bannersLoading, setBannersLoading] = useState(false);
+  const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
+  const bannerFlatListRef = useRef(null);
+  const autoScrollTimer = useRef(null);
+
+  // Products & Categories states
+  const [products, setProducts] = useState(() => {
+    const cachedCats = PersistentCache.getSync('home_categories');
+    if (Array.isArray(cachedCats) && cachedCats.length > 0) {
+      const allProds = [];
+      cachedCats.forEach((cat) => {
+        if (cat.products && Array.isArray(cat.products)) {
+          cat.products.forEach((prod) => allProds.push(prod));
+        }
+      });
+      allProds.sort((a, b) => (b.is_featured ? 1 : 0) - (a.is_featured ? 1 : 0));
+      return allProds;
+    }
+    return [];
+  });
+  const [categories, setCategories] = useState(() => {
+    const cachedCats = PersistentCache.getSync('home_categories');
+    return Array.isArray(cachedCats) ? cachedCats : [];
+  });
+  const [gymLocation, setGymLocation] = useState({
+    name: 'Gigafit Gim',
+    address: 'Calle J-1 y Calle 31, Costa Azul, Manta, Ecuador',
+    description: 'Fácil acceso, estacionamiento cercano y una zona segura para que entrenar sea parte natural de tu rutina.',
+    maps_url: 'https://maps.google.com/?q=-0.967601,-80.678922'
+  });
+  const [loading, setLoading] = useState(() => {
+    const cachedCats = PersistentCache.getSync('home_categories');
+    return !Array.isArray(cachedCats) || cachedCats.length === 0;
+  });
+  const [searchText, setSearchText] = useState('');
+
+  // ── Catalog Integrated Filter States ──
+  const [showFullCatalog, setShowFullCatalog] = useState(false);
+  const [selectedCategories, setSelectedCategories] = useState([]);
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
+  const [sortBy, setSortBy] = useState('default'); // 'default' | 'price_asc' | 'price_desc'
+  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
+  const catalogSearchInputRef = useRef(null);
+
+  // Mantener foco del teclado al cambiar de la pantalla de inicio al catálogo
+  useEffect(() => {
+    if (showFullCatalog && searchText) {
+      const timer = setTimeout(() => {
+        catalogSearchInputRef.current?.focus();
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [showFullCatalog]);
 
   // ── 1. Cache-First Hydration & Background Sync (0ms load time) ──
   useEffect(() => {
@@ -292,7 +327,8 @@ export default function HomeScreen() {
         source={{ uri: item.image_url || 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=60&w=800&auto=format&fit=crop' }}
         style={styles.bannerImage}
         contentFit="cover"
-        transition={300}
+        transition={150}
+        priority="high"
         cachePolicy="memory-disk"
       />
       <LinearGradient
@@ -429,9 +465,11 @@ export default function HomeScreen() {
           <View style={[styles.searchContainer, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface }]}>
             <Ionicons name="search" size={22} color={theme.colors.text} style={{ marginRight: 10 }} />
             <TextInput
+              ref={catalogSearchInputRef}
+              autoFocus={!!searchText}
               placeholder="Buscar en el catálogo..."
               placeholderTextColor="#9CA3AF"
-              style={[styles.searchInput, { color: theme.colors.text }]}
+              style={[styles.searchInput, { color: theme.colors.text, borderWidth: 0, outlineStyle: 'none' }]}
               value={searchText}
               onChangeText={setSearchText}
             />
@@ -662,7 +700,7 @@ export default function HomeScreen() {
           <TextInput
             placeholder="Busca productos, marcas..."
             placeholderTextColor="#9CA3AF"
-            style={[styles.searchInput, { color: theme.colors.text }]}
+            style={[styles.searchInput, { color: theme.colors.text, borderWidth: 0, outlineStyle: 'none' }]}
             value={searchText}
             onChangeText={(text) => {
               setSearchText(text);
@@ -897,6 +935,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     padding: 0,
+    borderWidth: 0,
+    borderColor: 'transparent',
+    outlineStyle: 'none',
+    outlineWidth: 0,
   },
 
   // ─── Banner Carousel ───

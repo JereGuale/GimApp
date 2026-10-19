@@ -1,7 +1,7 @@
 import { API_URL } from '../services/api';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import { TouchableOpacity, View, Text, Image } from 'react-native';
+import { TouchableOpacity, View, Text } from 'react-native';
 import HomeScreen from '../screens/user/HomeScreen';
 import CategoriesScreen from '../screens/user/CategoriesScreen';
 import SubscriptionScreen from '../screens/user/SubscriptionScreen';
@@ -14,14 +14,16 @@ import { useCart } from '../context/CartContext';
 import { RoleGuard } from '../components/RoleGuard';
 import { useAuth } from '../context/AuthContext';
 import { useResponsive } from '../hooks/useResponsive';
+import React, { useEffect, useState } from 'react';
 
 const Tab = createBottomTabNavigator();
 
 export default function UserTabs() {
   const { theme } = useTheme();
   const { totalItems } = useCart();
-  const { user } = useAuth();
+  const { user, avatarPreview } = useAuth();
   const { width, isSmallScreen } = useResponsive();
+  const [avatarFailedUri, setAvatarFailedUri] = useState(null);
   
   const tabHorizontalInset = isSmallScreen ? 8 : 16;
   const tabWidth = Math.max(320, width - (tabHorizontalInset * 2));
@@ -31,6 +33,8 @@ export default function UserTabs() {
   const BASE_URL = API_URL.replace('/api', '');
 
   const profilePhotoUri = (() => {
+    if (avatarPreview) return avatarPreview;
+
     let photoUrl = user?.profile_photo_url || user?.profile_photo;
     if (!photoUrl) return null;
 
@@ -39,12 +43,17 @@ export default function UserTabs() {
       if (pathPart) {
         photoUrl = `${BASE_URL}/storage/${pathPart}`;
       }
-    } else if (!photoUrl.startsWith('http')) {
+    } else if (!photoUrl.startsWith('http') && !photoUrl.startsWith('file:') && !photoUrl.startsWith('blob:') && !photoUrl.startsWith('data:')) {
       photoUrl = `${BASE_URL}/storage/${photoUrl}`;
     }
 
     return photoUrl;
   })();
+
+  useEffect(() => {
+    setAvatarFailedUri(null);
+  }, [profilePhotoUri]);
+
   return (
     <RoleGuard requiredRole="user">
       <Tab.Navigator
@@ -104,16 +113,17 @@ export default function UserTabs() {
                   borderColor: theme.colors.border,
                 }}
               >
-                {profilePhotoUri ? (
+                <Ionicons name="person" size={28} color={theme.colors.textSecondary || '#9CA3AF'} />
+                {profilePhotoUri && profilePhotoUri !== avatarFailedUri && (
                   <ExpoImage
                     source={{ uri: profilePhotoUri }}
-                    style={{ width: '100%', height: '100%' }}
+                    style={{ position: 'absolute', width: '100%', height: '100%' }}
                     contentFit="cover"
-                    transition={200}
+                    priority="high"
                     cachePolicy="memory-disk"
+                    transition={0}
+                    onError={() => setAvatarFailedUri(profilePhotoUri)}
                   />
-                ) : (
-                  <Ionicons name="person" size={28} color={theme.colors.textSecondary || '#9CA3AF'} />
                 )}
               </TouchableOpacity>
             </View>

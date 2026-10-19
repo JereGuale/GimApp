@@ -200,11 +200,13 @@ export default function Orders() {
   const executeApprove = async (id) => {
     setActionLoading(id + '_approve');
     setError(''); setSuccess('');
+    // Optimistic update
+    const prev = orders;
+    setOrders(o => o.map(x => x.id === id ? { ...x, status: 'approved' } : x));
     try {
       const result = await apiFetch(`/admin/orders/${id}/approve`, { method: 'POST' });
       setSuccess('Pedido aprobado exitosamente');
-      fetchOrders();
-
+      fetchOrders(); // silent background refresh
       const approvedOrder = result?.order;
       const clientPhone = approvedOrder?.billing_phone || approvedOrder?.user?.phone || '';
       const cleanPhone = clientPhone.replace(/\D/g, '');
@@ -222,7 +224,10 @@ export default function Orders() {
           `Te esperamos. ¡Gracias por tu compra! 💪`;
         window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
       }
-    } catch (e) { setError(e.message); }
+    } catch (e) {
+      setOrders(prev); // revert
+      setError(e.message);
+    }
     finally { setActionLoading(null); }
   };
 
@@ -242,6 +247,9 @@ export default function Orders() {
   const executeUpdateStatus = async (id, newStatus) => {
     setActionLoading(id + '_status');
     setError(''); setSuccess('');
+    // Optimistic update
+    const prev = orders;
+    setOrders(o => o.map(x => x.id === id ? { ...x, status: newStatus } : x));
     try {
       await apiFetch(`/admin/orders/${id}/status`, { 
         method: 'POST',
@@ -249,8 +257,11 @@ export default function Orders() {
         body: JSON.stringify({ status: newStatus })
       });
       setSuccess('Estado del pedido actualizado exitosamente');
-      fetchOrders();
-    } catch (e) { setError(e.message); }
+      fetchOrders(); // silent background refresh
+    } catch (e) {
+      setOrders(prev); // revert
+      setError(e.message);
+    }
     finally { setActionLoading(null); }
   };
 
@@ -265,14 +276,20 @@ export default function Orders() {
     setRejectModal(null);
     setActionLoading(id + '_reject');
     setError(''); setSuccess('');
+    // Optimistic update
+    const prev = orders;
+    setOrders(o => o.map(x => x.id === id ? { ...x, status: 'rejected' } : x));
     try {
       await apiFetch(`/admin/orders/${id}/reject`, { 
         method: 'POST',
         body: JSON.stringify({ reason: rejectionReason || 'Comprobante no válido o stock insuficiente' })
       });
       setSuccess('Pedido rechazado correctamente');
-      fetchOrders();
-    } catch (e) { setError(e.message); }
+      fetchOrders(); // silent background refresh
+    } catch (e) {
+      setOrders(prev); // revert
+      setError(e.message);
+    }
     finally { setActionLoading(null); }
   };
 
@@ -288,11 +305,17 @@ export default function Orders() {
   const executeDelete = async (id) => {
     setActionLoading(id + '_delete');
     setError(''); setSuccess('');
+    // Optimistic update
+    const prev = orders;
+    setOrders(o => o.filter(x => x.id !== id));
     try {
       await apiFetch(`/admin/orders/${id}`, { method: 'DELETE' });
       setSuccess('Pedido eliminado correctamente');
-      fetchOrders();
-    } catch (e) { setError(e.message); }
+      fetchOrders(); // silent background refresh
+    } catch (e) {
+      setOrders(prev); // revert
+      setError(e.message);
+    }
     finally { setActionLoading(null); }
   };
 

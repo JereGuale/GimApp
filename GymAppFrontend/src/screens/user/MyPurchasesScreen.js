@@ -305,7 +305,7 @@ export default function MyPurchasesScreen() {
                 <View style={[styles.searchContainer, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
                     <Ionicons name="search-outline" size={18} color={mutedText} />
                     <TextInput
-                        style={[styles.searchInput, { color: theme.colors.text }]}
+                        style={[styles.searchInput, { color: theme.colors.text, borderWidth: 0, outlineStyle: 'none' }]}
                         placeholder="Buscar en tus compras..."
                         placeholderTextColor={mutedText}
                         value={searchQuery}
@@ -429,7 +429,7 @@ const styles = StyleSheet.create({
     summaryLabel: { fontSize: 11, fontWeight: "600", textAlign: "center" },
 
     searchContainer: { flexDirection: "row", alignItems: "center", borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, height: 44, gap: 8 },
-    searchInput: { flex: 1, fontSize: 14, fontWeight: "500", padding: 0 },
+    searchInput: { flex: 1, fontSize: 14, fontWeight: "500", padding: 0, borderWidth: 0, borderColor: 'transparent', outlineStyle: 'none', outlineWidth: 0 },
 
     filterRow: { flexDirection: "row", gap: 8, paddingVertical: 2 },
     filterChip: { flexDirection: "row", alignItems: "center", gap: 5, borderWidth: 1, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 },

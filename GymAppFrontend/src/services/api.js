@@ -36,6 +36,24 @@ const apiCache = {};
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 export const PersistentCache = {
+  getSync: (key) => {
+    if (apiCache[key] && (Date.now() - apiCache[key].timestamp < CACHE_DURATION)) {
+      return apiCache[key].data;
+    }
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
+      try {
+        const raw = window.localStorage.getItem(`@fast_cache_${key}`);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && parsed.data) {
+            apiCache[key] = parsed;
+            return parsed.data;
+          }
+        }
+      } catch {}
+    }
+    return null;
+  },
   get: async (key) => {
     // 1. Check in-memory first (0ms)
     if (apiCache[key] && (Date.now() - apiCache[key].timestamp < CACHE_DURATION)) {

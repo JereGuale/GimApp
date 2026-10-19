@@ -186,7 +186,7 @@ export default function RoleManagementScreen({ navigation }) {
                     <View style={[styles.searchContainer, { backgroundColor: theme.colors.background, borderColor: theme.colors.border }]}>
                         <Ionicons name="search" size={20} color={theme.colors.textSecondary} />
                         <TextInput
-                            style={[styles.searchInput, { color: theme.colors.text }]}
+                            style={[styles.searchInput, { color: theme.colors.text, borderWidth: 0, outlineStyle: 'none' }]}
                             placeholder="Buscar usuario..."
                             placeholderTextColor={theme.colors.textSecondary}
                             value={searchQuery}
@@ -315,7 +315,7 @@ const styles = StyleSheet.create({
     section: { borderRadius: 12, padding: 15, marginBottom: 20, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
     sectionTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 15 },
     searchContainer: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 8, paddingHorizontal: 10, height: 45, marginBottom: 15 },
-    searchInput: { flex: 1, marginLeft: 10 },
+    searchInput: { flex: 1, marginLeft: 10, borderWidth: 0, borderColor: 'transparent', outlineStyle: 'none', outlineWidth: 0 },
     userRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 1 },
     userInfo: { flex: 1 },
     userName: { fontSize: 16, fontWeight: '500' },

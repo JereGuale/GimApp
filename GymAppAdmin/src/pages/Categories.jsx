@@ -69,6 +69,15 @@ export default function Categories() {
     e.preventDefault();
     if (!name.trim()) { setError('El nombre es requerido'); return; }
     setError(''); setSuccess('');
+    const prev = categories;
+    if (editId) {
+      // Optimistic edit
+      setCategories(c => c.map(x => x.id === editId ? { ...x, name } : x));
+    } else {
+      // Optimistic create (temp item with negative id)
+      setCategories(c => [...c, { id: Date.now() * -1, name, products: [] }]);
+    }
+    setModalOpen(false);
     try {
       if (editId) {
         await apiFetch(`/admin/categories/${editId}`, {
@@ -83,9 +92,9 @@ export default function Categories() {
         });
         setSuccess('Categoría creada');
       }
-      setModalOpen(false);
-      fetchCategories();
+      fetchCategories(); // silent background refresh (replaces temp id with real id)
     } catch (err) {
+      setCategories(prev); // revert
       setError(err.message || 'Error al guardar la categoría');
     }
   };
@@ -98,11 +107,16 @@ export default function Categories() {
     const c = deleteConfirm.category;
     if (!c) return;
     setError(''); setSuccess('');
+    // Optimistic delete
+    const prev = categories;
+    setCategories(cats => cats.filter(x => x.id !== c.id));
+    setDeleteConfirm({ isOpen: false, category: null });
     try {
       await apiFetch(`/admin/categories/${c.id}`, { method: 'DELETE' });
       setSuccess('Categoría eliminada');
-      fetchCategories();
+      fetchCategories(); // silent background refresh
     } catch (err) {
+      setCategories(prev); // revert
       setError(err.message || 'No se pudo eliminar la categoría');
     }
   };

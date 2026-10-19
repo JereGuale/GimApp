@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import { API_URL } from './api';
 import axios from 'axios';
+import * as ImageManipulator from 'expo-image-manipulator';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -182,25 +183,40 @@ export const ProfileAPI = {
         try {
             const token = await getToken();
             if (!token) {
-                return { success: false, error: 'No hay token de autenticaciÃ³n' };
+                return { success: false, error: 'No hay token de autenticación' };
+            }
+
+            // 1. Redimensionar y comprimir la foto (tanto en Web como en Móvil)
+            // Se escala a 400x400 px con compresión JPEG 0.75 para un peso ultra ligero (~40KB - 70KB)
+            let optimizedUri = imageUri;
+            try {
+                const manipResult = await ImageManipulator.manipulateAsync(
+                    imageUri,
+                    [{ resize: { width: 400, height: 400 } }],
+                    { compress: 0.75, format: ImageManipulator.SaveFormat?.JPEG || 'jpeg' }
+                );
+                if (manipResult && manipResult.uri) {
+                    optimizedUri = manipResult.uri;
+                }
+            } catch (manipError) {
+                console.warn('ImageManipulator warning, usando URI original:', manipError);
             }
 
             const formData = new FormData();
-            const cleanUri = imageUri.split('?')[0];
+            const cleanUri = optimizedUri.split('?')[0];
             const fileExtension = cleanUri.split('.').pop().toLowerCase();
-            const validExt = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExtension) ? fileExtension : 'jpg';
+            const validExt = ['jpg', 'jpeg', 'png', 'webp'].includes(fileExtension) ? fileExtension : 'jpg';
             const mimeType = validExt === 'png' ? 'image/png' : 'image/jpeg';
 
             if (Platform.OS === 'web') {
-                // Web: convert data URI or blob URL to File
-                const response = await fetch(imageUri);
+                const response = await fetch(optimizedUri);
                 const blob = await response.blob();
                 const file = new File([blob], `profile_${Date.now()}.${validExt}`, { type: mimeType });
                 formData.append('photo', file);
             } else {
                 // Native: use RN format
                 formData.append('photo', {
-                    uri: Platform.OS === 'android' ? imageUri : imageUri.replace('file://', ''),
+                    uri: Platform.OS === 'android' ? optimizedUri : optimizedUri.replace('file://', ''),
                     type: mimeType,
                     name: `profile_${Date.now()}.${validExt}`
                 });

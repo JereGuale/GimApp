@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { apiFetch } from '../api/client';
+import { apiFetch, prefetchEndpoints } from '../api/client';
 import { Dumbbell, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import './Login.css';
 
@@ -30,6 +30,18 @@ export default function Login() {
         return;
       }
       login(user, token);
+      // Warm up all main pages in the background right after login
+      // so when the admin navigates there the data is already cached
+      prefetchEndpoints([
+        '/admin/metrics',
+        '/admin/users?all=true',
+        '/trainer/subscriptions',
+        '/admin/orders',
+        '/admin/categories',
+        '/admin/products',
+        '/admin/subscription-plans',
+        '/admin/banners',
+      ]);
     } catch (err) {
       const msg = err.message || '';
       if (msg.includes('401') || msg.includes('credentials') || msg.includes('Invalid') || msg.includes('autorizado')) {

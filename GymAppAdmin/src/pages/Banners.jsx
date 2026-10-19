@@ -111,6 +111,16 @@ export default function Banners() {
 
     setError(''); setSuccess('');
     
+    // For edits: optimistic update. For creates: wait (need server image URL)
+    const prev = banners;
+    if (editId) {
+      setBanners(b => b.map(x => x.id === editId
+        ? { ...x, title, description, price, button_text: buttonText, button_action: buttonAction, is_active: isActive, display_order: displayOrder }
+        : x
+      ));
+      setModalOpen(false);
+    }
+
     try {
       if (editId) {
         await apiFetch(`/admin/banners/${editId}`, {
@@ -135,10 +145,11 @@ export default function Banners() {
           body: formData,
         });
         setSuccess('Banner creado');
+        setModalOpen(false);
       }
-      setModalOpen(false);
-      fetchBanners();
+      fetchBanners(); // silent background refresh
     } catch (err) {
+      setBanners(prev); // revert
       setError(err.message || 'Error al guardar el banner');
     }
   };
@@ -151,11 +162,16 @@ export default function Banners() {
     const b = deleteConfirm.banner;
     if (!b) return;
     setError(''); setSuccess('');
+    // Optimistic delete
+    const prev = banners;
+    setBanners(bs => bs.filter(x => x.id !== b.id));
+    setDeleteConfirm({ isOpen: false, banner: null });
     try {
       await apiFetch(`/admin/banners/${b.id}`, { method: 'DELETE' });
       setSuccess('Banner eliminado correctamente');
-      fetchBanners();
+      fetchBanners(); // silent background refresh
     } catch (err) {
+      setBanners(prev); // revert
       setError(err.message || 'No se pudo eliminar el banner');
     }
   };

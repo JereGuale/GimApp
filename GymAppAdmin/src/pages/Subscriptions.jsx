@@ -702,15 +702,22 @@ export default function Subscriptions() {
   const executeApprove = async (id) => {
     setActionLoading(id + '_approve');
     setError(''); setSuccess('');
+    // Optimistic update
+    const prev = subs;
+    setSubs(s => s.map(x => x.id === id ? { ...x, status: 'active' } : x));
+    cachedSubs = subs.map(x => x.id === id ? { ...x, status: 'active' } : x);
     try {
       const result = await apiFetch(`/trainer/subscriptions/${id}/approve`, { method: 'POST' });
-      await fetchSubs();
       setSuccess('Suscripción aprobada exitosamente');
+      fetchSubs(true); // silent background refresh
       const approvedSubscription = result?.subscription;
       if (approvedSubscription && !openWhatsAppMessage(approvedSubscription, generateWelcomeMessage(approvedSubscription))) {
         setError('Suscripción aprobada, pero el cliente no tiene un teléfono registrado para enviar la bienvenida.');
       }
-    } catch (e) { setError(e.message); }
+    } catch (e) {
+      setSubs(prev); cachedSubs = prev; // revert
+      setError(e.message);
+    }
     finally { setActionLoading(null); }
   };
 
@@ -725,14 +732,21 @@ export default function Subscriptions() {
     setRejectModal(null);
     setActionLoading(id + '_reject');
     setError(''); setSuccess('');
+    // Optimistic update
+    const prev = subs;
+    setSubs(s => s.map(x => x.id === id ? { ...x, status: 'rejected' } : x));
+    cachedSubs = subs.map(x => x.id === id ? { ...x, status: 'rejected' } : x);
     try {
       await apiFetch(`/trainer/subscriptions/${id}/reject`, {
         method: 'POST',
         body: JSON.stringify({ reason: rejectionReason || 'Comprobante no válido' })
       });
-      await fetchSubs();
       setSuccess('Suscripción rechazada');
-    } catch (e) { setError(e.message); }
+      fetchSubs(true); // silent background refresh
+    } catch (e) {
+      setSubs(prev); cachedSubs = prev; // revert
+      setError(e.message);
+    }
     finally { setActionLoading(null); }
   };
 
@@ -745,12 +759,17 @@ export default function Subscriptions() {
   const executeDelete = async (id) => {
     setActionLoading(id + '_delete');
     setError(''); setSuccess('');
+    // Optimistic update
+    const prev = subs;
+    setSubs(s => s.filter(x => x.id !== id));
+    cachedSubs = subs.filter(x => x.id !== id);
+    setDeleteModal(null);
     try {
       await apiFetch(`/trainer/subscriptions/${id}`, { method: 'DELETE' });
-      setDeleteModal(null);
-      await fetchSubs();
       setSuccess('Suscripción eliminada exitosamente');
+      fetchSubs(true); // silent background refresh
     } catch (e) {
+      setSubs(prev); cachedSubs = prev; // revert
       setError(e.message || 'Error al eliminar la suscripción');
     } finally {
       setActionLoading(null);
@@ -769,11 +788,16 @@ export default function Subscriptions() {
   const executeRenew = async (id) => {
     setActionLoading(id + '_renew');
     setError(''); setSuccess('');
+    // Optimistic update
+    const prev = subs;
+    setSubs(s => s.map(x => x.id === id ? { ...x, status: 'active' } : x));
+    cachedSubs = subs.map(x => x.id === id ? { ...x, status: 'active' } : x);
     try {
       await apiFetch(`/trainer/subscriptions/${id}/renew`, { method: 'POST' });
-      await fetchSubs();
       setSuccess('Suscripción renovada exitosamente');
+      fetchSubs(true); // silent background refresh
     } catch (e) {
+      setSubs(prev); cachedSubs = prev; // revert
       setError(e.message || 'Error al renovar la suscripción');
     } finally {
       setActionLoading(null);

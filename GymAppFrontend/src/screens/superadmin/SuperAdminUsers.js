@@ -98,7 +98,7 @@ export default function SuperAdminUsers() {
           onChangeText={setSearchQuery}
           placeholder="Buscar por nombre o email..."
           placeholderTextColor={theme.colors.textSecondary}
-          style={[styles.searchInput, { color: theme.colors.text }]}
+          style={[styles.searchInput, { color: theme.colors.text, borderWidth: 0, outlineStyle: 'none' }]}
         />
         {searchQuery.length > 0 && (
           <TouchableOpacity onPress={() => setSearchQuery('')}>
@@ -198,7 +198,11 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 15,
-    fontWeight: '500'
+    fontWeight: '500',
+    borderWidth: 0,
+    borderColor: 'transparent',
+    outlineStyle: 'none',
+    outlineWidth: 0
   },
   emptyCard: {
     borderRadius: 18,

@@ -308,7 +308,7 @@ export default function AdminDashboard() {
           <View style={[styles.searchBox, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
             <Ionicons name="search-outline" size={18} color={isDark ? '#9CA3AF' : theme.colors.textSecondary} />
             <TextInput
-              style={[styles.searchInput, { color: theme.colors.text }]}
+              style={[styles.searchInput, { color: theme.colors.text, borderWidth: 0, outlineStyle: 'none' }]}
               placeholder="Buscar..."
               placeholderTextColor={isDark ? '#9CA3AF' : theme.colors.textSecondary}
               value={searchQuery}
@@ -604,7 +604,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     gap: 8,
   },
-  searchInput: { flex: 1, fontSize: 14, height: '100%' },
+  searchInput: { flex: 1, fontSize: 14, height: '100%', borderWidth: 0, borderColor: 'transparent', outlineStyle: 'none', outlineWidth: 0 },
   filterScroll: { marginBottom: 4 },
   filterChip: {
     paddingHorizontal: 14,

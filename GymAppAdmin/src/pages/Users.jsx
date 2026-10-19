@@ -173,6 +173,13 @@ export default function Users() {
     }
 
     setSaving(true); setModalError('');
+    // Optimistic update
+    const prev = users;
+    setUsers(u => u.map(x => x.id === targetUser.id
+      ? { ...x, is_active: finalIsActive, suspended_until: finalSuspendedUntil?.toISOString() || null }
+      : x
+    ));
+    closeModal();
     try {
       await apiFetch(`/admin/users/${targetUser.id}`, {
         method: 'PUT',
@@ -182,10 +189,10 @@ export default function Users() {
         ? `Cuenta de ${targetUser.name} activada correctamente`
         : `Cuenta de ${targetUser.name} suspendida correctamente`;
       setPageSuccess(msg);
-      fetchUsers();
-      closeModal();
+      fetchUsers(); // silent background refresh
     } catch (err) {
-      setModalError(err.message || 'Error al actualizar el estado. Verifica tus permisos.');
+      setUsers(prev); // revert
+      setPageError(err.message || 'Error al actualizar el estado. Verifica tus permisos.');
       setConfirmStep(null);
     } finally { setSaving(false); }
   };
@@ -207,7 +214,7 @@ export default function Users() {
   const Avatar = ({ user, size = 40 }) => {
     const url = getUserAvatarUrl(user);
     return url ? (
-      <img src={url} alt={user.name} className="user-avatar" style={{ width: size, height: size }} />
+      <img src={url} key={url} alt={user.name} className="user-avatar" style={{ width: size, height: size }} />
     ) : (
       <div
         className="user-avatar-fallback"

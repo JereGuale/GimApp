@@ -19,7 +19,7 @@ import { API_URL, PersistentCache } from '../../services/api';
 const BASE_URL = API_URL.replace('/api', '');
 
 export default function ProfileScreen() {
-  const { user, logout, updateUser } = useAuth();
+  const { user, logout, updateUser, avatarPreview, setAvatarPreview } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigation = useNavigation();
   const route = useRoute();
@@ -48,6 +48,7 @@ export default function ProfileScreen() {
   const [saving, setSaving] = useState(false);
   const [photoKey, setPhotoKey] = useState(Date.now());
   const [localPhotoUri, setLocalPhotoUri] = useState(null);
+  const [photoStatus, setPhotoStatus] = useState(null);
 
   const [subscription, setSubscription] = useState({ data: null, loading: true });
   const [rejectedOrders, setRejectedOrders] = useState([]);
@@ -173,33 +174,50 @@ export default function ProfileScreen() {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') return Alert.alert('Permiso necesario', 'Necesitamos acceso a tu galería');
-      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.8 });
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.6
+      });
       if (!result.canceled && result.assets[0]) {
         const selectedUri = result.assets[0].uri;
+        // Previsualización instantánea (0ms) en toda la aplicación
         setLocalPhotoUri(selectedUri);
-        setUploadingPhoto(true);
-        const uploadResult = await ProfileAPI.uploadPhoto(selectedUri);
-        if (uploadResult.success) {
-          Alert.alert('¡Éxito!', 'Foto de perfil actualizada');
-          const newTimestamp = Date.now();
-          setLocalPhotoUri(null); // Limpiar previsualización local para mostrar la URL remota actualizada
-          if (updateUser) {
-            updateUser({
-              ...user,
-              profile_photo: uploadResult.data.profile_photo,
-              profile_photo_url: uploadResult.data.profile_photo_url ? `${uploadResult.data.profile_photo_url}?t=${newTimestamp}` : null
-            });
+        if (setAvatarPreview) setAvatarPreview(selectedUri);
+        setPhotoStatus('uploading');
+
+        // Subir en segundo plano sin interrumpir ni bloquear al usuario
+        ProfileAPI.uploadPhoto(selectedUri).then((uploadResult) => {
+          if (uploadResult.success) {
+            setPhotoStatus('saved');
+            setTimeout(() => setPhotoStatus(null), 3000);
+            const newRemoteUrl = uploadResult.data.profile_photo_url || uploadResult.data.profile_photo;
+            if (newRemoteUrl) {
+              Image.prefetch(newRemoteUrl).catch(() => {});
+            }
+            if (updateUser) {
+              const cleanUser = { ...user };
+              delete cleanUser.local_profile_photo;
+              updateUser({
+                ...cleanUser,
+                profile_photo: uploadResult.data.profile_photo,
+                profile_photo_url: newRemoteUrl
+              });
+            }
+          } else {
+            setPhotoStatus(null);
+            Alert.alert('Error', uploadResult.error || 'No se pudo subir la foto');
+            setLocalPhotoUri(null);
+            if (setAvatarPreview) setAvatarPreview(null);
           }
-          setPhotoKey(newTimestamp);
-        } else {
-          Alert.alert('Error', uploadResult.error || 'No se pudo subir la foto');
-          setLocalPhotoUri(null);
-        }
-        setUploadingPhoto(false);
+        }).catch(() => {
+          setPhotoStatus(null);
+        });
       }
     } catch (error) {
       Alert.alert('Error', 'No se pudo seleccionar la imagen');
-      setUploadingPhoto(false);
+      setPhotoStatus(null);
     }
   };
 
@@ -210,50 +228,45 @@ export default function ProfileScreen() {
       return;
     }
 
-    const nameChanged = editName !== user?.name;
-    const usernameChanged = editUsername !== user?.username;
+    const nameChanged = editName.trim() !== (user?.name || '').trim();
+    const usernameChanged = editUsername.trim() !== (user?.username || '').trim();
+    const phoneChanged = editPhone.trim() !== (user?.phone || '').trim();
+
+    // Si los campos de texto no han cambiado (solo se cambió la foto o nada), cerramos al instante (0ms) sin segunda carga
+    if (!nameChanged && !usernameChanged && !phoneChanged) {
+      setEditModalVisible(false);
+      setEditingField(null);
+      return;
+    }
 
     const performSave = async () => {
-      setSaving(true);
-      const result = await ProfileAPI.updateProfile({
-        name: editName,
-        username: editUsername,
-        phone: editPhone
-      });
-      setSaving(false);
+      // 1. Actualización optimista instantánea (0ms)
+      if (updateUser) {
+        updateUser({
+          ...user,
+          name: editName,
+          username: editUsername,
+          phone: editPhone
+        });
+      }
+      setEditModalVisible(false);
+      setEditingField(null);
 
-      if (result.success) {
-        if (updateUser) {
-          updateUser({
-            ...user,
-            name: editName,
-            username: editUsername,
-            phone: editPhone
-          });
+      // 2. Guardar en segundo plano enviando solo lo modificado
+      try {
+        const payload = {};
+        if (nameChanged) payload.name = editName.trim();
+        if (usernameChanged) payload.username = editUsername.trim();
+        if (phoneChanged) payload.phone = editPhone.trim();
+
+        const result = await ProfileAPI.updateProfile(payload);
+        if (!result.success) {
+          if (updateUser) updateUser(user); // Revertir en caso de error
+          Alert.alert('Error', result.error || 'No se pudo actualizar los datos.');
         }
-        setEditModalVisible(false);
-        setEditingField(null);
-        setConfirmModalState({
-          visible: true,
-          title: '¡Perfil actualizado!',
-          message: 'Tus cambios han sido guardados correctamente.',
-          showCancel: false,
-          confirmText: 'Aceptar',
-          isDestructive: false,
-          type: 'success',
-          onConfirm: () => setConfirmModalState(prev => ({ ...prev, visible: false }))
-        });
-      } else {
-        setConfirmModalState({
-          visible: true,
-          title: 'No se pudo actualizar',
-          message: result.error || 'Ocurrió un error al actualizar los datos.',
-          showCancel: false,
-          confirmText: 'Entendido',
-          isDestructive: false,
-          type: 'warning',
-          onConfirm: () => setConfirmModalState(prev => ({ ...prev, visible: false }))
-        });
+      } catch {
+        if (updateUser) updateUser(user);
+        Alert.alert('Error', 'Error de conexión al guardar cambios.');
       }
     };
 
@@ -278,55 +291,47 @@ export default function ProfileScreen() {
   };
 
   const handleSaveBilling = async () => {
-    setSaving(true);
-    const result = await ProfileAPI.updateProfile({
+    const updatedBilling = {
       billing_name: billingName,
       billing_email: billingEmail,
       billing_phone: billingPhone,
       billing_id_number: billingIdNumber,
       billing_city: billingCity,
       billing_address: billingAddress
-    });
-    setSaving(false);
+    };
 
-    if (result.success) {
-      if (updateUser) {
-        updateUser({
-          ...user,
-          billing_name: billingName,
-          billing_email: billingEmail,
-          billing_phone: billingPhone,
-          billing_id_number: billingIdNumber,
-          billing_city: billingCity,
-          billing_address: billingAddress
+    // Actualización optimista instantánea (0ms)
+    if (updateUser) {
+      updateUser({
+        ...user,
+        ...updatedBilling
+      });
+    }
+    setBillingEditVisible(false);
+
+    // Guardar en segundo plano
+    try {
+      const result = await ProfileAPI.updateProfile(updatedBilling);
+      if (!result.success) {
+        if (updateUser) updateUser(user);
+        setConfirmModalState({
+          visible: true,
+          title: 'Error',
+          message: result.error || 'No se pudieron actualizar los datos de facturación',
+          showCancel: false,
+          confirmText: 'Entendido',
+          isDestructive: false,
+          type: 'warning',
+          onConfirm: () => setConfirmModalState(prev => ({ ...prev, visible: false }))
         });
       }
-      setBillingEditVisible(false);
-      setConfirmModalState({
-        visible: true,
-        title: '¡Guardado!',
-        message: 'Datos de facturación actualizados correctamente.',
-        showCancel: false,
-        confirmText: 'Aceptar',
-        isDestructive: false,
-        type: 'success',
-        onConfirm: () => setConfirmModalState(prev => ({ ...prev, visible: false }))
-      });
-    } else {
-      setConfirmModalState({
-        visible: true,
-        title: 'Error',
-        message: result.error || 'No se pudieron actualizar los datos de facturación',
-        showCancel: false,
-        confirmText: 'Entendido',
-        isDestructive: false,
-        type: 'warning',
-        onConfirm: () => setConfirmModalState(prev => ({ ...prev, visible: false }))
-      });
+    } catch {
+      if (updateUser) updateUser(user);
     }
   };
 
   const profilePhotoUri = (() => {
+    if (avatarPreview) return avatarPreview;
     if (localPhotoUri) return localPhotoUri;
 
     let photoUrl = user?.profile_photo_url || user?.profile_photo;
@@ -339,11 +344,11 @@ export default function ProfileScreen() {
       if (pathPart) {
         photoUrl = `${BASE_URL}/storage/${pathPart}`;
       }
-    } else if (!photoUrl.startsWith('http')) {
+    } else if (!photoUrl.startsWith('http') && !photoUrl.startsWith('file:') && !photoUrl.startsWith('blob:') && !photoUrl.startsWith('data:')) {
       photoUrl = `${BASE_URL}/storage/${photoUrl}`;
     }
 
-    return photoUrl.includes('?') ? photoUrl : `${photoUrl}?t=${photoKey}`;
+    return photoUrl;
   })();
 
   const DrawerContent = () => (
@@ -564,7 +569,7 @@ export default function ProfileScreen() {
             activeOpacity={0.8}
           >
             {profilePhotoUri ? (
-              <Image source={{ uri: profilePhotoUri }} style={[styles.headerAvatar, { borderColor: '#000000' }]} contentFit="cover" transition={200} cachePolicy="memory-disk" />
+              <Image key={profilePhotoUri || 'hero-avatar'} source={{ uri: profilePhotoUri }} style={[styles.headerAvatar, { borderColor: '#5B3DF5' }]} contentFit="cover" transition={200} cachePolicy="memory-disk" />
             ) : (
               <View style={[styles.headerAvatarPlaceholder, { backgroundColor: theme.isDark ? '#374151' : '#F3F4F6', borderColor: '#000000' }]}>
                 <Ionicons name="person" size={28} color={theme.colors.textSecondary || '#9CA3AF'} />
@@ -822,21 +827,25 @@ export default function ProfileScreen() {
               Editar Perfil
             </Text>
             <View style={styles.editPhotoSection}>
-              <TouchableOpacity onPress={handlePickPhoto} disabled={uploadingPhoto} style={styles.avatarWrapper} activeOpacity={0.8}>
+              <TouchableOpacity onPress={handlePickPhoto} style={styles.avatarWrapper} activeOpacity={0.8}>
                 {profilePhotoUri ? (
-                  <Image source={{ uri: profilePhotoUri }} style={styles.editAvatar} contentFit="cover" transition={300} cachePolicy="memory-disk" />
+                  <Image key={profilePhotoUri || 'modal-avatar'} source={{ uri: profilePhotoUri }} style={styles.editAvatar} contentFit="cover" transition={300} cachePolicy="memory-disk" />
                 ) : (
-                  <View style={[styles.editAvatarPlaceholder, { borderColor: theme.colors.primary, backgroundColor: theme.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}>
+                  <View style={[styles.editAvatarPlaceholder, { borderColor: '#5B3DF5', backgroundColor: theme.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}>
                     <Ionicons name="person" size={32} color={theme.colors.text} />
                   </View>
                 )}
-                <View style={[styles.editCameraOverlay, { backgroundColor: theme.colors.primary, borderColor: theme.colors.surface }]}>
-                  {uploadingPhoto ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="camera" size={14} color={theme.colors.background} />}
+                <View style={[styles.editCameraOverlay, { backgroundColor: photoStatus === 'saved' ? '#10B981' : '#5B3DF5', borderColor: theme.colors.surface }]}>
+                  {photoStatus === 'saved' ? (
+                    <Ionicons name="checkmark" size={14} color="#FFFFFF" />
+                  ) : (
+                    <Ionicons name="camera" size={14} color="#FFFFFF" />
+                  )}
                 </View>
               </TouchableOpacity>
-              <TouchableOpacity onPress={handlePickPhoto} disabled={uploadingPhoto} activeOpacity={0.7} style={{ marginTop: 12 }}>
-                <Text style={[styles.changePhotoText, { color: theme.colors.primary, marginTop: 0 }]}>
-                  {uploadingPhoto ? 'Subiendo foto...' : 'Cambiar foto de perfil'}
+              <TouchableOpacity onPress={handlePickPhoto} activeOpacity={0.7} style={{ marginTop: 12 }}>
+                <Text style={[styles.changePhotoText, { color: photoStatus === 'saved' ? '#10B981' : (theme.isDark ? '#A5B4FC' : '#5B3DF5'), marginTop: 0 }]}>
+                  {photoStatus === 'saved' ? '✓ Foto actualizada' : 'Cambiar foto de perfil'}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -896,8 +905,8 @@ export default function ProfileScreen() {
               <TouchableOpacity style={[styles.editModalBtn, { borderColor: theme.colors.border, borderWidth: 1.5 }]} onPress={() => setEditModalVisible(false)}>
                 <Text style={[styles.editModalBtnText, { color: theme.colors.text }]}>Cancelar</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.editModalBtn, { backgroundColor: theme.colors.primary }]} onPress={handleSaveProfile} disabled={saving}>
-                {saving ? <ActivityIndicator size="small" color="#fff" /> : <Text style={[styles.editModalBtnText, { color: theme.colors.background }]}>Guardar</Text>}
+              <TouchableOpacity style={[styles.editModalBtn, { backgroundColor: '#5B3DF5' }]} onPress={handleSaveProfile} disabled={saving}>
+                {saving ? <ActivityIndicator size="small" color="#fff" /> : <Text style={[styles.editModalBtnText, { color: '#FFFFFF' }]}>Guardar</Text>}
               </TouchableOpacity>
             </View>
           </View>
@@ -946,8 +955,8 @@ export default function ProfileScreen() {
               <TouchableOpacity style={[styles.editModalBtn, { borderColor: theme.colors.border, borderWidth: 1.5 }]} onPress={() => setBillingEditVisible(false)}>
                 <Text style={[styles.editModalBtnText, { color: theme.colors.text }]}>Cancelar</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.editModalBtn, { backgroundColor: theme.colors.primary }]} onPress={handleSaveBilling} disabled={saving}>
-                {saving ? <ActivityIndicator size="small" color="#fff" /> : <Text style={[styles.editModalBtnText, { color: theme.colors.background }]}>Guardar</Text>}
+              <TouchableOpacity style={[styles.editModalBtn, { backgroundColor: '#5B3DF5' }]} onPress={handleSaveBilling} disabled={saving}>
+                {saving ? <ActivityIndicator size="small" color="#fff" /> : <Text style={[styles.editModalBtnText, { color: '#FFFFFF' }]}>Guardar</Text>}
               </TouchableOpacity>
             </View>
           </View>

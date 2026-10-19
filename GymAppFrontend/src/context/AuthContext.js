@@ -1,13 +1,42 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
+import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ProfileAPI } from '../services/notificationService';
 
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(() => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
+      try {
+        const stored = window.localStorage.getItem('user');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed && parsed.local_profile_photo) delete parsed.local_profile_photo;
+          return parsed;
+        }
+      } catch {}
+    }
+    return null;
+  });
+
+  const [token, setToken] = useState(() => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
+      try {
+        return window.localStorage.getItem('token') || null;
+      } catch {}
+    }
+    return null;
+  });
+
+  const [loading, setLoading] = useState(() => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
+      return !window.localStorage.getItem('token');
+    }
+    return true;
+  });
+
+  const [avatarPreview, setAvatarPreview] = useState(null);
 
   useEffect(() => {
     loadStoredAuth();
@@ -21,14 +50,24 @@ export function AuthProvider({ children }) {
       if (storedToken && storedUser) {
         setToken(storedToken);
         const parsedUser = JSON.parse(storedUser);
+        if (parsedUser && parsedUser.local_profile_photo) {
+          delete parsedUser.local_profile_photo;
+        }
         setUser(parsedUser);
 
         // Intenta obtener los datos mÃ¡s recientes del backend
         ProfileAPI.getProfile(storedToken).then((res) => {
           if (res.success && res.data) {
-            updateUser(res.data);
+            updateUser({
+              ...parsedUser,
+              ...res.data,
+              profile_photo: res.data.profile_photo || parsedUser.profile_photo,
+              profile_photo_url: res.data.profile_photo_url || parsedUser.profile_photo_url,
+            });
           }
-        }).catch(() => { });
+        }).catch((error) => {
+          console.warn('No se pudo sincronizar el perfil en segundo plano:', error);
+        });
       }
     } catch (error) {
       console.error('Error loading auth:', error);
@@ -68,15 +107,21 @@ export function AuthProvider({ children }) {
 
   const updateUser = async (updatedUser) => {
     try {
-      await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
-      setUser(updatedUser);
+      const nextUser = {
+        ...user,
+        ...updatedUser,
+        profile_photo: updatedUser?.profile_photo || user?.profile_photo,
+        profile_photo_url: updatedUser?.profile_photo_url || user?.profile_photo_url,
+      };
+      await AsyncStorage.setItem('user', JSON.stringify(nextUser));
+      setUser(nextUser);
     } catch (error) {
       console.error('Error updating user:', error);
     }
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, updateUser, loading }}>
+    <AuthContext.Provider value={{ user, token, login, logout, updateUser, loading, avatarPreview, setAvatarPreview }}>
       {children}
     </AuthContext.Provider>
   );
