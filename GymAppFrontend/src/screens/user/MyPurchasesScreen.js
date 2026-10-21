@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
     View,
     Text,
@@ -101,6 +101,15 @@ export default function MyPurchasesScreen() {
         }, [])
     );
 
+    useEffect(() => {
+        orders
+            .map((order) => resolveStorageUrl(order.receipt_url || order.payment_receipt))
+            .filter(Boolean)
+            .forEach((receiptUrl) => {
+                Image.prefetch(receiptUrl).catch(() => {});
+            });
+    }, [orders]);
+
     const onRefresh = async () => {
         setRefreshing(true);
         await loadOrders();
@@ -129,7 +138,7 @@ export default function MyPurchasesScreen() {
     const renderOrderCard = (order) => {
         const statusColor = STATUS_COLORS[order.status] || theme.colors.primary;
         const statusIcon = STATUS_ICONS[order.status] || "help-circle-outline";
-        const receiptUrl = resolveStorageUrl(order.payment_receipt);
+        const receiptUrl = resolveStorageUrl(order.receipt_url || order.payment_receipt);
         const items = Array.isArray(order.items) ? order.items : [];
         const createdAt = order.created_at
             ? new Date(order.created_at).toLocaleDateString("es-MX", { day: "numeric", month: "short", year: "numeric" })
@@ -229,7 +238,10 @@ export default function MyPurchasesScreen() {
                     </Text>
                     <TouchableOpacity
                         style={styles.receiptBadge}
-                        onPress={() => receiptUrl ? setReceiptViewerUri(receiptUrl) : null}
+                        onPress={() => {
+                            if (!receiptUrl) return;
+                            setReceiptViewerUri(receiptUrl);
+                        }}
                         activeOpacity={receiptUrl ? 0.7 : 1}
                     >
                         <Ionicons
@@ -404,6 +416,8 @@ export default function MyPurchasesScreen() {
                                 style={styles.receiptImage}
                                 contentFit="contain"
                                 cachePolicy="memory-disk"
+                                priority="high"
+                                transition={0}
                             />
                         )}
                         <Text style={styles.receiptModalNote}>
@@ -478,6 +492,6 @@ const styles = StyleSheet.create({
     receiptModalHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: "rgba(255,255,255,0.1)" },
     receiptModalTitle: { fontSize: 16, fontWeight: "800", color: "#FFFFFF" },
     receiptModalClose: { width: 32, height: 32, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.1)", alignItems: "center", justifyContent: "center" },
-    receiptImage: { width: "100%", height: 440 },
+    receiptImage: { width: "100%", height: 440, backgroundColor: "#030712" },
     receiptModalNote: { fontSize: 12, color: "rgba(255,255,255,0.4)", textAlign: "center", paddingVertical: 14, paddingHorizontal: 16 },
 });

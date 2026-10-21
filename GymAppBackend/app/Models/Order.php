@@ -32,6 +32,10 @@ class Order extends Model
         'approved_at' => 'datetime',
     ];
 
+    protected $appends = [
+        'receipt_url',
+    ];
+
     public function user()
     {
         return $this->belongsTo(User::class);

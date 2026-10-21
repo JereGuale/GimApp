@@ -42,7 +42,8 @@ class Subscription extends Model
 
     protected $appends = [
         'resolved_phone',
-        'notes'
+        'notes',
+        'receipt_url',
     ];
 
     public function getNotesAttribute($value)
@@ -76,6 +77,19 @@ class Subscription extends Model
             }
         }
         return null;
+    }
+
+    public function getReceiptUrlAttribute()
+    {
+        if (!$this->payment_receipt) {
+            return null;
+        }
+
+        if (str_starts_with($this->payment_receipt, 'http')) {
+            return $this->payment_receipt;
+        }
+
+        return asset('storage/' . $this->payment_receipt);
     }
 
     public function user()

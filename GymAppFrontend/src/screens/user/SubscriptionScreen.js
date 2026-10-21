@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, RefreshControl, Platform, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, RefreshControl, Platform, Dimensions, Modal } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
@@ -13,7 +14,15 @@ import { useNavigation } from '@react-navigation/native';
 import { useResponsive } from '../../hooks/useResponsive';
 import BillingModal from '../../components/BillingModal';
 import { ProfileAPI } from '../../services/notificationService';
-import { PersistentCache } from '../../services/api';
+import { API_URL, PersistentCache } from '../../services/api';
+
+const BASE_URL = API_URL.replace('/api', '');
+
+const resolveReceiptUrl = (subscription) => {
+  const path = subscription?.receipt_url || subscription?.payment_receipt;
+  if (!path) return null;
+  return path.startsWith('http') ? path : `${BASE_URL}/storage/${path}`;
+};
 
 export default function SubscriptionScreen() {
   const { theme } = useTheme();
@@ -27,6 +36,7 @@ export default function SubscriptionScreen() {
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [pendingPlan, setPendingPlan] = useState(null);
   const [receiptModalVisible, setReceiptModalVisible] = useState(false);
+  const [subscriptionReceiptUri, setSubscriptionReceiptUri] = useState(null);
   const [authModalVisible, setAuthModalVisible] = useState(false);
   const [confirmModalVisible, setConfirmModalVisible] = useState(false);
   const [billingModalVisible, setBillingModalVisible] = useState(false);
@@ -83,6 +93,13 @@ export default function SubscriptionScreen() {
     }
     setLoadingSub(false);
   };
+
+  useEffect(() => {
+    const receiptUrl = resolveReceiptUrl(existingSub);
+    if (receiptUrl) {
+      Image.prefetch(receiptUrl).catch(() => {});
+    }
+  }, [existingSub]);
 
   const fetchPlans = async () => {
     // 1. Hidratación instantánea desde caché (0ms)
@@ -244,6 +261,10 @@ export default function SubscriptionScreen() {
       console.log('[ReceiptUpload] Upload result:', uploadResult);
 
       if (uploadResult.success) {
+        if (uploadResult.data) {
+          setExistingSub(uploadResult.data);
+          PersistentCache.set('my_subscription', uploadResult.data);
+        }
         setReceiptModalVisible(false);
         setSelectedPlan(null);
         fetchExistingSubscription();
@@ -263,6 +284,7 @@ export default function SubscriptionScreen() {
 
     const isActive = existingSub.status === 'active';
     const isPending = existingSub.status === 'pending';
+    const receiptUrl = resolveReceiptUrl(existingSub);
     const bannerColor = isActive ? '#10B981' : '#F59E0B';
     const bgColor = isActive ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)';
 
@@ -309,6 +331,20 @@ export default function SubscriptionScreen() {
             Precio: ${existingSub.price ? Number(existingSub.price).toFixed(2) : '—'} | Método: {existingSub.payment_method === 'transfer' ? 'Transferencia' : existingSub.payment_method === 'card' ? 'Tarjeta' : existingSub.payment_method}
           </Text>
         </View>
+
+        {receiptUrl && (
+          <TouchableOpacity
+            style={styles.receiptButton}
+            onPress={() => {
+              setSubscriptionReceiptUri(receiptUrl);
+            }}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="document-attach-outline" size={17} color="#10B981" />
+            <Text style={styles.receiptButtonText}>Ver comprobante enviado</Text>
+            <Ionicons name="chevron-forward" size={15} color="#10B981" />
+          </TouchableOpacity>
+        )}
 
         <Text style={[styles.existingSubNote, { color: theme.colors.textSecondary }]}>
           Podrás elegir un nuevo plan cuando termine tu periodo actual.
@@ -504,6 +540,45 @@ export default function SubscriptionScreen() {
           </>
         )}
       </ScrollView>
+
+      <Modal
+        visible={!!subscriptionReceiptUri}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSubscriptionReceiptUri(null)}
+      >
+        <View style={styles.receiptModalOverlay}>
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            activeOpacity={1}
+            onPress={() => setSubscriptionReceiptUri(null)}
+          />
+          <View style={styles.receiptModalCard}>
+            <View style={styles.receiptModalHeader}>
+              <Text style={styles.receiptModalTitle}>Comprobante de suscripción</Text>
+              <TouchableOpacity
+                onPress={() => setSubscriptionReceiptUri(null)}
+                style={styles.receiptModalClose}
+              >
+                <Ionicons name="close" size={22} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+            {subscriptionReceiptUri && (
+              <Image
+                source={{ uri: subscriptionReceiptUri }}
+                style={styles.receiptImage}
+                contentFit="contain"
+                cachePolicy="memory-disk"
+                priority="high"
+                transition={0}
+              />
+            )}
+            <Text style={styles.receiptModalNote}>
+              Este es el comprobante que enviaste para validar tu suscripción.
+            </Text>
+          </View>
+        </View>
+      </Modal>
 
       <ReceiptUploader
         visible={receiptModalVisible}
@@ -765,6 +840,63 @@ const styles = StyleSheet.create({
     marginTop: 12,
     textAlign: 'center',
     fontFamily: Platform.OS === 'web' ? 'Plus Jakarta Sans, sans-serif' : undefined,
+  },
+  receiptButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.35)',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginTop: 4,
+  },
+  receiptButtonText: {
+    flex: 1,
+    color: '#10B981',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  receiptModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    justifyContent: 'center',
+    padding: 16,
+  },
+  receiptModalCard: {
+    backgroundColor: '#111827',
+    borderRadius: 18,
+    overflow: 'hidden',
+    maxHeight: '90%',
+  },
+  receiptModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  receiptModalTitle: {
+    flex: 1,
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  receiptModalClose: {
+    padding: 4,
+  },
+  receiptImage: {
+    width: '100%',
+    height: 420,
+    backgroundColor: '#030712',
+  },
+  receiptModalNote: {
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: 12,
+    textAlign: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
   viewPlansButton: {
     alignSelf: 'center',

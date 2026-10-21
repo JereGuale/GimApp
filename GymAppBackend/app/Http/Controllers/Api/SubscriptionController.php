@@ -184,6 +184,10 @@ class SubscriptionController extends Controller
             'status' => 'pending' // Asegurar que quede en pendiente
         ]);
 
+        // Refrescar inmediatamente el listado administrativo, sin esperar a que expire su caché.
+        \Illuminate\Support\Facades\Cache::forget('trainer_subscriptions_all');
+        \Illuminate\Support\Facades\Cache::forget('admin_dashboard_metrics_v2');
+
         // Notificar a admins sobre nueva solicitud con comprobante
         $subscription->load(['plan', 'user']);
         Notification::notifyAdmins($subscription);
