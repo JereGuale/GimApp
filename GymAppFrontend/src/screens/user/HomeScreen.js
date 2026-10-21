@@ -116,7 +116,7 @@ export default function HomeScreen() {
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
   const catalogSearchInputRef = useRef(null);
 
-  // Mantener foco del teclado al cambiar de la pantalla de inicio al catálogo
+  // Mantener foco del teclado al cambiar de la pantalla de inicio al catalogo
   useEffect(() => {
     if (showFullCatalog && searchText) {
       const timer = setTimeout(() => {

@@ -53,7 +53,7 @@ class AuthController extends Controller
             'password' => 'required|string'
         ]);
 
-        // Buscar por email O por username (para login de cliente)
+        // Buscar por email o por el username (para login de cliente)
         $identifier = $validated['email'];
         $user = filter_var($identifier, FILTER_VALIDATE_EMAIL)
             ? User::where('email', $identifier)->first()
