@@ -63,20 +63,10 @@ class Subscription extends Model
         if (!empty($this->billing_phone)) {
             return $this->billing_phone;
         }
-        if (!empty($this->user?->phone)) {
+        if ($this->relationLoaded('user') && !empty($this->user?->phone)) {
             return $this->user->phone;
         }
-        if ($this->user_id) {
-            $orderPhone = \App\Models\Order::where('user_id', $this->user_id)
-                ->whereNotNull('billing_phone')
-                ->where('billing_phone', '!=', '')
-                ->latest()
-                ->value('billing_phone');
-            if (!empty($orderPhone)) {
-                return $orderPhone;
-            }
-        }
-        return null;
+        return $this->billing_phone ?: ($this->user?->phone ?? null);
     }
 
     public function getReceiptUrlAttribute()

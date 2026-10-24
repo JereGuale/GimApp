@@ -24,7 +24,7 @@ class SubscriptionController extends Controller
             return Subscription::updateExpiredStatus();
         });
 
-        $subscription = Subscription::with(['plan', 'approvedBy'])
+        $subscription = Subscription::with(['plan', 'approvedBy', 'user'])
             ->where('user_id', $request->user()->id)
             ->orderByDesc('created_at')
             ->first();
@@ -196,5 +196,18 @@ class SubscriptionController extends Controller
             'message' => 'Comprobante enviado con éxito',
             'subscription' => $subscription
         ]);
+    }
+
+    /**
+     * Get all subscriptions history for the authenticated user
+     */
+    public function history(Request $request)
+    {
+        $subscriptions = Subscription::with(['plan', 'approvedBy', 'user'])
+            ->where('user_id', $request->user()->id)
+            ->orderByDesc('created_at')
+            ->get();
+
+        return response()->json($subscriptions);
     }
 }

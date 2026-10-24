@@ -46,6 +46,20 @@ export const SubscriptionAPI = {
     },
 
     /**
+     * Obtener historial completo de suscripciones del usuario
+     */
+    async getSubscriptionHistory() {
+        try {
+            const headers = await getAuthHeaders();
+            const response = await axios.get(`${API_URL}/subscription/history`, { headers });
+            return { success: true, data: response.data };
+        } catch (error) {
+            console.error('Error getting subscription history:', error.response?.data || error.message);
+            return { success: false, data: [], error: error.response?.data?.message || 'Error al obtener historial' };
+        }
+    },
+
+    /**
      * Crear nueva suscripción
      */
     async createSubscription(planId, paymentMethod, cardData = {}, billingData = null) {
@@ -196,120 +210,6 @@ export const SubscriptionAPI = {
     }
 };
 
-export const TrainerSubscriptionAPI = {
-    /**
-     * Obtener todas las suscripciones (con filtros)
-     */
-    async getSubscriptions(filters = {}) {
-        try {
-            const headers = await getAuthHeaders();
-            const params = new URLSearchParams(filters).toString();
-            const url = `${API_URL}/trainer/subscriptions${params ? `?${params}` : ''}`;
-
-            const response = await axios.get(url, { headers });
-            return { success: true, data: response.data };
-        } catch (error) {
-            console.error('Error getting subscriptions:', error.response?.data || error.message);
-            return {
-                success: false,
-                error: error.response?.data?.message || 'Error al obtener suscripciones'
-            };
-        }
-    },
-
-    /**
-     * Obtener contador de suscripciones pendientes
-     */
-    async getPendingCount() {
-        try {
-            const headers = await getAuthHeaders();
-            const response = await axios.get(`${API_URL}/trainer/subscriptions/pending-count`, { headers });
-            return { success: true, count: response.data.count };
-        } catch (error) {
-            console.error('Error getting pending count:', error.response?.data || error.message);
-            return { success: false, count: 0 };
-        }
-    },
-
-    /**
-     * Aprobar suscripción
-     */
-    async approveSubscription(subscriptionId) {
-        try {
-            const headers = await getAuthHeaders();
-            const response = await axios.post(
-                `${API_URL}/trainer/subscriptions/${subscriptionId}/approve`,
-                {},
-                { headers }
-            );
-
-            return {
-                success: true,
-                data: response.data.subscription,
-                message: response.data.message
-            };
-        } catch (error) {
-            console.error('Error approving subscription:', error.response?.data || error.message);
-            return {
-                success: false,
-                error: error.response?.data?.message || 'Error al aprobar suscripción'
-            };
-        }
-    },
-
-    /**
-     * Rechazar suscripción
-     */
-    async rejectSubscription(subscriptionId, reason) {
-        try {
-            const headers = await getAuthHeaders();
-            const response = await axios.post(
-                `${API_URL}/trainer/subscriptions/${subscriptionId}/reject`,
-                { reason },
-                { headers }
-            );
-
-            return {
-                success: true,
-                data: response.data.subscription,
-                message: response.data.message
-            };
-        } catch (error) {
-            console.error('Error rejecting subscription:', error.response?.data || error.message);
-            return {
-                success: false,
-                error: error.response?.data?.message || 'Error al rechazar suscripción'
-            };
-        }
-    },
-
-    /**
-     * Crear suscripción para un usuario (trainer)
-     */
-    async createSubscriptionForUser(userId, planId) {
-        try {
-            const headers = await getAuthHeaders();
-            const response = await axios.post(
-                `${API_URL}/trainer/subscriptions/create`,
-                { user_id: userId, subscription_plan_id: planId },
-                { headers }
-            );
-
-            return {
-                success: true,
-                data: response.data.subscription,
-                message: response.data.message
-            };
-        } catch (error) {
-            console.error('Error creating subscription:', error.response?.data || error.message);
-            return {
-                success: false,
-                error: error.response?.data?.message || 'Error al crear suscripción',
-                errors: error.response?.data?.errors
-            };
-        }
-    }
-};
 
 export const SubscriptionPlanAPI = {
     /**

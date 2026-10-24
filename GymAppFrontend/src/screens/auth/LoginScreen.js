@@ -185,15 +185,6 @@ export default function LoginScreen({ navigation }) {
             </TouchableOpacity>
           </View>
 
-          <View style={styles.roleButtonsContainer}>
-            <TouchableOpacity
-              style={[styles.roleButton, { flex: 1, backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
-              onPress={() => navigation.navigate('AdminLogin')}
-            >
-              <Ionicons name="shield-checkmark" size={18} color={theme.colors.orange} />
-              <Text style={[styles.roleButtonText, { color: theme.colors.text }]}>Soy Administrador</Text>
-            </TouchableOpacity>
-          </View>
         </View>
       </KeyboardAvoidingView>
     </View>

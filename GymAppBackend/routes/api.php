@@ -68,6 +68,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/admin/roles/permissions', [\App\Http\Controllers\AdminPanelRolesController::class , 'rolesPermissionsMatrix']);
     Route::get('/home', [HomeController::class , 'index']);
     Route::get('/subscription/my', [SubscriptionController::class , 'my']);
+    Route::get('/subscription/history', [SubscriptionController::class , 'history']);
     Route::post('/subscription/subscribe', [SubscriptionController::class , 'store']);
     Route::post('/subscription/{id}/upload-receipt', [SubscriptionController::class , 'uploadReceipt']);
 

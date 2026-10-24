@@ -18,6 +18,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL, PersistentCache } from '../../services/api';
 const BASE_URL = API_URL.replace('/api', '');
 
+const resolveStorageUrl = (path) => {
+  if (!path) return null;
+  if (path.startsWith('http')) return path;
+  return `${BASE_URL}/storage/${path}`;
+};
+
 export default function ProfileScreen() {
   const { user, logout, updateUser, avatarPreview, setAvatarPreview } = useAuth();
   const { theme, toggleTheme } = useTheme();
@@ -54,13 +60,17 @@ export default function ProfileScreen() {
   const [rejectedOrders, setRejectedOrders] = useState([]);
   const [recentOrders, setRecentOrders] = useState([]);
   const [dismissedRejections, setDismissedRejections] = useState([]);
+  const [subscriptionHistory, setSubscriptionHistory] = useState([]);
+  const [ordersExpanded, setOrdersExpanded] = useState(false);
+  const [subsExpanded, setSubsExpanded] = useState(false);
+  const [receiptViewerUri, setReceiptViewerUri] = useState(null);
   const [confirmModalState, setConfirmModalState] = useState({
     visible: false,
     title: '',
     message: '',
     isDestructive: false,
     type: 'warning',
-    onConfirm: () => {}
+    onConfirm: () => { }
   });
 
   // Cargar avisos descartados previamente desde AsyncStorage
@@ -108,9 +118,10 @@ export default function ProfileScreen() {
       // 1. Hidratación instantánea desde caché (0ms)
       const hydrateCache = async () => {
         try {
-          const [cachedSub, cachedOrders] = await Promise.all([
+          const [cachedSub, cachedOrders, cachedHistory] = await Promise.all([
             PersistentCache.get('my_subscription'),
-            PersistentCache.get('my_orders')
+            PersistentCache.get('my_orders'),
+            PersistentCache.get('subscription_history')
           ]);
           if (!mounted) return;
           if (cachedSub) {
@@ -122,15 +133,19 @@ export default function ProfileScreen() {
             setRejectedOrders(allRejected);
             setRecentOrders(validRecent);
           }
-        } catch (e) {}
+          if (Array.isArray(cachedHistory) && cachedHistory.length > 0) {
+            setSubscriptionHistory(cachedHistory);
+          }
+        } catch (e) { }
       };
       hydrateCache();
 
       // 2. Sincronización en segundo plano con el servidor
       const fetchProfileData = async () => {
-        const [subscriptionResult, ordersResult] = await Promise.all([
+        const [subscriptionResult, ordersResult, historyResult] = await Promise.all([
           SubscriptionAPI.getMySubscription(),
           OrderAPI.getMyOrders(),
+          SubscriptionAPI.getSubscriptionHistory(),
         ]);
 
         if (mounted) {
@@ -148,9 +163,26 @@ export default function ProfileScreen() {
             const validRecent = allOrders.filter(order => order.status !== 'rejected').slice(0, 5);
             setRejectedOrders(allRejected);
             setRecentOrders(validRecent);
+
+            // Prefetch comprobantes de compras en caché
+            allOrders
+              .map(ord => resolveStorageUrl(ord.receipt_url || ord.payment_receipt))
+              .filter(Boolean)
+              .forEach(url => Image.prefetch(url).catch(() => { }));
           } else {
             setRejectedOrders([]);
             setRecentOrders([]);
+          }
+
+          if (historyResult.success && Array.isArray(historyResult.data)) {
+            setSubscriptionHistory(historyResult.data);
+            PersistentCache.set('subscription_history', historyResult.data);
+
+            // Prefetch comprobantes de suscripciones en caché
+            historyResult.data
+              .map(sub => resolveStorageUrl(sub.receipt_url || sub.payment_receipt))
+              .filter(Boolean)
+              .forEach(url => Image.prefetch(url).catch(() => { }));
           }
         }
       };
@@ -194,7 +226,7 @@ export default function ProfileScreen() {
             setTimeout(() => setPhotoStatus(null), 3000);
             const newRemoteUrl = uploadResult.data.profile_photo_url || uploadResult.data.profile_photo;
             if (newRemoteUrl) {
-              Image.prefetch(newRemoteUrl).catch(() => {});
+              Image.prefetch(newRemoteUrl).catch(() => { });
             }
             if (updateUser) {
               const cleanUser = { ...user };
@@ -765,18 +797,33 @@ export default function ProfileScreen() {
           </View>
         )}
 
-        {/* Purchases Section: full width */}
-        <View style={styles.bottomSectionStacked}>
-          <View style={styles.bottomColMobile}>
-            <Text style={[styles.sectionTitle, { color: textMain }]}>Compras Recientes</Text>
-            <View style={[styles.purchaseContainer, { borderColor: cardBorder, backgroundColor: cardBg }]}>
-              {recentOrders.length === 0 ? (
-                <View style={{ padding: 24, alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                  <Ionicons name="bag-handle-outline" size={32} color={textMuted} />
-                  <Text style={{ color: textMuted, fontSize: 13, textAlign: 'center', fontWeight: '500' }}>Sin compras recientes</Text>
+        {/* ─── Acordeón: Historial de Compras ─── */}
+        {recentOrders.length > 0 && (
+          <View style={[styles.accordionCard, { backgroundColor: cardBg, borderColor: cardBorder }]}>
+            <TouchableOpacity
+              style={styles.accordionHeader}
+              onPress={() => setOrdersExpanded(v => !v)}
+              activeOpacity={0.7}
+            >
+              <View style={styles.accordionHeaderLeft}>
+                <View style={[styles.accordionIcon, { backgroundColor: theme.isDark ? '#1E293B' : '#F0FDF4' }]}>
+                  <Ionicons name="bag-handle" size={18} color="#16A34A" />
                 </View>
-              ) : (
-                recentOrders.map((ord, idx) => {
+                <View>
+                  <Text style={[styles.accordionTitle, { color: textMain }]}>Historial de Compras</Text>
+                  <Text style={[styles.accordionSub, { color: textMuted }]}>{recentOrders.length} pedido{recentOrders.length !== 1 ? 's' : ''}</Text>
+                </View>
+              </View>
+              <Ionicons
+                name={ordersExpanded ? 'chevron-up' : 'chevron-down'}
+                size={20}
+                color={textMuted}
+              />
+            </TouchableOpacity>
+
+            {ordersExpanded && (
+              <View style={[styles.accordionBody, { borderTopColor: cardBorder }]}>
+                {recentOrders.map((ord, idx) => {
                   const firstItem = ord.items && ord.items[0];
                   const rawImg = firstItem?.image;
                   const itemImage = rawImg
@@ -785,33 +832,147 @@ export default function ProfileScreen() {
                   const itemName = firstItem
                     ? (ord.items.length > 1 ? `${firstItem.name} +${ord.items.length - 1} más` : firstItem.name)
                     : `Compra #${ord.id}`;
-                  const orderDate = ord.created_at ? new Date(ord.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }) : '—';
-                  const statusLabel = ord.status === 'completed' ? 'Entregado' : ord.status === 'pending' ? 'Pendiente' : ord.status === 'shipped' ? 'Enviado' : ord.status;
+                  const orderDate = ord.created_at
+                    ? new Date(ord.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })
+                    : '—';
+                  const STATUS_ORDER = {
+                    pending: { label: 'Pendiente', color: '#F59E0B' },
+                    approved: { label: 'Listo p/ retirar', color: '#10B981' },
+                    processing: { label: 'Listo p/ retirar', color: '#10B981' },
+                    shipped: { label: 'Listo p/ retirar', color: '#10B981' },
+                    completed: { label: 'Retirado', color: '#16A34A' },
+                    rejected: { label: 'Rechazado', color: '#EF4444' },
+                  };
+                  const st = STATUS_ORDER[ord.status] || { label: ord.status, color: textMuted };
 
                   return (
-                    <View key={ord.id} style={[styles.purchaseItem, idx < recentOrders.length - 1 && { borderBottomColor: cardBorder }]}>
-                      <Image
-                        source={{ uri: itemImage }}
-                        style={styles.purchaseImg}
-                        contentFit="cover"
-                      />
+                    <View
+                      key={ord.id}
+                      style={[styles.purchaseItem, idx < recentOrders.length - 1 && { borderBottomWidth: 1, borderBottomColor: cardBorder }]}
+                    >
+                      <Image source={{ uri: itemImage }} style={styles.purchaseImg} contentFit="cover" />
                       <View style={styles.purchaseInfo}>
                         <Text style={[styles.purchaseName, { color: textMain }]} numberOfLines={1}>{itemName}</Text>
                         <Text style={[styles.purchaseDate, { color: textMuted }]}>{orderDate}</Text>
                       </View>
                       <View style={styles.purchaseRight}>
                         <Text style={[styles.purchasePrice, { color: textMain }]}>${Number(ord.total).toFixed(2)}</Text>
-                        <View style={[styles.purchaseBadge, { backgroundColor: theme.isDark ? '#1E293B' : '#F3F4F6' }]}>
-                          <Text style={[styles.purchaseBadgeText, { color: ord.status === 'completed' ? '#16A34A' : ord.status === 'pending' ? '#EAB308' : textMuted }]}>{statusLabel}</Text>
+                        <View style={[styles.purchaseBadge, { backgroundColor: st.color + '22' }]}>
+                          <Text style={[styles.purchaseBadgeText, { color: st.color }]}>{st.label}</Text>
                         </View>
+                        {(() => {
+                          const receiptUrl = resolveStorageUrl(ord.receipt_url || ord.payment_receipt);
+                          if (!receiptUrl) return null;
+                          return (
+                            <TouchableOpacity
+                              style={styles.subReceiptBadge}
+                              onPress={() => setReceiptViewerUri(receiptUrl)}
+                              activeOpacity={0.7}
+                            >
+                              <Ionicons name="document-attach-outline" size={12} color="#10B981" />
+                              <Text style={styles.subReceiptBadgeText}>Comprobante</Text>
+                            </TouchableOpacity>
+                          );
+                        })()}
                       </View>
                     </View>
                   );
-                })
-              )}
-            </View>
+                })}
+              </View>
+            )}
           </View>
-        </View>
+        )}
+
+        {/* ─── Acordeón: Historial de Membresías ─── */}
+        {subscriptionHistory.length > 0 && (
+          <View style={[styles.accordionCard, { backgroundColor: cardBg, borderColor: cardBorder, marginTop: 12 }]}>
+            <TouchableOpacity
+              style={styles.accordionHeader}
+              onPress={() => setSubsExpanded(v => !v)}
+              activeOpacity={0.7}
+            >
+              <View style={styles.accordionHeaderLeft}>
+                <View style={[styles.accordionIcon, { backgroundColor: theme.isDark ? '#1E1B3A' : '#EDE9FE' }]}>
+                  <Ionicons name="card" size={18} color="#7C3AED" />
+                </View>
+                <View>
+                  <Text style={[styles.accordionTitle, { color: textMain }]}>Historial de Membresías</Text>
+                  <Text style={[styles.accordionSub, { color: textMuted }]}>{subscriptionHistory.length} membresía{subscriptionHistory.length !== 1 ? 's' : ''}</Text>
+                </View>
+              </View>
+              <Ionicons
+                name={subsExpanded ? 'chevron-up' : 'chevron-down'}
+                size={20}
+                color={textMuted}
+              />
+            </TouchableOpacity>
+
+            {subsExpanded && (
+              <View style={[styles.accordionBody, { borderTopColor: cardBorder }]}>
+                {subscriptionHistory.map((sub, idx) => {
+                  const STATUS_SUB = {
+                    active: { label: 'Activa', color: '#10B981' },
+                    pending: { label: 'Pendiente', color: '#F59E0B' },
+                    expired: { label: 'Vencida', color: '#6B7280' },
+                    rejected: { label: 'Rechazada', color: '#EF4444' },
+                  };
+                  const st = STATUS_SUB[sub.status] || { label: sub.status, color: textMuted };
+                  const startDate = sub.starts_at
+                    ? new Date(sub.starts_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })
+                    : (sub.created_at ? new Date(sub.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' }) : '—');
+                  const endDate = sub.ends_at
+                    ? new Date(sub.ends_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })
+                    : '—';
+
+                  return (
+                    <View
+                      key={sub.id}
+                      style={[
+                        styles.subHistoryItem,
+                        { borderColor: cardBorder },
+                        idx < subscriptionHistory.length - 1 && { borderBottomWidth: 1, borderBottomColor: cardBorder }
+                      ]}
+                    >
+                      <View style={styles.subHistoryLeft}>
+                        <View style={[styles.subHistoryDot, { backgroundColor: st.color }]} />
+                        <View style={{ flex: 1 }}>
+                          <Text style={[styles.purchaseName, { color: textMain }]} numberOfLines={1}>
+                            {sub.plan?.name || 'Membresía Gym'}
+                          </Text>
+                          <Text style={[styles.purchaseDate, { color: textMuted }]}>
+                            {startDate} → {endDate}
+                          </Text>
+                        </View>
+                      </View>
+                      <View style={styles.purchaseRight}>
+                        <Text style={[styles.purchasePrice, { color: textMain }]}>${Number(sub.price || 0).toFixed(2)}</Text>
+                        <View style={[styles.purchaseBadge, { backgroundColor: st.color + '22' }]}>
+                          <Text style={[styles.purchaseBadgeText, { color: st.color }]}>{st.label}</Text>
+                        </View>
+                        {(() => {
+                          const receiptUrl = resolveStorageUrl(sub.receipt_url || sub.payment_receipt);
+                          if (!receiptUrl) return null;
+                          return (
+                            <TouchableOpacity
+                              style={styles.subReceiptBadge}
+                              onPress={() => setReceiptViewerUri(receiptUrl)}
+                              activeOpacity={0.7}
+                            >
+                              <Ionicons name="document-attach-outline" size={12} color="#10B981" />
+                              <Text style={styles.subReceiptBadgeText}>Comprobante</Text>
+                            </TouchableOpacity>
+                          );
+                        })()}
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+          </View>
+        )}
+
+        <View style={{ height: 40 }} />
       </ScrollView>
 
       {/* Edit Profile Modal */}
@@ -959,6 +1120,46 @@ export default function ProfileScreen() {
                 {saving ? <ActivityIndicator size="small" color="#fff" /> : <Text style={[styles.editModalBtnText, { color: '#FFFFFF' }]}>Guardar</Text>}
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal visor de comprobante */}
+      <Modal
+        visible={!!receiptViewerUri}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setReceiptViewerUri(null)}
+      >
+        <View style={styles.receiptModalOverlay}>
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            activeOpacity={1}
+            onPress={() => setReceiptViewerUri(null)}
+          />
+          <View style={[styles.receiptModalCard, { backgroundColor: cardBg, borderColor: cardBorder }]}>
+            <View style={styles.receiptModalHeader}>
+              <Text style={[styles.receiptModalTitle, { color: textMain }]}>Comprobante de pago</Text>
+              <TouchableOpacity
+                onPress={() => setReceiptViewerUri(null)}
+                style={styles.receiptModalClose}
+              >
+                <Ionicons name="close" size={22} color={textMain} />
+              </TouchableOpacity>
+            </View>
+            {receiptViewerUri && (
+              <Image
+                source={{ uri: receiptViewerUri }}
+                style={styles.receiptImage}
+                contentFit="contain"
+                cachePolicy="memory-disk"
+                priority="high"
+                transition={0}
+              />
+            )}
+            <Text style={[styles.receiptModalNote, { color: textMuted }]}>
+              Comprobante registrado en el sistema.
+            </Text>
           </View>
         </View>
       </Modal>
@@ -1138,5 +1339,75 @@ const styles = StyleSheet.create({
   guestTitle: { fontSize: 24, fontWeight: '800', marginBottom: 10 },
   guestSubtitle: { fontSize: 14, textAlign: 'center', lineHeight: 20, marginBottom: 24 },
   guestBtn: { width: '100%', height: 50, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
-  guestBtnText: { color: '#FFF', fontSize: 14, fontWeight: '800', letterSpacing: 0.5 }
+  guestBtnText: { color: '#FFF', fontSize: 14, fontWeight: '800', letterSpacing: 0.5 },
+
+  /* Accordion / collapsible sections */
+  accordionCard: { borderRadius: 20, borderWidth: 1, overflow: 'hidden', marginBottom: 0 },
+  accordionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 18 },
+  accordionHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1 },
+  accordionIcon: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  accordionTitle: { fontSize: 15, fontWeight: '700' },
+  accordionSub: { fontSize: 12, fontWeight: '500', marginTop: 2 },
+  accordionBody: { borderTopWidth: 1, paddingHorizontal: 18 },
+
+  /* Subscription history item */
+  subHistoryItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 14 },
+  subHistoryLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
+  subHistoryDot: { width: 10, height: 10, borderRadius: 5, flexShrink: 0 },
+
+  subReceiptBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
+    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    marginTop: 4,
+  },
+  subReceiptBadgeText: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: '#10B981',
+  },
+  receiptModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+    zIndex: 9999,
+  },
+  receiptModalCard: {
+    width: '100%',
+    maxWidth: 420,
+    borderRadius: 20,
+    borderWidth: 1,
+    padding: 16,
+    maxHeight: '85%',
+  },
+  receiptModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  receiptModalTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  receiptModalClose: {
+    padding: 6,
+  },
+  receiptImage: {
+    width: '100%',
+    height: 320,
+    borderRadius: 12,
+    backgroundColor: '#0f172a',
+  },
+  receiptModalNote: {
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 10,
+  },
 });

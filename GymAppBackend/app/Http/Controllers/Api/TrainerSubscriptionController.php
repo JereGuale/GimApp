@@ -47,12 +47,17 @@ class TrainerSubscriptionController extends Controller
             });
         }
 
+        // Filtrar por usuario
+        if ($request->has('user_id') && $request->user_id) {
+            $query->where('user_id', $request->user_id);
+        }
+
         // Límite opcional de registros para cargas rápidas
         if ($request->has('limit')) {
             $query->limit((int)$request->limit);
         }
 
-        $isDefaultQuery = !$request->has('search') && (!$request->has('status') || $request->status === 'all') && !$request->has('plan_id') && !$request->has('limit');
+        $isDefaultQuery = !$request->has('user_id') && !$request->has('search') && (!$request->has('status') || $request->status === 'all') && !$request->has('plan_id') && !$request->has('limit');
 
         if ($isDefaultQuery) {
             $subscriptions = \Illuminate\Support\Facades\Cache::remember('trainer_subscriptions_all', 30, function () use ($query) {

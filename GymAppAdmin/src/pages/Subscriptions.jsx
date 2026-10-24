@@ -806,7 +806,7 @@ export default function Subscriptions() {
 
   const getReceiptUrl = (sub) => {
     if (!sub) return null;
-    const path = sub.payment_receipt || sub.receipt_path || sub.payment_proof;
+    const path = sub.payment_receipt || sub.receipt_url || sub.receipt_path || sub.payment_proof;
     if (!path) return null;
     if (path.startsWith('http')) return path;
     return `${API_BASE_URL.replace('/api', '')}/storage/${path}`;
@@ -1198,6 +1198,19 @@ export default function Subscriptions() {
                                   </button>
                                 );
                               })()}
+                              {getReceiptUrl(s) && (
+                                <button
+                                  type="button"
+                                  className="actions-dropdown-item"
+                                  onClick={() => {
+                                    handleOpenReceiptModal(s);
+                                    setActiveDropdown(null);
+                                  }}
+                                >
+                                  <Eye size={14} style={{ color: '#2563eb' }} />
+                                  <span>Ver comprobante</span>
+                                </button>
+                              )}
                               <button
                                 type="button"
                                 className="actions-dropdown-item"
@@ -2392,6 +2405,18 @@ Estamos validando tu comprobante de pago para activar tu membresía de inmediato
                 onClick={() => { setActiveDropdown(null); handleRenew(s.id); }}
               >
                 <RefreshCw size={14} /> <span>Renovar membresía</span>
+              </button>
+            )}
+            {getReceiptUrl(s) && (
+              <button
+                type="button"
+                className="dropdown-item"
+                onClick={() => {
+                  setActiveDropdown(null);
+                  handleOpenReceiptModal(s);
+                }}
+              >
+                <Eye size={14} /> <span>Ver comprobante</span>
               </button>
             )}
             <button

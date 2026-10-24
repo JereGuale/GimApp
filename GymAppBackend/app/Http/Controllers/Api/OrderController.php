@@ -199,6 +199,11 @@ class OrderController extends Controller
             });
         }
 
+        // Filter by user_id
+        if ($request->has('user_id') && $request->user_id) {
+            $query->where('user_id', $request->user_id);
+        }
+
         // Límite opcional para consultas optimizadas
         if ($request->has('limit')) {
             $query->limit((int)$request->limit);

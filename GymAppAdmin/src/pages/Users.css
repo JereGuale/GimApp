@@ -632,9 +632,12 @@
   margin-bottom: 20px;
 }
 
-/* ── Profile modal hero section ── */
-.modal--profile .modal {
-  max-width: 480px;
+.modal--profile .modal,
+.modal.modal--profile {
+  max-width: 580px;
+  width: 95%;
+  max-height: 90vh;
+  overflow-y: auto;
 }
 
 .profile-modal-hero {
@@ -832,4 +835,166 @@
     flex-wrap: wrap;
     justify-content: center;
   }
+}
+
+/* ── User Profile History Accordions ── */
+.user-history-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.user-history-accordion-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+  overflow: hidden;
+  transition: border-color 0.2s ease;
+}
+
+.user-history-accordion-card:hover {
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+.user-history-accordion-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.15s ease;
+}
+
+.user-history-accordion-header:hover {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.user-history-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-history-header-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.user-history-header-icon--sub {
+  background: rgba(139, 92, 246, 0.12);
+  color: #8b5cf6;
+}
+
+.user-history-header-icon--order {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+}
+
+.user-history-header-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.user-history-header-count {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+
+.user-history-accordion-body {
+  border-top: 1px solid var(--border);
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.user-history-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  gap: 10px;
+}
+
+.user-history-item-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.user-history-item-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-history-item-sub {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.user-history-item-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.user-history-price {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.user-history-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.user-history-badge--active,
+.user-history-badge--completed,
+.user-history-badge--approved {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+}
+
+.user-history-badge--pending {
+  background: rgba(245, 158, 11, 0.12);
+  color: #f59e0b;
+}
+
+.user-history-badge--expired {
+  background: rgba(107, 114, 128, 0.12);
+  color: #6b7280;
+}
+
+.user-history-badge--rejected,
+.user-history-badge--cancelled {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
 }

@@ -55,7 +55,7 @@ export default function UserTabs() {
   }, [profilePhotoUri]);
 
   return (
-    <RoleGuard requiredRole="user">
+    <RoleGuard requiredRole={['user', 'admin', 'super_admin']}>
       <Tab.Navigator
         screenOptions={({ navigation, route }) => ({
           headerShown: true,
