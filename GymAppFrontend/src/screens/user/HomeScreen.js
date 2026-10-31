@@ -882,16 +882,20 @@ export default function HomeScreen() {
             styles.locationInfoRow,
             {
               flexDirection: isDesktop ? 'row' : 'column',
-              alignItems: isDesktop ? 'center' : 'flex-start'
+              alignItems: 'center'
             }
           ]}>
-            <View style={styles.locationTextContent}>
-              <Text style={[styles.locationGymName, { color: theme.colors.text }]}>{gymLocation.name}</Text>
-              <Text style={[styles.locationAddress, { color: theme.colors.textSecondary || '#9CA3AF' }]}>{gymLocation.address}</Text>
+            <View style={[styles.locationTextContent, !isDesktop && { width: '100%', alignItems: 'center' }]}>
+              <Text style={[styles.locationGymName, { color: theme.colors.text }, !isDesktop && { textAlign: 'center' }]}>
+                {gymLocation.name}
+              </Text>
+              <Text style={[styles.locationAddress, { color: theme.colors.textSecondary || '#9CA3AF' }, !isDesktop && { textAlign: 'center' }]}>
+                {gymLocation.address}
+              </Text>
             </View>
             <TouchableOpacity
               onPress={() => Linking.openURL(gymLocation.maps_url)}
-              style={styles.locationButton}
+              style={[styles.locationButton, !isDesktop && { alignSelf: 'center' }]}
               activeOpacity={0.8}
             >
               <Text style={styles.locationButtonText}>Cómo Llegar</Text>
@@ -1389,7 +1393,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   locationButton: {
-    backgroundColor: '#D95C2B',
+    backgroundColor: '#FF6A1A',
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 12,

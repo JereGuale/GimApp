@@ -34,24 +34,24 @@ const navGroups = [
     ]
   },
   {
-    title: 'Ventas',
+    title: 'Catálogo',
     items: [
-      { to: '/suscripciones', icon: CreditCard, label: 'Suscripciones' },
-      { to: '/pedidos', icon: ShoppingBag, label: 'Pedidos' },
+      { to: '/productos', icon: Package, label: 'Productos' },
       { to: '/planes', icon: Tags, label: 'Planes' },
+      { to: '/banners', icon: Image, label: 'Banners' },
     ]
   },
   {
-    title: 'Catálogo',
+    title: 'Ventas',
     items: [
-      { to: '/usuarios', icon: Users, label: 'Usuarios' },
-      { to: '/productos', icon: Package, label: 'Productos' },
-      { to: '/banners', icon: Image, label: 'Banners' },
+      { to: '/pedidos', icon: ShoppingBag, label: 'Pedidos' },
+      { to: '/suscripciones', icon: CreditCard, label: 'Suscripciones' },
     ]
   },
   {
     title: 'Sistema',
     items: [
+      { to: '/usuarios', icon: Users, label: 'Usuarios' },
       { to: '/bancos', icon: Landmark, label: 'Cuentas Bancarias' },
       { to: '/ajustes', icon: Settings, label: 'Ajustes' },
     ]

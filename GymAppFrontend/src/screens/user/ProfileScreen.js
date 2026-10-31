@@ -349,7 +349,7 @@ export default function ProfileScreen() {
         setConfirmModalState({
           visible: true,
           title: 'Error',
-          message: result.error || 'No se pudieron actualizar los datos de facturación',
+          message: result.error || 'No se pudieron actualizar los datos para la compra',
           showCancel: false,
           confirmText: 'Entendido',
           isDestructive: false,
@@ -402,7 +402,7 @@ export default function ProfileScreen() {
         }} />
         <DrawerItem icon="card-outline" label="Mi Suscripción" onPress={() => { closeDrawer(); navigation.navigate('Suscripción'); }} />
         <DrawerItem icon="cart-outline" label="Mis Compras" onPress={() => { closeDrawer(); navigation.navigate('Mis Compras'); }} />
-        <DrawerItem icon="document-text-outline" label="Datos de facturación" onPress={() => {
+        <DrawerItem icon="document-text-outline" label="Datos para la compra" onPress={() => {
           closeDrawer();
           setBillingName(user?.billing_name || user?.name || '');
           setBillingEmail(user?.billing_email || user?.email || '');
@@ -641,7 +641,28 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </View>
         ) : (
-          <View style={styles.platinumCardOuter}>
+          <>
+            {subscription.data?.status === 'active' && getDaysRemaining() <= 7 && (
+              <View style={[
+                styles.expiryAlertCard,
+                {
+                  backgroundColor: theme.isDark ? 'rgba(245, 158, 11, 0.16)' : '#FEF3C7',
+                  borderColor: '#F59E0B'
+                }
+              ]}>
+                <Ionicons name="warning" size={22} color="#D97706" style={{ marginTop: 2 }} />
+                <View style={{ flex: 1, marginLeft: 10 }}>
+                  <Text style={[styles.expiryAlertCardTitle, { color: theme.isDark ? '#FBBF24' : '#B45309' }]}>
+                    Aviso de Vencimiento
+                  </Text>
+                  <Text style={[styles.expiryAlertCardText, { color: theme.isDark ? '#FDE68A' : '#92400E' }]}>
+                    ⚠️ Tu membresía está próxima a vencer ({getDaysRemaining() === 0 ? 'vence hoy' : getDaysRemaining() === 1 ? 'queda 1 día' : `quedan ${getDaysRemaining()} días`}). Renueva a tiempo tu plan.
+                  </Text>
+                </View>
+              </View>
+            )}
+
+            <View style={styles.platinumCardOuter}>
             <LinearGradient
               colors={theme.isDark ? ['#1E293B', '#0F172A'] : ['#F9FAFB', '#F3F4F6']}
               start={{ x: 0, y: 0 }}
@@ -705,8 +726,12 @@ export default function ProfileScreen() {
                   <View style={[styles.renewalBarBg, { backgroundColor: theme.isDark ? '#334155' : '#E5E7EB' }]}>
                     <View style={[styles.renewalBarFill, { width: `${getSubscriptionProgress()}%`, backgroundColor: theme.colors.primary }]} />
                   </View>
-                  <Text style={[styles.renewalText, { color: textMuted }]}>
-                    Renueva en {getDaysRemaining()} días
+                  <Text style={[styles.renewalText, { color: getDaysRemaining() <= 7 ? '#F59E0B' : textMuted, fontWeight: '700' }]}>
+                    {getDaysRemaining() === 0
+                      ? '👉 Tu membresía vence hoy'
+                      : getDaysRemaining() === 1
+                      ? '👉 Te queda 1 día de entrenamiento'
+                      : `👉 Te quedan ${getDaysRemaining()} días de entrenamiento`}
                   </Text>
                 </View>
               )}
@@ -730,6 +755,7 @@ export default function ProfileScreen() {
               )}
             </LinearGradient>
           </View>
+          </>
         )}
 
         {(hasRejectedSubscription || hasRejectedOrder) && (
@@ -1078,7 +1104,7 @@ export default function ProfileScreen() {
       <Modal visible={billingEditVisible} transparent animationType="slide" onRequestClose={() => setBillingEditVisible(false)}>
         <View style={styles.editModalOverlay}>
           <View style={[styles.editModalContent, { backgroundColor: theme.colors.surface, maxHeight: '90%' }]}>
-            <Text style={[styles.editModalTitle, { color: theme.colors.text }]}>Datos de Facturación</Text>
+            <Text style={[styles.editModalTitle, { color: theme.colors.text }]}>Datos para la Compra</Text>
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 16 }}>
               <View style={styles.editField}>
@@ -1409,5 +1435,32 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: 'center',
     marginTop: 10,
+  },
+  expiryAlertCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginBottom: 16,
+    width: '100%',
+    shadowColor: '#F59E0B',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  expiryAlertCardTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    marginBottom: 2,
+    fontFamily: Platform.OS === 'web' ? 'Plus Jakarta Sans, sans-serif' : undefined,
+  },
+  expiryAlertCardText: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '600',
+    fontFamily: Platform.OS === 'web' ? 'Plus Jakarta Sans, sans-serif' : undefined,
   },
 });

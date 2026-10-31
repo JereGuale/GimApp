@@ -24,6 +24,15 @@ const resolveReceiptUrl = (subscription) => {
   return path.startsWith('http') ? path : `${BASE_URL}/storage/${path}`;
 };
 
+const getDaysRemaining = (endsAt) => {
+  if (!endsAt) return null;
+  const today = new Date();
+  const end = new Date(endsAt);
+  const diffTime = end - today;
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return diffDays > 0 ? diffDays : 0;
+};
+
 export default function SubscriptionScreen() {
   const { theme } = useTheme();
   const { isSmallScreen } = useResponsive();
@@ -287,69 +296,127 @@ export default function SubscriptionScreen() {
     const receiptUrl = resolveReceiptUrl(existingSub);
     const bannerColor = isActive ? '#10B981' : '#F59E0B';
     const bgColor = isActive ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)';
+    const daysRemaining = isActive && existingSub.ends_at ? getDaysRemaining(existingSub.ends_at) : null;
+    const isExpiringSoon = isActive && daysRemaining !== null && daysRemaining <= 7;
 
     return (
-      <View style={[styles.existingSubBanner, { backgroundColor: theme.isDark ? (isActive ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)') : bgColor, borderColor: bannerColor }]}>
-        <View style={styles.existingSubHeader}>
-          <Ionicons name={isActive ? 'checkmark-circle' : 'time'} size={28} color={bannerColor} />
-          <View style={{ flex: 1, marginLeft: 12 }}>
-            <Text style={[styles.existingSubTitle, { color: theme.colors.text }]}>
-              {isActive ? '¡Suscripción Activa!' : 'Suscripción Pendiente'}
-            </Text>
-            <Text style={[styles.existingSubPlan, { color: bannerColor }]}>
-              {existingSub.plan?.name || 'Plan actual'}
-            </Text>
+      <View style={styles.existingSubContainer}>
+        {/* Alerta destacada de vencimiento a 7 días o menos (RF05) */}
+        {isExpiringSoon && (
+          <View style={[
+            styles.expiryAlertBanner,
+            {
+              backgroundColor: theme.isDark ? 'rgba(245, 158, 11, 0.18)' : '#FEF3C7',
+              borderColor: '#F59E0B',
+            }
+          ]}>
+            <Ionicons name="warning" size={24} color="#D97706" style={{ marginTop: 2 }} />
+            <View style={{ flex: 1, marginLeft: 12 }}>
+              <Text style={[styles.expiryAlertTitle, { color: theme.isDark ? '#FBBF24' : '#B45309' }]}>
+                Aviso de Vencimiento
+              </Text>
+              <Text style={[styles.expiryAlertMessage, { color: theme.isDark ? '#FDE68A' : '#92400E' }]}>
+                ⚠️ Tu membresía está próxima a vencer ({daysRemaining === 0 ? 'vence hoy' : daysRemaining === 1 ? 'queda 1 día' : `quedan ${daysRemaining} días`}). Renueva a tiempo tu plan.
+              </Text>
+            </View>
           </View>
-          <View style={[styles.existingSubBadge, { backgroundColor: bannerColor }]}>
-            <Text style={styles.existingSubBadgeText}>
-              {isActive ? 'ACTIVA' : 'PENDIENTE'}
-            </Text>
-          </View>
-        </View>
+        )}
 
-        {isActive && existingSub.ends_at && (
+        <View style={[styles.existingSubBanner, { backgroundColor: theme.isDark ? (isActive ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)') : bgColor, borderColor: bannerColor }]}>
+          <View style={styles.existingSubHeader}>
+            <Ionicons name={isActive ? 'checkmark-circle' : 'time'} size={28} color={bannerColor} />
+            <View style={{ flex: 1, marginLeft: 12 }}>
+              <Text style={[styles.existingSubTitle, { color: theme.colors.text }]}>
+                {isActive ? '¡Suscripción Activa!' : 'Suscripción Pendiente'}
+              </Text>
+              <Text style={[styles.existingSubPlan, { color: bannerColor }]}>
+                {existingSub.plan?.name || 'Plan actual'}
+              </Text>
+            </View>
+            <View style={[styles.existingSubBadge, { backgroundColor: bannerColor }]}>
+              <Text style={styles.existingSubBadgeText}>
+                {isActive ? 'ACTIVA' : 'PENDIENTE'}
+              </Text>
+            </View>
+          </View>
+
+          {isActive && existingSub.ends_at && (
+            <View style={styles.existingSubDetailGroup}>
+              <View style={styles.existingSubDetail}>
+                <Ionicons name="calendar-outline" size={16} color={theme.colors.textSecondary} />
+                <Text style={[styles.existingSubDetailText, { color: theme.colors.textSecondary }]}>
+                  Tu suscripción vence el {new Date(existingSub.ends_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })}
+                </Text>
+              </View>
+
+              {/* Contador visible de días restantes (RF04) */}
+              <View style={[
+                styles.daysRemainingBadge,
+                {
+                  backgroundColor: isExpiringSoon
+                    ? (theme.isDark ? 'rgba(245, 158, 11, 0.22)' : '#FEF3C7')
+                    : (theme.isDark ? 'rgba(16, 185, 129, 0.2)' : '#D1FAE5'),
+                  borderColor: isExpiringSoon ? '#F59E0B' : '#10B981',
+                }
+              ]}>
+                <Ionicons
+                  name={isExpiringSoon ? 'time-outline' : 'fitness-outline'}
+                  size={16}
+                  color={isExpiringSoon ? '#D97706' : '#059669'}
+                />
+                <Text style={[
+                  styles.daysRemainingBadgeText,
+                  {
+                    color: isExpiringSoon
+                      ? (theme.isDark ? '#FBBF24' : '#B45309')
+                      : (theme.isDark ? '#34D399' : '#065F46')
+                  }
+                ]}>
+                  {daysRemaining === 0
+                    ? '👉 Tu membresía vence hoy'
+                    : daysRemaining === 1
+                    ? '👉 Te queda 1 día de entrenamiento'
+                    : `👉 Te quedan ${daysRemaining} días de entrenamiento`}
+                </Text>
+              </View>
+            </View>
+          )}
+
+          {isPending && (
+            <View style={styles.existingSubDetail}>
+              <Ionicons name="information-circle-outline" size={16} color={theme.isDark ? '#FCD34D' : '#D97706'} />
+              <Text style={[styles.existingSubDetailText, { color: theme.isDark ? '#FCD34D' : '#D97706' }]}>
+                Tu comprobante está siendo revisado por un administrador. Te notificaremos cuando tu suscripción sea aprobada.
+              </Text>
+            </View>
+          )}
+
           <View style={styles.existingSubDetail}>
-            <Ionicons name="calendar-outline" size={16} color={theme.colors.textSecondary} />
+            <Ionicons name="cash-outline" size={16} color={theme.colors.textSecondary} />
             <Text style={[styles.existingSubDetailText, { color: theme.colors.textSecondary }]}>
-              Tu suscripción vence el {new Date(existingSub.ends_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })}
+              Precio: ${existingSub.price ? Number(existingSub.price).toFixed(2) : '—'} | Método: {existingSub.payment_method === 'transfer' ? 'Transferencia' : existingSub.payment_method === 'card' ? 'Tarjeta' : existingSub.payment_method}
             </Text>
           </View>
-        )}
 
-        {isPending && (
-          <View style={styles.existingSubDetail}>
-            <Ionicons name="information-circle-outline" size={16} color={theme.isDark ? '#FCD34D' : '#D97706'} />
-            <Text style={[styles.existingSubDetailText, { color: theme.isDark ? '#FCD34D' : '#D97706' }]}>
-              Tu comprobante está siendo revisado por un administrador. Te notificaremos cuando tu suscripción sea aprobada.
-            </Text>
-          </View>
-        )}
+          {receiptUrl && (
+            <TouchableOpacity
+              style={styles.receiptButton}
+              onPress={() => {
+                setSubscriptionReceiptUri(receiptUrl);
+              }}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="document-attach-outline" size={17} color="#10B981" />
+              <Text style={styles.receiptButtonText}>Ver comprobante enviado</Text>
+              <Ionicons name="chevron-forward" size={15} color="#10B981" />
+            </TouchableOpacity>
+          )}
 
-        <View style={styles.existingSubDetail}>
-          <Ionicons name="cash-outline" size={16} color={theme.colors.textSecondary} />
-          <Text style={[styles.existingSubDetailText, { color: theme.colors.textSecondary }]}>
-            Precio: ${existingSub.price ? Number(existingSub.price).toFixed(2) : '—'} | Método: {existingSub.payment_method === 'transfer' ? 'Transferencia' : existingSub.payment_method === 'card' ? 'Tarjeta' : existingSub.payment_method}
+          <Text style={[styles.existingSubNote, { color: theme.colors.textSecondary }]}>
+            Podrás elegir un nuevo plan cuando termine tu periodo actual.
           </Text>
+
         </View>
-
-        {receiptUrl && (
-          <TouchableOpacity
-            style={styles.receiptButton}
-            onPress={() => {
-              setSubscriptionReceiptUri(receiptUrl);
-            }}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="document-attach-outline" size={17} color="#10B981" />
-            <Text style={styles.receiptButtonText}>Ver comprobante enviado</Text>
-            <Ionicons name="chevron-forward" size={15} color="#10B981" />
-          </TouchableOpacity>
-        )}
-
-        <Text style={[styles.existingSubNote, { color: theme.colors.textSecondary }]}>
-          Podrás elegir un nuevo plan cuando termine tu periodo actual.
-        </Text>
-
       </View>
     );
   };
@@ -788,14 +855,64 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontFamily: Platform.OS === 'web' ? 'Plus Jakarta Sans, sans-serif' : undefined,
   },
+  existingSubContainer: {
+    width: '100%',
+    maxWidth: 600,
+    alignSelf: 'center',
+    marginBottom: 32,
+  },
   existingSubBanner: {
     borderRadius: 20,
     borderWidth: 1,
     padding: 24,
-    marginBottom: 32,
-    maxWidth: 600,
-    alignSelf: 'center',
     width: '100%',
+  },
+  existingSubDetailGroup: {
+    marginBottom: 6,
+  },
+  daysRemainingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderWidth: 1.5,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginTop: 4,
+    marginBottom: 10,
+    alignSelf: 'flex-start',
+  },
+  daysRemainingBadgeText: {
+    fontSize: 13,
+    fontWeight: '700',
+    fontFamily: Platform.OS === 'web' ? 'Plus Jakarta Sans, sans-serif' : undefined,
+  },
+  expiryAlertBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginBottom: 16,
+    width: '100%',
+    shadowColor: '#F59E0B',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  expiryAlertTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    marginBottom: 2,
+    fontFamily: Platform.OS === 'web' ? 'Plus Jakarta Sans, sans-serif' : undefined,
+  },
+  expiryAlertMessage: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '600',
+    fontFamily: Platform.OS === 'web' ? 'Plus Jakarta Sans, sans-serif' : undefined,
   },
   existingSubHeader: {
     flexDirection: 'row',

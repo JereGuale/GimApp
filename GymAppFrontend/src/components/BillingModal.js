@@ -142,7 +142,7 @@ export default function BillingModal({ visible, onClose, onConfirm, initialData 
       !billingName.trim() || !billingEmail.trim() || !billingPhone.trim() ||
       !billingId.trim()
     ) {
-      setErrorMsg('Todos los campos de facturación son obligatorios.');
+      setErrorMsg('Todos los campos de datos de compra son obligatorios.');
       return;
     }
     setErrorMsg('');
@@ -201,9 +201,9 @@ export default function BillingModal({ visible, onClose, onConfirm, initialData 
                     <Ionicons name="receipt-outline" size={20} color={accent} />
                   </View>
                   <View>
-                    <Text style={[styles.title, { color: textPri }]}>Datos de Facturación</Text>
+                    <Text style={[styles.title, { color: textPri }]}>Datos para la Compra</Text>
                     <Text style={[styles.headerSub, { color: textSec }]}>
-                      {editMode ? 'Completa tus datos' : 'Datos guardados'}
+                      {editMode ? 'Completa tus datos' : 'Datos de contacto y entrega'}
                     </Text>
                   </View>
                 </View>
@@ -233,6 +233,7 @@ export default function BillingModal({ visible, onClose, onConfirm, initialData 
 
                   {/* Tarjeta resumen */}
                   <View style={[styles.summaryCard, { backgroundColor: surface, borderColor: border }]}>
+                    <Text style={[styles.summarySectionTag, { color: accent }]}>DATOS DE CONTACTO Y ENTREGA</Text>
                     {/* Nombre + badge */}
                     <View style={styles.summaryHeader}>
                       <View style={[styles.summaryAvatar, { backgroundColor: isDark ? 'rgba(251,146,60,0.15)' : 'rgba(0,0,0,0.06)' }]}>
@@ -342,7 +343,7 @@ export default function BillingModal({ visible, onClose, onConfirm, initialData 
                     activeOpacity={0.85}
                   >
                     <Ionicons name="checkmark-circle-outline" size={18} color={isDark ? '#000' : '#FFF'} style={{ marginRight: 6 }} />
-                    <Text style={[styles.btnConfirmText, { color: isDark ? '#000' : '#FFF' }]}>Guardar y Confirmar</Text>
+                    <Text style={[styles.btnConfirmText, { color: isDark ? '#000' : '#FFF' }]}>Ingresar datos de compra</Text>
                   </TouchableOpacity>
                 </View>
               </>
@@ -403,6 +404,14 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     padding: 16,
     marginBottom: 16,
+  },
+  summarySectionTag: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    marginBottom: 12,
+    marginLeft: 2,
   },
   summaryHeader: {
     flexDirection: 'row',
