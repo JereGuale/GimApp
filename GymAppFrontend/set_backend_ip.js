@@ -36,14 +36,20 @@ if (!ip) {
   ip = '127.0.0.1';
 }
 
+const DEFAULT_GOOGLE_CLIENT_ID = '1084206665583-d1rukiunhp4aomvnnpe1re99t2r0ob7k.apps.googleusercontent.com';
+
 const envPath = path.join(__dirname, '.env.js');
 let existingGoogleClientId = '';
 if (fs.existsSync(envPath)) {
   const currentContent = fs.readFileSync(envPath, 'utf8');
   const match = currentContent.match(/export const GOOGLE_WEB_CLIENT_ID = ['"]([^'"]*)['"]/);
-  if (match) {
+  if (match && match[1]) {
     existingGoogleClientId = match[1];
   }
+}
+
+if (!existingGoogleClientId) {
+  existingGoogleClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || DEFAULT_GOOGLE_CLIENT_ID;
 }
 
 const content = `// .env.js
