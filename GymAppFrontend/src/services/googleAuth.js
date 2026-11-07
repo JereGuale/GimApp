@@ -6,11 +6,19 @@ import { GOOGLE_WEB_CLIENT_ID } from '../../.env.js';
 
 WebBrowser.maybeCompleteAuthSession();
 
+// Client ID de Google Web por defecto (público para flujo OAuth)
+const DEFAULT_GOOGLE_CLIENT_ID = '1084206665583-d1rukiunhp4aomvnnpe1re99t2r0ob7k.apps.googleusercontent.com';
+
+const resolvedClientId =
+  process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ||
+  GOOGLE_WEB_CLIENT_ID ||
+  DEFAULT_GOOGLE_CLIENT_ID;
+
 // Configuration for Google OAuth
 export const GOOGLE_CONFIG = {
-  webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || GOOGLE_WEB_CLIENT_ID || '',
-  androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || GOOGLE_WEB_CLIENT_ID || '',
-  iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || GOOGLE_WEB_CLIENT_ID || '',
+  webClientId: resolvedClientId,
+  androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || resolvedClientId,
+  iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || resolvedClientId,
 };
 
 /**
