@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { NavLink, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -23,6 +23,7 @@ import {
   Landmark
 } from 'lucide-react';
 import './Layout.css';
+import { apiFetch } from '../api/client';
 
 // Navigation groups for the sidebar
 const navGroups = [
@@ -67,9 +68,69 @@ export default function Layout({ children }) {
   const location = useLocation();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isTabletExpanded, setIsTabletExpanded] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   const currentItem = allNavItems.find(n => n.to === location.pathname);
   const pageTitle = currentItem?.label || 'Panel';
+
+  const loadNotifications = useCallback(async () => {
+    try {
+      const data = await apiFetch('/notifications');
+      const next = Array.isArray(data) ? data : [];
+      setNotifications(next);
+      setUnreadCount(next.filter(notification => !notification.read_at).length);
+    } catch (error) {
+      console.error('No se pudieron cargar las notificaciones:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadNotifications();
+    const interval = setInterval(loadNotifications, 30000);
+    return () => clearInterval(interval);
+  }, [loadNotifications]);
+
+  const markNotificationAsRead = async (id) => {
+    try {
+      await apiFetch(`/notifications/${id}/read`, { method: 'POST', body: JSON.stringify({}) });
+      setNotifications(current => current.map(notification =>
+        notification.id === id
+          ? { ...notification, read_at: new Date().toISOString() }
+          : notification
+      ));
+      setUnreadCount(current => Math.max(0, current - 1));
+    } catch (error) {
+      console.error('No se pudo marcar la notificación:', error);
+    }
+  };
+
+  const markAllNotificationsAsRead = async () => {
+    try {
+      await apiFetch('/notifications/read-all', { method: 'POST', body: JSON.stringify({}) });
+      setNotifications(current => current.map(notification => ({
+        ...notification,
+        read_at: notification.read_at || new Date().toISOString(),
+      })));
+      setUnreadCount(0);
+    } catch (error) {
+      console.error('No se pudieron marcar las notificaciones:', error);
+    }
+  };
+
+  const getNotificationPresentation = (notification) => {
+    if (notification.type === 'subscription_request') {
+      return { icon: '💳', color: '#8b5cf6' };
+    }
+    if (notification.type === 'order_request') {
+      return { icon: '🛍️', color: '#10b981' };
+    }
+    if (notification.type?.includes('subscription')) {
+      return { icon: '📋', color: '#8b5cf6' };
+    }
+    return { icon: '🔔', color: '#f59e0b' };
+  };
 
   const handleMenuToggle = () => {
     if (window.innerWidth < 768) {
@@ -177,9 +238,65 @@ export default function Layout({ children }) {
             </button>
 
             {/* Notification Bell */}
-            <button className="topbar-action-btn" title="Notificaciones">
+            <button
+              className="topbar-action-btn admin-notification-button"
+              title="Notificaciones"
+              onClick={() => {
+                setNotificationsOpen(current => !current);
+                if (!notificationsOpen) loadNotifications();
+              }}
+            >
               <Bell size={18} />
+              {unreadCount > 0 && <span className="admin-notification-count">{unreadCount > 99 ? '99+' : unreadCount}</span>}
             </button>
+
+            {notificationsOpen && (
+              <div className="admin-notification-popover">
+                <div className="admin-notification-header">
+                  <div>
+                    <strong>Notificaciones</strong>
+                    <span>Solicitudes y actividad reciente</span>
+                  </div>
+                  {unreadCount > 0 && (
+                    <button type="button" onClick={markAllNotificationsAsRead}>
+                      Marcar todas
+                    </button>
+                  )}
+                </div>
+                <div className="admin-notification-list">
+                  {notifications.length === 0 ? (
+                    <div className="admin-notification-empty">
+                      <Bell size={24} />
+                      <span>No tienes notificaciones</span>
+                    </div>
+                  ) : notifications.map(notification => {
+                    const presentation = getNotificationPresentation(notification);
+                    return (
+                      <div
+                        key={notification.id}
+                        className={`admin-notification-item ${notification.read_at ? 'admin-notification-item--read' : ''}`}
+                        style={{ '--notification-accent': presentation.color }}
+                      >
+                        <div className="admin-notification-icon">{presentation.icon}</div>
+                        <div className="admin-notification-content">
+                          <div className="admin-notification-title-row">
+                            <strong>{notification.title}</strong>
+                            {!notification.read_at && <span>NUEVA</span>}
+                          </div>
+                          <p>{notification.message}</p>
+                          <small>{notification.created_at ? new Date(notification.created_at).toLocaleString('es-MX') : ''}</small>
+                          {!notification.read_at && (
+                            <button type="button" onClick={() => markNotificationAsRead(notification.id)}>
+                              Marcar como vista
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             <div className="topbar-divider"></div>
 

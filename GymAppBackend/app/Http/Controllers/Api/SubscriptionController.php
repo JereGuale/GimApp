@@ -34,6 +34,31 @@ class SubscriptionController extends Controller
             $subscription->status = 'expired';
         }
 
+        if ($subscription && $subscription->status === 'active' && $subscription->ends_at) {
+            $daysRemaining = now()->startOfDay()->diffInDays($subscription->ends_at->startOfDay(), false);
+            if (in_array($daysRemaining, [5, 3, 1], true)) {
+                $alreadyNotified = Notification::where('user_id', $subscription->user_id)
+                    ->where('type', 'subscription_expiring')
+                    ->where('data->subscription_id', $subscription->id)
+                    ->where('data->days_remaining', $daysRemaining)
+                    ->exists();
+
+                if (!$alreadyNotified) {
+                    Notification::create([
+                        'user_id' => $subscription->user_id,
+                        'type' => 'subscription_expiring',
+                        'title' => 'Tu suscripción está por vencer',
+                        'message' => "A tu suscripción {$subscription->plan->name} le quedan {$daysRemaining} días. Renueva a tiempo para mantener tu acceso.",
+                        'data' => [
+                            'subscription_id' => $subscription->id,
+                            'plan_name' => $subscription->plan->name,
+                            'days_remaining' => $daysRemaining,
+                        ],
+                    ]);
+                }
+            }
+        }
+
         return response()->json($subscription);
     }
 

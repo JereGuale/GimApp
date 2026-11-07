@@ -51,6 +51,11 @@ export default function ProfileScreen() {
   const [billingCity, setBillingCity] = useState(user?.billing_city || '');
   const [billingAddress, setBillingAddress] = useState(user?.billing_address || '');
   const [billingEditVisible, setBillingEditVisible] = useState(false);
+  const [passwordExpanded, setPasswordExpanded] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [passwordConfirmation, setPasswordConfirmation] = useState('');
+  const [passwordSaving, setPasswordSaving] = useState(false);
   const [saving, setSaving] = useState(false);
   const [photoKey, setPhotoKey] = useState(Date.now());
   const [localPhotoUri, setLocalPhotoUri] = useState(null);
@@ -360,6 +365,36 @@ export default function ProfileScreen() {
     } catch {
       if (updateUser) updateUser(user);
     }
+  };
+
+  const handleChangePassword = async () => {
+    if (!currentPassword || !newPassword || !passwordConfirmation) {
+      Alert.alert('Datos incompletos', 'Completa todos los campos de contraseña.');
+      return;
+    }
+    if (newPassword.length < 8) {
+      Alert.alert('Contraseña inválida', 'La nueva contraseña debe tener al menos 8 caracteres.');
+      return;
+    }
+    if (newPassword !== passwordConfirmation) {
+      Alert.alert('Contraseñas diferentes', 'La confirmación no coincide con la nueva contraseña.');
+      return;
+    }
+
+    setPasswordSaving(true);
+    const result = await ProfileAPI.changePassword(currentPassword, newPassword, passwordConfirmation);
+    setPasswordSaving(false);
+
+    if (!result.success) {
+      Alert.alert('No se pudo cambiar', result.error || 'Verifica tu contraseña actual.');
+      return;
+    }
+
+    setCurrentPassword('');
+    setNewPassword('');
+    setPasswordConfirmation('');
+    setPasswordExpanded(false);
+    Alert.alert('Contraseña actualizada', 'Tu contraseña fue cambiada correctamente.');
   };
 
   const profilePhotoUri = (() => {
@@ -1087,6 +1122,84 @@ export default function ProfileScreen() {
                 </View>
               )}
             </View>
+
+            <TouchableOpacity
+              onPress={() => setPasswordExpanded(prev => !prev)}
+              activeOpacity={0.75}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                paddingVertical: 14,
+                borderTopWidth: 1,
+                borderBottomWidth: passwordExpanded ? 0 : 1,
+                borderColor: theme.colors.border,
+                marginTop: 4
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Ionicons name="lock-closed-outline" size={18} color={theme.colors.primary} />
+                <Text style={{ color: theme.colors.text, fontSize: 15, fontWeight: '700', marginLeft: 9 }}>
+                  Cambiar contraseña
+                </Text>
+              </View>
+              <Ionicons
+                name={passwordExpanded ? 'chevron-up-outline' : 'chevron-down-outline'}
+                size={20}
+                color={theme.colors.textSecondary}
+              />
+            </TouchableOpacity>
+
+            {passwordExpanded && (
+              <View style={{
+                borderBottomWidth: 1,
+                borderColor: theme.colors.border,
+                paddingTop: 12,
+                paddingBottom: 4
+              }}>
+                <>
+                  <Text style={{ color: theme.colors.textSecondary, fontSize: 13, marginBottom: 12 }}>
+                    Usa al menos 8 caracteres y confirma la nueva contraseña.
+                  </Text>
+                    <TextInput
+                      style={[styles.editInput, { color: theme.colors.text, borderColor: theme.colors.border, marginBottom: 10 }]}
+                      value={currentPassword}
+                      onChangeText={setCurrentPassword}
+                      placeholder="Contraseña actual"
+                      placeholderTextColor={theme.colors.textSecondary}
+                      secureTextEntry
+                      autoCapitalize="none"
+                    />
+                    <TextInput
+                      style={[styles.editInput, { color: theme.colors.text, borderColor: theme.colors.border, marginBottom: 10 }]}
+                      value={newPassword}
+                      onChangeText={setNewPassword}
+                      placeholder="Nueva contraseña"
+                      placeholderTextColor={theme.colors.textSecondary}
+                      secureTextEntry
+                      autoCapitalize="none"
+                    />
+                    <TextInput
+                      style={[styles.editInput, { color: theme.colors.text, borderColor: theme.colors.border, marginBottom: 10 }]}
+                      value={passwordConfirmation}
+                      onChangeText={setPasswordConfirmation}
+                      placeholder="Confirmar nueva contraseña"
+                      placeholderTextColor={theme.colors.textSecondary}
+                      secureTextEntry
+                      autoCapitalize="none"
+                    />
+                    <TouchableOpacity
+                      style={[styles.editModalBtn, { backgroundColor: '#5B3DF5', alignSelf: 'stretch', marginBottom: 8 }]}
+                      onPress={handleChangePassword}
+                      disabled={passwordSaving}
+                    >
+                      {passwordSaving
+                        ? <ActivityIndicator size="small" color="#fff" />
+                        : <Text style={[styles.editModalBtnText, { color: '#FFFFFF' }]}>Actualizar contraseña</Text>}
+                    </TouchableOpacity>
+                </>
+              </View>
+            )}
 
             <View style={styles.editModalBtns}>
               <TouchableOpacity style={[styles.editModalBtn, { borderColor: theme.colors.border, borderWidth: 1.5 }]} onPress={() => setEditModalVisible(false)}>

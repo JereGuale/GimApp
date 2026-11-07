@@ -14,7 +14,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
-import { authLogin, authRegister } from '../services/api';
+import { useNavigation } from '@react-navigation/native';
+import { authLogin, authRegister, requestRegistrationCode } from '../services/api';
 import { performGoogleSignIn } from '../services/googleAuth';
 
 // ─── Premium Icon-prefixed Input Field ────────────────────────────────────────
@@ -93,6 +94,7 @@ function InputField({ label, icon, value, onChangeText, placeholder, keyboardTyp
 export default function AuthModal({ visible, onClose, onSuccess }) {
   const { theme, isDark } = useTheme();
   const { login } = useAuth();
+  const navigation = useNavigation();
   
   const [activeTab, setActiveTab] = useState('login'); // 'login' | 'register'
   const [loading, setLoading] = useState(false);
@@ -106,6 +108,8 @@ export default function AuthModal({ visible, onClose, onSuccess }) {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [registrationCode, setRegistrationCode] = useState('');
+  const [registrationVerificationStep, setRegistrationVerificationStep] = useState(false);
 
   const resetForm = () => {
     setName('');
@@ -114,6 +118,8 @@ export default function AuthModal({ visible, onClose, onSuccess }) {
     setPhone('');
     setPassword('');
     setConfirmPassword('');
+    setRegistrationCode('');
+    setRegistrationVerificationStep(false);
     setErrorMsg('');
   };
 
@@ -215,10 +221,30 @@ export default function AuthModal({ visible, onClose, onSuccess }) {
       setErrorMsg('Las contraseñas no coinciden');
       return;
     }
+    if (!registrationVerificationStep) {
+      setErrorMsg('');
+      setLoading(true);
+      try {
+        await requestRegistrationCode(name.trim(), username.trim(), email.trim(), password, confirmPassword, phone.trim());
+        setRegistrationVerificationStep(true);
+        setErrorMsg('');
+      } catch (error) {
+        setErrorMsg(parseRegistrationError(error));
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    if (!/^\d{6}$/.test(registrationCode)) {
+      setErrorMsg('Ingresa el código de 6 dígitos enviado a tu correo');
+      return;
+    }
+
     setErrorMsg('');
     setLoading(true);
     try {
-      const { user, token } = await authRegister(name.trim(), username.trim(), email.trim(), password, confirmPassword, phone.trim());
+      const { user, token } = await authRegister(name.trim(), username.trim(), email.trim(), password, confirmPassword, phone.trim(), registrationCode);
       await login(user, token, true);
       resetForm();
       if (onSuccess) onSuccess();
@@ -250,7 +276,21 @@ export default function AuthModal({ visible, onClose, onSuccess }) {
     }
   };
 
+  const parseRegistrationError = (error) => {
+    const raw = error.message || '';
+    try {
+      const parsed = JSON.parse(raw);
+      const firstField = Object.keys(parsed.errors || {})[0];
+      return parsed.errors?.[firstField]?.[0] || parsed.message || 'No se pudo enviar el código';
+    } catch {
+      return raw.includes('Network') || raw.includes('fetch')
+        ? 'Sin conexión al servidor'
+        : 'No se pudo enviar el código. Verifica los datos ingresados';
+    }
+  };
+
   return (
+    <>
     <Modal
       visible={visible}
       animationType="slide"
@@ -346,6 +386,19 @@ export default function AuthModal({ visible, onClose, onSuccess }) {
                     returnKeyType="done"
                     isDark={isDark}
                   />
+
+                  <TouchableOpacity
+                    onPress={() => {
+                      onClose();
+                      navigation.navigate('ForgotPassword');
+                    }}
+                    style={styles.forgotPasswordButton}
+                    disabled={loading || googleLoading}
+                  >
+                    <Text style={[styles.forgotPasswordText, { color: theme.colors.primary }]}>
+                      ¿Olvidaste tu contraseña?
+                    </Text>
+                  </TouchableOpacity>
 
                   <TouchableOpacity
                     style={[styles.submitBtn, { backgroundColor: theme.colors.orange }, (loading || googleLoading) && { opacity: 0.6 }]}
@@ -498,6 +551,57 @@ export default function AuthModal({ visible, onClose, onSuccess }) {
         </KeyboardAvoidingView>
       </View>
     </Modal>
+
+    <Modal
+      visible={registrationVerificationStep}
+      transparent
+      animationType="fade"
+      onRequestClose={() => {
+        setRegistrationVerificationStep(false);
+        setRegistrationCode('');
+      }}
+    >
+      <View style={styles.overlay}>
+        <View style={[styles.verificationCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+          <Ionicons name="mail-open-outline" size={42} color={theme.colors.orange} />
+          <Text style={[styles.verificationTitle, { color: theme.colors.text }]}>Verifica tu correo</Text>
+          <Text style={[styles.verificationSubtitle, { color: theme.colors.textSecondary }]}>
+            Te enviamos un código de 6 dígitos a {email.trim()}
+          </Text>
+          <InputField
+            label="Código de verificación"
+            icon="shield-checkmark-outline"
+            placeholder="000000"
+            keyboardType="number-pad"
+            maxLength={6}
+            value={registrationCode}
+            onChangeText={text => setRegistrationCode(text.replace(/\D/g, ''))}
+            isDark={isDark}
+          />
+          {errorMsg ? (
+            <Text style={styles.verificationError}>{errorMsg}</Text>
+          ) : null}
+          <TouchableOpacity
+            style={[styles.submitBtn, { backgroundColor: theme.colors.orange }, loading && { opacity: 0.6 }]}
+            onPress={handleRegisterSubmit}
+            disabled={loading}
+          >
+            {loading ? <ActivityIndicator color="#FFF" /> : <Text style={styles.submitBtnText}>CONFIRMAR Y REGISTRARSE</Text>}
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => {
+              setRegistrationVerificationStep(false);
+              setRegistrationCode('');
+              setErrorMsg('');
+            }}
+            style={styles.cancelVerificationButton}
+          >
+            <Text style={[styles.cancelVerificationText, { color: theme.colors.textSecondary }]}>Cancelar</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+    </>
   );
 }
 
@@ -526,6 +630,39 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.35,
     shadowRadius: 14,
     elevation: 10,
+  },
+  verificationCard: {
+    width: '100%',
+    maxWidth: 400,
+    borderRadius: 18,
+    borderWidth: 1,
+    padding: 24,
+    alignItems: 'center',
+  },
+  verificationTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  verificationSubtitle: {
+    textAlign: 'center',
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 18,
+  },
+  verificationError: {
+    color: '#EF4444',
+    fontSize: 13,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  cancelVerificationButton: {
+    paddingVertical: 8,
+    marginTop: 4,
+  },
+  cancelVerificationText: {
+    fontSize: 14,
   },
   header: {
     flexDirection: 'row',
@@ -579,6 +716,17 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     fontWeight: '500',
     marginBottom: 5,
+  },
+  forgotPasswordButton: {
+    alignSelf: 'flex-start',
+    paddingVertical: 2,
+    marginTop: -3,
+    marginBottom: 6,
+  },
+  forgotPasswordText: {
+    fontSize: 12,
+    fontWeight: '500',
+    opacity: 0.7,
   },
   input: {
     height: 44,

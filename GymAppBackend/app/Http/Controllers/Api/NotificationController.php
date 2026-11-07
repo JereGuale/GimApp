@@ -13,6 +13,8 @@ class NotificationController extends Controller
      */
     public function index(Request $request)
     {
+        $this->deleteExpiredReadNotifications($request->user()->id);
+
         $notifications = Notification::where('user_id', $request->user()->id)
             ->orderByDesc('created_at')
             ->limit(50)
@@ -26,6 +28,8 @@ class NotificationController extends Controller
      */
     public function unreadCount(Request $request)
     {
+        $this->deleteExpiredReadNotifications($request->user()->id);
+
         $count = Notification::where('user_id', $request->user()->id)
             ->whereNull('read_at')
             ->count();
@@ -76,5 +80,16 @@ class NotificationController extends Controller
         return response()->json([
             'message' => 'Notificación eliminada'
         ]);
+    }
+
+    /**
+     * Keep only three days of notifications after the user has seen them.
+     */
+    private function deleteExpiredReadNotifications(int $userId): void
+    {
+        Notification::where('user_id', $userId)
+            ->whereNotNull('read_at')
+            ->where('read_at', '<=', now()->subDays(3))
+            ->delete();
     }
 }

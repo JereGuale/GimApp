@@ -176,6 +176,30 @@ export const ProfileAPI = {
         }
     },
 
+    async changePassword(currentPassword, password, passwordConfirmation) {
+        try {
+            const headers = await getAuthHeaders();
+            const response = await axios.put(`${API_URL}/profile/password`, {
+                current_password: currentPassword,
+                password,
+                password_confirmation: passwordConfirmation,
+            }, { headers });
+            return {
+                success: response.data.success !== false,
+                message: response.data.message,
+            };
+        } catch (error) {
+            const data = error.response?.data;
+            const firstValidationError = data?.errors
+                ? Object.values(data.errors).flat()[0]
+                : null;
+            return {
+                success: false,
+                error: data?.message || firstValidationError || 'No se pudo cambiar la contraseña.',
+            };
+        }
+    },
+
     /**
      * Upload profile photo
      */

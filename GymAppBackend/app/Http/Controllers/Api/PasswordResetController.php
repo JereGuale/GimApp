@@ -18,6 +18,12 @@ class PasswordResetController extends Controller
      */
     public function requestReset(Request $request)
     {
+        if (config('mail.default') === 'log') {
+            return response()->json([
+                'message' => 'El servicio de correo no está configurado. Configura SMTP antes de solicitar códigos.'
+            ], 503);
+        }
+
         $request->validate([
             'email' => 'required|email|exists:users,email'
         ]);

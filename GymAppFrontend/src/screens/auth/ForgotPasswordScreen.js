@@ -155,19 +155,19 @@ export default function ForgotPasswordScreen({ navigation }) {
                     <View style={[
                         styles.stepCircle,
                         {
-                            backgroundColor: s <= step ? '#22D3EE' : 'rgba(255, 255, 255, 0.1)',
-                            borderColor: s <= step ? '#22D3EE' : theme.colors.border
+                            backgroundColor: s <= step ? theme.colors.orange : 'rgba(255, 255, 255, 0.1)',
+                            borderColor: s <= step ? theme.colors.orange : theme.colors.border
                         }
                     ]}>
                         <Text style={[
                             styles.stepNumber,
-                            { color: s <= step ? '#0f172a' : theme.colors.textSecondary }
+                            { color: s <= step ? '#FFFFFF' : theme.colors.textSecondary }
                         ]}>{s}</Text>
                     </View>
                     {s < 3 && (
                         <View style={[
                             styles.stepLine,
-                            { backgroundColor: s < step ? '#22D3EE' : theme.colors.border }
+                            { backgroundColor: s < step ? theme.colors.orange : theme.colors.border }
                         ]} />
                     )}
                 </View>
@@ -178,7 +178,7 @@ export default function ForgotPasswordScreen({ navigation }) {
     const renderStep1 = () => (
         <View style={styles.stepContent}>
             <View style={styles.iconContainer}>
-                <Ionicons name="mail-outline" size={64} color="#22D3EE" />
+                <Ionicons name="mail-outline" size={64} color={theme.colors.orange} />
             </View>
 
             <Text style={[styles.title, { color: theme.colors.text }]}>
@@ -203,12 +203,12 @@ export default function ForgotPasswordScreen({ navigation }) {
             </View>
 
             <TouchableOpacity
-                style={[styles.button, { opacity: loading ? 0.6 : 1 }]}
+                style={[styles.button, { backgroundColor: theme.colors.orange, opacity: loading ? 0.6 : 1 }]}
                 onPress={handleSendCode}
                 disabled={loading}
             >
                 {loading ? (
-                    <ActivityIndicator color="#0f172a" />
+                    <ActivityIndicator color="#FFFFFF" />
                 ) : (
                     <Text style={styles.buttonText}>Enviar Código</Text>
                 )}
@@ -219,7 +219,7 @@ export default function ForgotPasswordScreen({ navigation }) {
     const renderStep2 = () => (
         <View style={styles.stepContent}>
             <View style={styles.iconContainer}>
-                <Ionicons name="shield-checkmark-outline" size={64} color="#22D3EE" />
+                <Ionicons name="shield-checkmark-outline" size={64} color={theme.colors.orange} />
             </View>
 
             <Text style={[styles.title, { color: theme.colors.text }]}>
@@ -236,8 +236,8 @@ export default function ForgotPasswordScreen({ navigation }) {
                         ref={ref => codeInputsRef.current[index] = ref}
                         style={[styles.codeInput, {
                             color: theme.colors.text,
-                            borderColor: digit ? '#22D3EE' : theme.colors.border,
-                            backgroundColor: digit ? 'rgba(34, 211, 238, 0.1)' : 'transparent'
+                            borderColor: digit ? theme.colors.orange : theme.colors.border,
+                            backgroundColor: digit ? 'rgba(251, 146, 60, 0.1)' : 'transparent'
                         }]}
                         value={digit}
                         onChangeText={(text) => handleCodeChange(text, index)}
@@ -257,12 +257,12 @@ export default function ForgotPasswordScreen({ navigation }) {
             </View>
 
             <TouchableOpacity
-                style={[styles.button, { opacity: loading ? 0.6 : 1 }]}
+                style={[styles.button, { backgroundColor: theme.colors.orange, opacity: loading ? 0.6 : 1 }]}
                 onPress={handleVerifyCode}
                 disabled={loading}
             >
                 {loading ? (
-                    <ActivityIndicator color="#0f172a" />
+                    <ActivityIndicator color="#FFFFFF" />
                 ) : (
                     <Text style={styles.buttonText}>Verificar Código</Text>
                 )}
@@ -276,7 +276,7 @@ export default function ForgotPasswordScreen({ navigation }) {
                     setTimeLeft(900);
                 }}
             >
-                <Text style={styles.resendText}>Reenviar código</Text>
+                <Text style={[styles.resendText, { color: theme.colors.orange }]}>Reenviar código</Text>
             </TouchableOpacity>
         </View>
     );
@@ -284,7 +284,7 @@ export default function ForgotPasswordScreen({ navigation }) {
     const renderStep3 = () => (
         <View style={styles.stepContent}>
             <View style={styles.iconContainer}>
-                <Ionicons name="lock-closed-outline" size={64} color="#22D3EE" />
+                <Ionicons name="lock-closed-outline" size={64} color={theme.colors.orange} />
             </View>
 
             <Text style={[styles.title, { color: theme.colors.text }]}>
@@ -327,12 +327,12 @@ export default function ForgotPasswordScreen({ navigation }) {
             </View>
 
             <TouchableOpacity
-                style={[styles.button, { opacity: loading ? 0.6 : 1 }]}
+                style={[styles.button, { backgroundColor: theme.colors.orange, opacity: loading ? 0.6 : 1 }]}
                 onPress={handleResetPassword}
                 disabled={loading}
             >
                 {loading ? (
-                    <ActivityIndicator color="#0f172a" />
+                    <ActivityIndicator color="#FFFFFF" />
                 ) : (
                     <Text style={styles.buttonText}>Restablecer Contraseña</Text>
                 )}
@@ -452,7 +452,6 @@ const styles = StyleSheet.create({
         zIndex: 1
     },
     button: {
-        backgroundColor: '#22D3EE',
         height: 56,
         borderRadius: 12,
         justifyContent: 'center',
@@ -460,7 +459,7 @@ const styles = StyleSheet.create({
         marginTop: 8
     },
     buttonText: {
-        color: '#0f172a',
+        color: '#FFFFFF',
         fontSize: 16,
         fontWeight: '800',
         letterSpacing: 0.5
@@ -499,7 +498,6 @@ const styles = StyleSheet.create({
         alignItems: 'center'
     },
     resendText: {
-        color: '#22D3EE',
         fontSize: 15,
         fontWeight: '600'
     }

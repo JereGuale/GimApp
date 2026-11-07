@@ -24,6 +24,7 @@ use App\Http\Controllers\Api\OrderController;
 Route::post('/login', [AuthController::class , 'login']);
 
 Route::post('/register', [AuthController::class , 'register']);
+Route::post('/register/request-code', [AuthController::class, 'requestRegistrationCode']);
 
 Route::post('/auth/google', [AuthController::class, 'googleAuth']);
 
@@ -76,6 +77,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/profile/photo', [AuthController::class , 'uploadPhoto']);
     Route::get('/profile', [AuthController::class , 'profile']);
     Route::put('/profile', [AuthController::class , 'updateProfile']);
+    Route::put('/profile/password', [AuthController::class, 'changePassword']);
 
     // Notifications
     Route::get('/notifications', [NotificationController::class , 'index']);

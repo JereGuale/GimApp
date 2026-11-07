@@ -198,8 +198,8 @@ export const authLogin = async (email, password) => {
   return response.json();
 };
 
-export const authRegister = async (name, username, email, password, passwordConfirmation, phone = '') => {
-  const body = { name, username, email, password, password_confirmation: passwordConfirmation };
+export const authRegister = async (name, username, email, password, passwordConfirmation, phone = '', verificationCode = '') => {
+  const body = { name, username, email, password, password_confirmation: passwordConfirmation, verification_code: verificationCode };
   if (phone && phone.trim()) body.phone = phone.trim();
 
   const response = await fetch(`${API_URL}/register`, {
@@ -216,6 +216,20 @@ export const authRegister = async (name, username, email, password, passwordConf
     throw new Error(message || `HTTP error! status: ${response.status}`);
   }
 
+  return response.json();
+};
+
+export const requestRegistrationCode = async (name, username, email, password, passwordConfirmation, phone = '') => {
+  const response = await fetch(`${API_URL}/register/request-code`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({
+      name, username, email, phone,
+      password,
+      password_confirmation: passwordConfirmation
+    })
+  });
+  if (!response.ok) throw new Error(await response.text() || `HTTP error! status: ${response.status}`);
   return response.json();
 };
 

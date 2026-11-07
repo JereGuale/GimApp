@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
-import { authRegister } from '../../services/api';
+import { authRegister, requestRegistrationCode } from '../../services/api';
 import { performGoogleSignIn } from '../../services/googleAuth';
 import { useTheme } from '../../context/ThemeContext';
 
@@ -29,6 +29,8 @@ export default function RegisterScreen({ navigation }) {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [registrationCode, setRegistrationCode] = useState('');
+  const [verificationStep, setVerificationStep] = useState(false);
 
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState('error');
@@ -102,9 +104,19 @@ export default function RegisterScreen({ navigation }) {
 
     try {
       setLoading(true);
-      const { user, token } = await authRegister(fullName, username, email, password, confirmPassword, phone);
-      showToast('¡Cuenta creada con éxito!', 'success');
-      await login(user, token);
+      if (!verificationStep) {
+        await requestRegistrationCode(fullName, username, email, password, confirmPassword, phone);
+        setVerificationStep(true);
+        showToast('Código enviado. Revisa tu correo electrónico.', 'success');
+      } else {
+        if (!/^\d{6}$/.test(registrationCode)) {
+          showToast('Ingresa el código de 6 dígitos recibido por correo', 'error');
+          return;
+        }
+        const { user, token } = await authRegister(fullName, username, email, password, confirmPassword, phone, registrationCode);
+        showToast('¡Cuenta creada con éxito!', 'success');
+        await login(user, token);
+      }
 
     } catch (error) {
       console.error('Register error:', error);
@@ -259,6 +271,21 @@ export default function RegisterScreen({ navigation }) {
               </View>
             </View>
 
+            {verificationStep && (
+              <View style={[styles.inputWrapper, { backgroundColor: theme.colors.surface, borderColor: theme.colors.orange, marginBottom: 14 }]}>
+                <Ionicons name="shield-checkmark-outline" size={18} color={theme.colors.orange} style={styles.inputIcon} />
+                <TextInput
+                  placeholder="Código de verificación enviado a tu correo"
+                  placeholderTextColor="#9CA3AF"
+                  style={[styles.inputWithIcon, { color: theme.colors.text }]}
+                  keyboardType="number-pad"
+                  maxLength={6}
+                  value={registrationCode}
+                  onChangeText={text => setRegistrationCode(text.replace(/\D/g, ''))}
+                />
+              </View>
+            )}
+
             <TouchableOpacity style={styles.checkRow} onPress={() => setAccepted(!accepted)}>
               <View style={[styles.checkbox, { borderColor: theme.colors.border }, accepted && { backgroundColor: theme.colors.orange, borderColor: theme.colors.orange }]}>
                 {accepted ? <Text style={styles.checkboxTick}>✓</Text> : null}
@@ -269,7 +296,7 @@ export default function RegisterScreen({ navigation }) {
             <TouchableOpacity style={[styles.btn, { backgroundColor: theme.colors.orange, borderColor: theme.colors.orange }, (loading || googleLoading) && styles.btnDisabled]} onPress={handleRegister} disabled={loading || googleLoading}>
               {loading
                 ? <ActivityIndicator color="#FFFFFF" />
-                : <Text style={styles.btnText}>REGISTRARSE</Text>
+                : <Text style={styles.btnText}>{verificationStep ? 'VERIFICAR Y CREAR CUENTA' : 'ENVIAR CÓDIGO'}</Text>
               }
             </TouchableOpacity>
 

@@ -9,6 +9,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Crypt;
 
 class AuthController extends Controller
 {
@@ -20,6 +23,19 @@ class AuthController extends Controller
             'email'    => 'required|email|unique:users,email',
             'password' => 'required|string|min:8|confirmed'
         ]);
+
+        $request->validate([
+            'verification_code' => 'required|string|size:6',
+        ]);
+
+        $pending = Cache::get($this->registrationCacheKey($validated['email']));
+        if ($pending) {
+            $pending = Crypt::decryptString($pending);
+            $pending = json_decode($pending, true);
+        }
+        if (!$pending || !hash_equals($pending['code'], $request->input('verification_code'))) {
+            return response()->json(['message' => 'El código de verificación no es válido o ha expirado.'], 422);
+        }
 
         $user = User::create([
             'name'     => $validated['name'],
@@ -39,11 +55,56 @@ class AuthController extends Controller
         $token = $user->createToken('auth')->plainTextToken;
         $user->load('roles.permissions');
         $permissions = $user->roles->flatMap(fn($r) => $r->permissions)->unique('id')->values();
+        Cache::forget($this->registrationCacheKey($validated['email']));
 
         return response()->json([
             'user' => $user, 'token' => $token,
             'roles' => $user->roles, 'permissions' => $permissions
         ], 201);
+    }
+
+    public function requestRegistrationCode(Request $request)
+    {
+        if (config('mail.default') === 'log') {
+            return response()->json([
+                'message' => 'El servicio de correo no está configurado. Configura SMTP antes de registrar usuarios.'
+            ], 503);
+        }
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:40',
+            'username' => 'required|string|max:50|unique:users,username|alpha_dash',
+            'email' => 'required|email|unique:users,email',
+            'password' => 'required|string|min:8|confirmed',
+            'phone' => 'nullable|string|max:40',
+        ]);
+
+        $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        Cache::put($this->registrationCacheKey($validated['email']), Crypt::encryptString(json_encode([
+            'code' => $code,
+            'data' => $validated,
+        ])), now()->addMinutes(15));
+
+        try {
+            Mail::raw(
+                "Tu código para crear tu cuenta en APP FITNESS es: {$code}\n\nEste código vence en 15 minutos. Si no solicitaste esta cuenta, ignora este correo.",
+                function ($message) use ($validated) {
+                    $message->to($validated['email'])
+                        ->subject('Verifica tu correo - APP FITNESS');
+                }
+            );
+        } catch (\Throwable $e) {
+            Cache::forget($this->registrationCacheKey($validated['email']));
+            Log::error('Registration verification email failed: ' . $e->getMessage());
+            return response()->json(['message' => 'No se pudo enviar el código. Verifica la configuración del correo.'], 500);
+        }
+
+        return response()->json(['message' => 'Código enviado. Revisa tu correo electrónico.']);
+    }
+
+    private function registrationCacheKey(string $email): string
+    {
+        return 'registration_verification:' . strtolower(trim($email));
     }
 
     public function login(Request $request)
@@ -257,6 +318,37 @@ class AuthController extends Controller
 
         $user->update($validated);
         return response()->json(['success' => true, 'message' => 'Perfil actualizado exitosamente', 'user' => $user]);
+    }
+
+    public function changePassword(Request $request)
+    {
+        $validated = $request->validate([
+            'current_password' => 'required|string',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        if (!Hash::check($validated['current_password'], $request->user()->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'La contraseña actual no es correcta.',
+            ], 422);
+        }
+
+        if (Hash::check($validated['password'], $request->user()->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'La nueva contraseña debe ser diferente a la actual.',
+            ], 422);
+        }
+
+        $request->user()->update([
+            'password' => Hash::make($validated['password']),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Contraseña actualizada exitosamente.',
+        ]);
     }
 
     public function uploadPhoto(Request $request)
