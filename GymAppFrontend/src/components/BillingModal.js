@@ -94,7 +94,6 @@ export default function BillingModal({ visible, onClose, onConfirm, initialData 
   const [billingName, setBillingName] = useState('');
   const [billingEmail, setBillingEmail] = useState('');
   const [billingPhone, setBillingPhone] = useState('');
-  const [billingId, setBillingId] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
   // editMode: false = muestra resumen, true = muestra formulario completo
@@ -105,10 +104,6 @@ export default function BillingModal({ visible, onClose, onConfirm, initialData 
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   // ¿Ya tiene datos guardados?
-  const hasSavedData = !!(
-    initialData?.billing_id_number || ''
-  );
-
   useEffect(() => {
     if (visible) {
       const name  = initialData?.billing_name  || initialData?.name  || '';
@@ -118,12 +113,11 @@ export default function BillingModal({ visible, onClose, onConfirm, initialData 
       setBillingName(name);
       setBillingEmail(email);
       setBillingPhone(phone);
-      setBillingId(initialData?.billing_id_number || '');
       setErrorMsg('');
 
       // Si ya tiene datos → modo resumen; si no → modo edición directamente
       const alreadyHasData = !!(
-        initialData?.billing_id_number || ''
+        initialData?.billing_name && initialData?.billing_email && initialData?.billing_phone
       );
       setEditMode(!alreadyHasData);
 
@@ -139,8 +133,7 @@ export default function BillingModal({ visible, onClose, onConfirm, initialData 
 
   const handleConfirmPress = () => {
     if (
-      !billingName.trim() || !billingEmail.trim() || !billingPhone.trim() ||
-      !billingId.trim()
+      !billingName.trim() || !billingEmail.trim() || !billingPhone.trim()
     ) {
       setErrorMsg('Todos los campos de datos de compra son obligatorios.');
       return;
@@ -150,7 +143,6 @@ export default function BillingModal({ visible, onClose, onConfirm, initialData 
       billing_name: billingName.trim(),
       billing_email: billingEmail.trim(),
       billing_phone: billingPhone.trim(),
-      billing_id_number: billingId.trim(),
       shipping_method: 'local',
     });
   };
@@ -161,7 +153,6 @@ export default function BillingModal({ visible, onClose, onConfirm, initialData 
       billing_name: billingName,
       billing_email: billingEmail,
       billing_phone: billingPhone,
-      billing_id_number: billingId,
       shipping_method: 'local',
     });
   };
@@ -241,7 +232,7 @@ export default function BillingModal({ visible, onClose, onConfirm, initialData 
                       </View>
                       <View style={{ flex: 1 }}>
                         <Text style={[styles.summaryName, { color: textPri }]}>{billingName || '—'}</Text>
-                        <Text style={[styles.summarySub, { color: textSec }]}>CI/RUC: {billingId || '—'}</Text>
+                        <Text style={[styles.summarySub, { color: textSec }]}>Datos de compra</Text>
                       </View>
                     </View>
 
@@ -284,21 +275,11 @@ export default function BillingModal({ visible, onClose, onConfirm, initialData 
                 <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
                   <InputField
-                    label="Nombre / Razón Social"
+                    label="Nombre"
                     icon="person-outline"
                     value={billingName}
                     onChangeText={setBillingName}
                     placeholder="Nombre completo"
-                    isDark={isDark}
-                  />
-
-                  <InputField
-                    label="Cédula o RUC"
-                    icon="card-outline"
-                    value={billingId}
-                    onChangeText={setBillingId}
-                    placeholder="Ej: 1309876543"
-                    keyboardType="numeric"
                     isDark={isDark}
                   />
 

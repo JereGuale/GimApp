@@ -83,8 +83,6 @@ export const SubscriptionAPI = {
                 payload.billing_name = billingData.billing_name;
                 payload.billing_email = billingData.billing_email;
                 payload.billing_phone = billingData.billing_phone;
-                payload.billing_id_number = billingData.billing_id_number;
-                payload.billing_city = billingData.billing_city;
                 payload.billing_address = billingData.billing_address;
             }
 

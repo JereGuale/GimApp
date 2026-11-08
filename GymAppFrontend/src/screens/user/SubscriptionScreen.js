@@ -156,14 +156,12 @@ export default function SubscriptionScreen() {
     }
     // Abrir confirmación de facturación antes del comprobante
     setSelectedPlan(plan);
-    const hasBilling = user?.billing_id_number && user?.billing_city && user?.billing_address;
+    const hasBilling = user?.billing_name && user?.billing_email && user?.billing_phone;
     if (hasBilling) {
       setConfirmedBilling({
-        billing_name: user.name,
-        billing_email: user.email,
-        billing_phone: user.phone,
-        billing_id_number: user.billing_id_number,
-        billing_city: user.billing_city,
+        billing_name: user.billing_name || user.name,
+        billing_email: user.billing_email || user.email,
+        billing_phone: user.billing_phone || user.phone,
         billing_address: user.billing_address
       });
       setReceiptModalVisible(true);
@@ -180,14 +178,12 @@ export default function SubscriptionScreen() {
       setTimeout(() => {
         fetchExistingSubscription().then(() => {
           setSelectedPlan(planToOpen);
-          const hasBilling = user?.billing_id_number && user?.billing_city && user?.billing_address;
+          const hasBilling = user?.billing_name && user?.billing_email && user?.billing_phone;
           if (hasBilling) {
             setConfirmedBilling({
-              billing_name: user.name,
-              billing_email: user.email,
-              billing_phone: user.phone,
-              billing_id_number: user.billing_id_number,
-              billing_city: user.billing_city,
+              billing_name: user.billing_name || user.name,
+              billing_email: user.billing_email || user.email,
+              billing_phone: user.billing_phone || user.phone,
               billing_address: user.billing_address
             });
             setReceiptModalVisible(true);
@@ -206,15 +202,17 @@ export default function SubscriptionScreen() {
     // Guardar en el perfil del usuario para no volver a pedírselo en el futuro
     try {
       const result = await ProfileAPI.updateProfile({
-        billing_id_number: billingData.billing_id_number,
-        billing_city: billingData.billing_city,
+        billing_name: billingData.billing_name,
+        billing_email: billingData.billing_email,
+        billing_phone: billingData.billing_phone,
         billing_address: billingData.billing_address
       });
       if (result.success && updateUser) {
         updateUser({
           ...user,
-          billing_id_number: billingData.billing_id_number,
-          billing_city: billingData.billing_city,
+          billing_name: billingData.billing_name,
+          billing_email: billingData.billing_email,
+          billing_phone: billingData.billing_phone,
           billing_address: billingData.billing_address
         });
       }

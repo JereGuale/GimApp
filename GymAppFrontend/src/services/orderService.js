@@ -44,8 +44,6 @@ export const OrderAPI = {
                 bodyData.billing_name = billingData.billing_name;
                 bodyData.billing_email = billingData.billing_email;
                 bodyData.billing_phone = billingData.billing_phone;
-                bodyData.billing_id_number = billingData.billing_id_number;
-                bodyData.billing_city = billingData.billing_city;
                 bodyData.billing_address = billingData.billing_address;
                 bodyData.shipping_method = billingData.shipping_method;
             }

@@ -120,7 +120,9 @@ export default function CartScreen() {
     try {
       // Persistir los datos personales y de facturación necesarios para retirar en local.
       await ProfileAPI.updateProfile({
-        billing_id_number: billingData.billing_id_number,
+        billing_name: billingData.billing_name,
+        billing_email: billingData.billing_email,
+        billing_phone: billingData.billing_phone,
       });
 
       // 2) Actualizar el contexto local con TODOS los campos (nombre, email, phone, método envío, etc.)
@@ -133,7 +135,9 @@ export default function CartScreen() {
           email: billingData.billing_email || user?.email,
           phone: billingData.billing_phone || user?.phone,
           // Campos de facturación
-          billing_id_number: billingData.billing_id_number,
+          billing_name: billingData.billing_name,
+          billing_email: billingData.billing_email,
+          billing_phone: billingData.billing_phone,
         });
       }
     } catch (e) {

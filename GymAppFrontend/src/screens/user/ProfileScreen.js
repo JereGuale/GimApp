@@ -47,8 +47,6 @@ export default function ProfileScreen() {
   const [billingName, setBillingName] = useState(user?.billing_name || user?.name || '');
   const [billingEmail, setBillingEmail] = useState(user?.billing_email || user?.email || '');
   const [billingPhone, setBillingPhone] = useState(user?.billing_phone || user?.phone || '');
-  const [billingIdNumber, setBillingIdNumber] = useState(user?.billing_id_number || '');
-  const [billingCity, setBillingCity] = useState(user?.billing_city || '');
   const [billingAddress, setBillingAddress] = useState(user?.billing_address || '');
   const [billingEditVisible, setBillingEditVisible] = useState(false);
   const [passwordExpanded, setPasswordExpanded] = useState(false);
@@ -332,8 +330,6 @@ export default function ProfileScreen() {
       billing_name: billingName,
       billing_email: billingEmail,
       billing_phone: billingPhone,
-      billing_id_number: billingIdNumber,
-      billing_city: billingCity,
       billing_address: billingAddress
     };
 
@@ -442,8 +438,6 @@ export default function ProfileScreen() {
           setBillingName(user?.billing_name || user?.name || '');
           setBillingEmail(user?.billing_email || user?.email || '');
           setBillingPhone(user?.billing_phone || user?.phone || '');
-          setBillingIdNumber(user?.billing_id_number || '');
-          setBillingCity(user?.billing_city || '');
           setBillingAddress(user?.billing_address || '');
           setBillingEditVisible(true);
         }} />
@@ -1221,7 +1215,7 @@ export default function ProfileScreen() {
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 16 }}>
               <View style={styles.editField}>
-                <Text style={[styles.editLabel, { color: theme.colors.textSecondary }]}>Nombre / Razón Social</Text>
+                <Text style={[styles.editLabel, { color: theme.colors.textSecondary }]}>Nombre</Text>
                 <TextInput style={[styles.editInput, { color: theme.colors.text, borderColor: theme.colors.border }]} value={billingName} onChangeText={setBillingName} placeholder="Tu nombre completo o Razón Social" placeholderTextColor={theme.colors.textSecondary} />
               </View>
 
@@ -1233,16 +1227,6 @@ export default function ProfileScreen() {
               <View style={styles.editField}>
                 <Text style={[styles.editLabel, { color: theme.colors.textSecondary }]}>Teléfono</Text>
                 <TextInput style={[styles.editInput, { color: theme.colors.text, borderColor: theme.colors.border }]} value={billingPhone} onChangeText={setBillingPhone} placeholder="Ej: 0999999999" placeholderTextColor={theme.colors.textSecondary} keyboardType="phone-pad" />
-              </View>
-
-              <View style={styles.editField}>
-                <Text style={[styles.editLabel, { color: theme.colors.textSecondary }]}>Cédula o RUC</Text>
-                <TextInput style={[styles.editInput, { color: theme.colors.text, borderColor: theme.colors.border }]} value={billingIdNumber} onChangeText={setBillingIdNumber} placeholder="Ej: 1309876543" placeholderTextColor={theme.colors.textSecondary} keyboardType="numeric" />
-              </View>
-
-              <View style={styles.editField}>
-                <Text style={[styles.editLabel, { color: theme.colors.textSecondary }]}>Ciudad</Text>
-                <TextInput style={[styles.editInput, { color: theme.colors.text, borderColor: theme.colors.border }]} value={billingCity} onChangeText={setBillingCity} placeholder="Ej: Manta" placeholderTextColor={theme.colors.textSecondary} />
               </View>
 
               <View style={styles.editField}>
