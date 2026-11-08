@@ -98,6 +98,11 @@ export default function BillingModal({ visible, onClose, onConfirm, initialData 
 
   // editMode: false = muestra resumen, true = muestra formulario completo
   const [editMode, setEditMode] = useState(false);
+  const hasSavedData = !!(
+    initialData?.billing_name &&
+    initialData?.billing_email &&
+    initialData?.billing_phone
+  );
 
   // Slide-up + fade animation
   const slideAnim = useRef(new Animated.Value(80)).current;
