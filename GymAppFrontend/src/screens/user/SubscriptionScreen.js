@@ -156,13 +156,12 @@ export default function SubscriptionScreen() {
     }
     // Abrir confirmación de facturación antes del comprobante
     setSelectedPlan(plan);
-    const hasBilling = user?.billing_name && user?.billing_email && user?.billing_phone;
+    const hasBilling = user?.name && user?.email && user?.phone;
     if (hasBilling) {
       setConfirmedBilling({
-        billing_name: user.billing_name || user.name,
-        billing_email: user.billing_email || user.email,
-        billing_phone: user.billing_phone || user.phone,
-        billing_address: user.billing_address
+        billing_name: user.name,
+        billing_email: user.email,
+        billing_phone: user.phone
       });
       setReceiptModalVisible(true);
     } else {
@@ -178,13 +177,12 @@ export default function SubscriptionScreen() {
       setTimeout(() => {
         fetchExistingSubscription().then(() => {
           setSelectedPlan(planToOpen);
-          const hasBilling = user?.billing_name && user?.billing_email && user?.billing_phone;
+          const hasBilling = user?.name && user?.email && user?.phone;
           if (hasBilling) {
             setConfirmedBilling({
-              billing_name: user.billing_name || user.name,
-              billing_email: user.billing_email || user.email,
-              billing_phone: user.billing_phone || user.phone,
-              billing_address: user.billing_address
+              billing_name: user.name,
+              billing_email: user.email,
+              billing_phone: user.phone
             });
             setReceiptModalVisible(true);
           } else {
@@ -202,24 +200,24 @@ export default function SubscriptionScreen() {
     // Guardar en el perfil del usuario para no volver a pedírselo en el futuro
     try {
       const result = await ProfileAPI.updateProfile({
-        billing_name: billingData.billing_name,
-        billing_email: billingData.billing_email,
         billing_phone: billingData.billing_phone,
-        billing_address: billingData.billing_address
       });
       if (result.success && updateUser) {
         updateUser({
           ...user,
-          billing_name: billingData.billing_name,
-          billing_email: billingData.billing_email,
           billing_phone: billingData.billing_phone,
-          billing_address: billingData.billing_address
         });
       }
     } catch (e) {
       console.log('[SubscriptionScreen] Error saving billing data to profile:', e);
     }
 
+    setConfirmedBilling(prev => ({
+      ...prev,
+      billing_name: user?.name,
+      billing_email: user?.email,
+      billing_phone: billingData.billing_phone,
+    }));
     setTimeout(() => {
       setReceiptModalVisible(true);
     }, 450);

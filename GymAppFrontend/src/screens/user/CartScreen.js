@@ -102,13 +102,33 @@ export default function CartScreen() {
       setAuthModalVisible(true);
       return;
     }
+    const hasCompleteProfile = user?.name && user?.email && user?.phone;
+    if (hasCompleteProfile) {
+      setConfirmedBilling({
+        billing_name: user.name,
+        billing_email: user.email,
+        billing_phone: user.phone,
+      });
+      setReceiptModalVisible(true);
+      return;
+    }
     setBillingModalVisible(true);
   };
 
   const handleAuthSuccess = () => {
     setAuthModalVisible(false);
     setTimeout(() => {
-      setBillingModalVisible(true);
+      const hasCompleteProfile = user?.name && user?.email && user?.phone;
+      if (hasCompleteProfile) {
+        setConfirmedBilling({
+          billing_name: user.name,
+          billing_email: user.email,
+          billing_phone: user.phone,
+        });
+        setReceiptModalVisible(true);
+      } else {
+        setBillingModalVisible(true);
+      }
     }, 450);
   };
 
@@ -120,8 +140,6 @@ export default function CartScreen() {
     try {
       // Persistir los datos personales y de facturación necesarios para retirar en local.
       await ProfileAPI.updateProfile({
-        billing_name: billingData.billing_name,
-        billing_email: billingData.billing_email,
         billing_phone: billingData.billing_phone,
       });
 
@@ -131,12 +149,8 @@ export default function CartScreen() {
         updateUser({
           ...user,
           // Campos personales que podrían haber sido editados
-          name: billingData.billing_name || user?.name,
-          email: billingData.billing_email || user?.email,
           phone: billingData.billing_phone || user?.phone,
           // Campos de facturación
-          billing_name: billingData.billing_name,
-          billing_email: billingData.billing_email,
           billing_phone: billingData.billing_phone,
         });
       }
@@ -145,6 +159,12 @@ export default function CartScreen() {
     }
 
     setTimeout(() => {
+      setConfirmedBilling(prev => ({
+        ...prev,
+        billing_name: user?.name,
+        billing_email: user?.email,
+        billing_phone: billingData.billing_phone,
+      }));
       setReceiptModalVisible(true);
     }, 450);
   };

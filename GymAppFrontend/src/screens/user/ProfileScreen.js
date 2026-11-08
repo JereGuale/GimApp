@@ -44,11 +44,6 @@ export default function ProfileScreen() {
   const [editEmail, setEditEmail] = useState(user?.email || '');
   const [editPhone, setEditPhone] = useState(user?.phone || '');
   const [editingField, setEditingField] = useState(null);
-  const [billingName, setBillingName] = useState(user?.billing_name || user?.name || '');
-  const [billingEmail, setBillingEmail] = useState(user?.billing_email || user?.email || '');
-  const [billingPhone, setBillingPhone] = useState(user?.billing_phone || user?.phone || '');
-  const [billingAddress, setBillingAddress] = useState(user?.billing_address || '');
-  const [billingEditVisible, setBillingEditVisible] = useState(false);
   const [passwordExpanded, setPasswordExpanded] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -325,44 +320,6 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleSaveBilling = async () => {
-    const updatedBilling = {
-      billing_name: billingName,
-      billing_email: billingEmail,
-      billing_phone: billingPhone,
-      billing_address: billingAddress
-    };
-
-    // Actualización optimista instantánea (0ms)
-    if (updateUser) {
-      updateUser({
-        ...user,
-        ...updatedBilling
-      });
-    }
-    setBillingEditVisible(false);
-
-    // Guardar en segundo plano
-    try {
-      const result = await ProfileAPI.updateProfile(updatedBilling);
-      if (!result.success) {
-        if (updateUser) updateUser(user);
-        setConfirmModalState({
-          visible: true,
-          title: 'Error',
-          message: result.error || 'No se pudieron actualizar los datos para la compra',
-          showCancel: false,
-          confirmText: 'Entendido',
-          isDestructive: false,
-          type: 'warning',
-          onConfirm: () => setConfirmModalState(prev => ({ ...prev, visible: false }))
-        });
-      }
-    } catch {
-      if (updateUser) updateUser(user);
-    }
-  };
-
   const handleChangePassword = async () => {
     if (!currentPassword || !newPassword || !passwordConfirmation) {
       Alert.alert('Datos incompletos', 'Completa todos los campos de contraseña.');
@@ -433,15 +390,6 @@ export default function ProfileScreen() {
         }} />
         <DrawerItem icon="card-outline" label="Mi Suscripción" onPress={() => { closeDrawer(); navigation.navigate('Suscripción'); }} />
         <DrawerItem icon="cart-outline" label="Mis Compras" onPress={() => { closeDrawer(); navigation.navigate('Mis Compras'); }} />
-        <DrawerItem icon="document-text-outline" label="Datos para la compra" onPress={() => {
-          closeDrawer();
-          setBillingName(user?.billing_name || user?.name || '');
-          setBillingEmail(user?.billing_email || user?.email || '');
-          setBillingPhone(user?.billing_phone || user?.phone || '');
-          setBillingAddress(user?.billing_address || '');
-          setBillingEditVisible(true);
-        }} />
-
         <Text style={[styles.drawerSection, { color: theme.colors.textSecondary, marginTop: 24 }]}>PREFERENCIAS</Text>
         <DrawerItem icon={theme.isDark ? 'sunny-outline' : 'moon-outline'} label={theme.isDark ? 'Modo Claro' : 'Modo Oscuro'} onPress={toggleTheme} />
 
@@ -1200,46 +1148,6 @@ export default function ProfileScreen() {
                 <Text style={[styles.editModalBtnText, { color: theme.colors.text }]}>Cancelar</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.editModalBtn, { backgroundColor: '#5B3DF5' }]} onPress={handleSaveProfile} disabled={saving}>
-                {saving ? <ActivityIndicator size="small" color="#fff" /> : <Text style={[styles.editModalBtnText, { color: '#FFFFFF' }]}>Guardar</Text>}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Edit Billing Modal */}
-      <Modal visible={billingEditVisible} transparent animationType="slide" onRequestClose={() => setBillingEditVisible(false)}>
-        <View style={styles.editModalOverlay}>
-          <View style={[styles.editModalContent, { backgroundColor: theme.colors.surface, maxHeight: '90%' }]}>
-            <Text style={[styles.editModalTitle, { color: theme.colors.text }]}>Datos para la Compra</Text>
-
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 16 }}>
-              <View style={styles.editField}>
-                <Text style={[styles.editLabel, { color: theme.colors.textSecondary }]}>Nombre</Text>
-                <TextInput style={[styles.editInput, { color: theme.colors.text, borderColor: theme.colors.border }]} value={billingName} onChangeText={setBillingName} placeholder="Tu nombre completo o Razón Social" placeholderTextColor={theme.colors.textSecondary} />
-              </View>
-
-              <View style={styles.editField}>
-                <Text style={[styles.editLabel, { color: theme.colors.textSecondary }]}>Correo Electrónico</Text>
-                <TextInput style={[styles.editInput, { color: theme.colors.text, borderColor: theme.colors.border }]} value={billingEmail} onChangeText={setBillingEmail} placeholder="ejemplo@correo.com" placeholderTextColor={theme.colors.textSecondary} keyboardType="email-address" autoCapitalize="none" />
-              </View>
-
-              <View style={styles.editField}>
-                <Text style={[styles.editLabel, { color: theme.colors.textSecondary }]}>Teléfono</Text>
-                <TextInput style={[styles.editInput, { color: theme.colors.text, borderColor: theme.colors.border }]} value={billingPhone} onChangeText={setBillingPhone} placeholder="Ej: 0999999999" placeholderTextColor={theme.colors.textSecondary} keyboardType="phone-pad" />
-              </View>
-
-              <View style={styles.editField}>
-                <Text style={[styles.editLabel, { color: theme.colors.textSecondary }]}>Dirección de Domicilio</Text>
-                <TextInput style={[styles.editInput, { color: theme.colors.text, borderColor: theme.colors.border, height: 60, paddingTop: 8 }]} value={billingAddress} onChangeText={setBillingAddress} placeholder="Ej: Manta Calle 15 y Av. 14" placeholderTextColor={theme.colors.textSecondary} multiline />
-              </View>
-            </ScrollView>
-
-            <View style={styles.editModalBtns}>
-              <TouchableOpacity style={[styles.editModalBtn, { borderColor: theme.colors.border, borderWidth: 1.5 }]} onPress={() => setBillingEditVisible(false)}>
-                <Text style={[styles.editModalBtnText, { color: theme.colors.text }]}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.editModalBtn, { backgroundColor: '#5B3DF5' }]} onPress={handleSaveBilling} disabled={saving}>
                 {saving ? <ActivityIndicator size="small" color="#fff" /> : <Text style={[styles.editModalBtnText, { color: '#FFFFFF' }]}>Guardar</Text>}
               </TouchableOpacity>
             </View>

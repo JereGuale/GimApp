@@ -91,10 +91,10 @@ function SummaryRow({ icon, value, isDark }) {
 export default function BillingModal({ visible, onClose, onConfirm, initialData = {} }) {
   const { theme, isDark } = useTheme();
 
-  const [billingName, setBillingName] = useState('');
-  const [billingEmail, setBillingEmail] = useState('');
   const [billingPhone, setBillingPhone] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const billingName = initialData?.billing_name || initialData?.name || '';
+  const billingEmail = initialData?.billing_email || initialData?.email || '';
 
   // editMode: false = muestra resumen, true = muestra formulario completo
   const [editMode, setEditMode] = useState(false);
@@ -111,12 +111,8 @@ export default function BillingModal({ visible, onClose, onConfirm, initialData 
   // ¿Ya tiene datos guardados?
   useEffect(() => {
     if (visible) {
-      const name  = initialData?.billing_name  || initialData?.name  || '';
-      const email = initialData?.billing_email || initialData?.email || '';
       const phone = initialData?.billing_phone || initialData?.phone || '';
 
-      setBillingName(name);
-      setBillingEmail(email);
       setBillingPhone(phone);
       setErrorMsg('');
 
@@ -137,16 +133,12 @@ export default function BillingModal({ visible, onClose, onConfirm, initialData 
   }, [visible, initialData]);
 
   const handleConfirmPress = () => {
-    if (
-      !billingName.trim() || !billingEmail.trim() || !billingPhone.trim()
-    ) {
-      setErrorMsg('Todos los campos de datos de compra son obligatorios.');
+    if (!billingPhone.trim()) {
+      setErrorMsg('Ingresa tu número de teléfono para continuar.');
       return;
     }
     setErrorMsg('');
     onConfirm({
-      billing_name: billingName.trim(),
-      billing_email: billingEmail.trim(),
       billing_phone: billingPhone.trim(),
       shipping_method: 'local',
     });
@@ -155,8 +147,6 @@ export default function BillingModal({ visible, onClose, onConfirm, initialData 
   // Confirm directo desde el modo resumen (sin re-validar, ya están guardados)
   const handleSummaryConfirm = () => {
     onConfirm({
-      billing_name: billingName,
-      billing_email: billingEmail,
       billing_phone: billingPhone,
       shipping_method: 'local',
     });
@@ -197,9 +187,9 @@ export default function BillingModal({ visible, onClose, onConfirm, initialData 
                     <Ionicons name="receipt-outline" size={20} color={accent} />
                   </View>
                   <View>
-                    <Text style={[styles.title, { color: textPri }]}>Datos para la Compra</Text>
+                    <Text style={[styles.title, { color: textPri }]}>Completa tu perfil</Text>
                     <Text style={[styles.headerSub, { color: textSec }]}>
-                      {editMode ? 'Completa tus datos' : 'Datos de contacto y entrega'}
+                      Ingresa tu teléfono para continuar
                     </Text>
                   </View>
                 </View>
@@ -280,26 +270,6 @@ export default function BillingModal({ visible, onClose, onConfirm, initialData 
                 <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
                   <InputField
-                    label="Nombre"
-                    icon="person-outline"
-                    value={billingName}
-                    onChangeText={setBillingName}
-                    placeholder="Nombre completo"
-                    isDark={isDark}
-                  />
-
-                  <InputField
-                    label="Correo Electrónico"
-                    icon="mail-outline"
-                    value={billingEmail}
-                    onChangeText={setBillingEmail}
-                    placeholder="ejemplo@correo.com"
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    isDark={isDark}
-                  />
-
-                  <InputField
                     label="Teléfono (WhatsApp)"
                     icon="call-outline"
                     value={billingPhone}
@@ -329,7 +299,7 @@ export default function BillingModal({ visible, onClose, onConfirm, initialData 
                     activeOpacity={0.85}
                   >
                     <Ionicons name="checkmark-circle-outline" size={18} color={isDark ? '#000' : '#FFF'} style={{ marginRight: 6 }} />
-                    <Text style={[styles.btnConfirmText, { color: isDark ? '#000' : '#FFF' }]}>Ingresar datos de compra</Text>
+                    <Text style={[styles.btnConfirmText, { color: isDark ? '#000' : '#FFF' }]}>Guardar y continuar</Text>
                   </TouchableOpacity>
                 </View>
               </>
