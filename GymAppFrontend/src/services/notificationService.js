@@ -31,7 +31,10 @@ export const NotificationAPI = {
     async getNotifications(tokenOverride = null) {
         try {
             const headers = await getAuthHeaders(tokenOverride);
-            const response = await axios.get(`${API_URL}/notifications`, { headers });
+            const response = await axios.get(`${API_URL}/notifications`, {
+                headers: { ...headers, 'Cache-Control': 'no-cache' },
+                params: { _: Date.now() }
+            });
             return { success: true, data: response.data };
         } catch (error) {
             console.error('Error getting notifications:', error.response?.data || error.message);
@@ -49,7 +52,10 @@ export const NotificationAPI = {
     async getUnreadCount(tokenOverride = null) {
         try {
             const headers = await getAuthHeaders(tokenOverride);
-            const response = await axios.get(`${API_URL}/notifications/unread-count`, { headers });
+            const response = await axios.get(`${API_URL}/notifications/unread-count`, {
+                headers: { ...headers, 'Cache-Control': 'no-cache' },
+                params: { _: Date.now() }
+            });
             return { success: true, count: response.data.count };
         } catch (error) {
             console.error('Error getting unread count:', error.response?.data || error.message);

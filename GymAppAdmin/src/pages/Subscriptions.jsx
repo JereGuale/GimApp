@@ -676,9 +676,7 @@ export default function Subscriptions() {
       s.billing_email?.toLowerCase().includes(query) ||
       (s.billing_phone && s.billing_phone.includes(query)) ||
       (s.user?.phone && s.user.phone.includes(query)) ||
-      (s.resolved_phone && s.resolved_phone.includes(query)) ||
-      (s.billing_id_number && s.billing_id_number.toLowerCase().includes(query)) ||
-      (s.user?.billing_id_number && s.user.billing_id_number.toLowerCase().includes(query));
+      (s.resolved_phone && s.resolved_phone.includes(query));
 
     return matchFilter && matchSearch;
   });
@@ -707,13 +705,9 @@ export default function Subscriptions() {
     setSubs(s => s.map(x => x.id === id ? { ...x, status: 'active' } : x));
     cachedSubs = subs.map(x => x.id === id ? { ...x, status: 'active' } : x);
     try {
-      const result = await apiFetch(`/trainer/subscriptions/${id}/approve`, { method: 'POST' });
+      await apiFetch(`/trainer/subscriptions/${id}/approve`, { method: 'POST' });
       setSuccess('Suscripción aprobada exitosamente');
       fetchSubs(true); // silent background refresh
-      const approvedSubscription = result?.subscription;
-      if (approvedSubscription && !openWhatsAppMessage(approvedSubscription, generateWelcomeMessage(approvedSubscription))) {
-        setError('Suscripción aprobada, pero el cliente no tiene un teléfono registrado para enviar la bienvenida.');
-      }
     } catch (e) {
       setSubs(prev); cachedSubs = prev; // revert
       setError(e.message);
@@ -1488,8 +1482,8 @@ export default function Subscriptions() {
 
                   {/* Billing Details & WhatsApp Trigger */}
                   <div className="verification-info-card" style={{ borderLeft: '3px solid #10b981', background: 'rgba(16, 185, 129, 0.03)' }}>
-                    <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)', marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span>DATOS DE FACTURACIÓN</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                      <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)' }}>Datos</span>
                       <button
                         type="button"
                         onClick={() => {
@@ -1536,16 +1530,8 @@ Estamos validando tu comprobante de pago para activar tu membresía de inmediato
                       </button>
                     </div>
                     <div className="info-row">
-                      <span className="info-label">Cliente (Cuenta)</span>
-                      <span className="info-value">{receiptModal.user?.name || '—'}</span>
-                    </div>
-                    <div className="info-row">
-                      <span className="info-label">Nombre Facturación</span>
-                      <span className="info-value">{receiptModal.billing_name || '—'}</span>
-                    </div>
-                    <div className="info-row">
-                      <span className="info-label">Cédula</span>
-                      <span className="info-value">{receiptModal.billing_id_number || receiptModal.user?.billing_id_number || '—'}</span>
+                      <span className="info-label">Nombre</span>
+                      <span className="info-value">{receiptModal.billing_name || receiptModal.user?.name || '—'}</span>
                     </div>
                     <div className="info-row">
                       <span className="info-label">Email</span>
@@ -1554,16 +1540,6 @@ Estamos validando tu comprobante de pago para activar tu membresía de inmediato
                     <div className="info-row">
                       <span className="info-label">Teléfono</span>
                       <span className="info-value">{receiptModal.billing_phone || receiptModal.user?.phone || '—'}</span>
-                    </div>
-                    <div className="info-row">
-                      <span className="info-label">Ciudad</span>
-                      <span className="info-value">{receiptModal.billing_city || receiptModal.user?.billing_city || '—'}</span>
-                    </div>
-                    <div className="info-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
-                      <span className="info-label">Dirección</span>
-                      <span className="info-value" style={{ width: '100%', whiteSpace: 'normal', wordBreak: 'break-all', textAlign: 'left', marginTop: 4 }}>
-                        {receiptModal.billing_address || receiptModal.user?.billing_address || '—'}
-                      </span>
                     </div>
                   </div>
 

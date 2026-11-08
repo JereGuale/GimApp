@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { NavLink, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -71,6 +71,7 @@ export default function Layout({ children }) {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const notificationPopoverRef = useRef(null);
 
   const currentItem = allNavItems.find(n => n.to === location.pathname);
   const pageTitle = currentItem?.label || 'Panel';
@@ -88,34 +89,67 @@ export default function Layout({ children }) {
 
   useEffect(() => {
     loadNotifications();
-    const interval = setInterval(loadNotifications, 30000);
-    return () => clearInterval(interval);
+    const interval = setInterval(loadNotifications, 10000);
+    const handleWindowFocus = () => loadNotifications();
+    window.addEventListener('focus', handleWindowFocus);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleWindowFocus);
+    };
   }, [loadNotifications]);
 
+  useEffect(() => {
+    setNotificationsOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!notificationsOpen) return;
+
+    const handleOutsideClick = (event) => {
+      if (!notificationPopoverRef.current?.contains(event.target) &&
+          !event.target.closest('.admin-notification-button')) {
+        setNotificationsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [notificationsOpen]);
+
   const markNotificationAsRead = async (id) => {
+    const notification = notifications.find(item => item.id === id);
+    if (!notification || notification.read_at) return;
+
+    const readAt = new Date().toISOString();
+    setNotifications(current => current.map(item =>
+      item.id === id ? { ...item, read_at: readAt } : item
+    ));
+    setUnreadCount(current => Math.max(0, current - 1));
+
     try {
       await apiFetch(`/notifications/${id}/read`, { method: 'POST', body: JSON.stringify({}) });
-      setNotifications(current => current.map(notification =>
-        notification.id === id
-          ? { ...notification, read_at: new Date().toISOString() }
-          : notification
-      ));
-      setUnreadCount(current => Math.max(0, current - 1));
     } catch (error) {
+      setNotifications(current => current.map(item =>
+        item.id === id ? { ...item, read_at: null } : item
+      ));
+      setUnreadCount(current => current + 1);
       console.error('No se pudo marcar la notificación:', error);
     }
   };
 
   const markAllNotificationsAsRead = async () => {
+    const readAt = new Date().toISOString();
+    setNotifications(current => current.map(notification => ({
+      ...notification,
+      read_at: notification.read_at || readAt,
+    })));
+    setUnreadCount(0);
+
     try {
       await apiFetch('/notifications/read-all', { method: 'POST', body: JSON.stringify({}) });
-      setNotifications(current => current.map(notification => ({
-        ...notification,
-        read_at: notification.read_at || new Date().toISOString(),
-      })));
-      setUnreadCount(0);
     } catch (error) {
       console.error('No se pudieron marcar las notificaciones:', error);
+      loadNotifications();
     }
   };
 
@@ -251,7 +285,7 @@ export default function Layout({ children }) {
             </button>
 
             {notificationsOpen && (
-              <div className="admin-notification-popover">
+              <div ref={notificationPopoverRef} className="admin-notification-popover">
                 <div className="admin-notification-header">
                   <div>
                     <strong>Notificaciones</strong>

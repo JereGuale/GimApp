@@ -204,26 +204,9 @@ export default function Orders() {
     const prev = orders;
     setOrders(o => o.map(x => x.id === id ? { ...x, status: 'approved' } : x));
     try {
-      const result = await apiFetch(`/admin/orders/${id}/approve`, { method: 'POST' });
+      await apiFetch(`/admin/orders/${id}/approve`, { method: 'POST' });
       setSuccess('Pedido aprobado exitosamente');
       fetchOrders(); // silent background refresh
-      const approvedOrder = result?.order;
-      const clientPhone = approvedOrder?.billing_phone || approvedOrder?.user?.phone || '';
-      const cleanPhone = clientPhone.replace(/\D/g, '');
-      if (approvedOrder && cleanPhone) {
-        const phone = cleanPhone.startsWith('0')
-          ? `593${cleanPhone.substring(1)}`
-          : (!cleanPhone.startsWith('593') && cleanPhone.length === 9 ? `593${cleanPhone}` : cleanPhone);
-        const itemsSummary = Array.isArray(approvedOrder.items) && approvedOrder.items.length > 0
-          ? approvedOrder.items.map(item => `• ${item.name} x${item.quantity}`).join('\n')
-          : '• Productos varios';
-        const message = `¡Hola ${approvedOrder.billing_name || approvedOrder.user?.name || 'Cliente'}! 🎉\n\n` +
-          `Tu pago fue aprobado y tu pedido en *Gigafit Gim* está confirmado.\n\n` +
-          `🛒 *Productos:*\n${itemsSummary}\n\n` +
-          `📍 Puedes retirar tu compra en el local de Gigafit Gim.\n\n` +
-          `Te esperamos. ¡Gracias por tu compra! 💪`;
-        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
-      }
     } catch (e) {
       setOrders(prev); // revert
       setError(e.message);
@@ -940,7 +923,7 @@ export default function Orders() {
                 {/* Billing Details & WhatsApp Trigger */}
                 <div>
                   <div className="order-verification-section-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span>Datos de Facturación</span>
+                    <span>Datos</span>
                     <button
                       type="button"
                       onClick={() => {
@@ -994,9 +977,7 @@ Estamos validando tu pago y nos comunicaremos contigo de inmediato. ¡Gracias po
                     </button>
                   </div>
                   <div style={{ padding: 12, backgroundColor: 'rgba(16, 185, 129, 0.03)', border: '1px solid var(--border)', borderRadius: 8, display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12, marginBottom: 12 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-secondary)' }}>Cliente (Cuenta):</span><span style={{ fontWeight: 600 }}>{receiptModal.user?.name || '—'}</span></div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-secondary)' }}>Nombre Facturación:</span><span style={{ fontWeight: 600 }}>{receiptModal.billing_name || '—'}</span></div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-secondary)' }}>Cédula:</span><span style={{ fontWeight: 600 }}>{receiptModal.billing_id_number || receiptModal.user?.billing_id_number || '—'}</span></div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-secondary)' }}>Nombre:</span><span style={{ fontWeight: 600 }}>{receiptModal.billing_name || receiptModal.user?.name || '—'}</span></div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-secondary)' }}>Email:</span><span style={{ fontWeight: 600 }}>{receiptModal.billing_email || receiptModal.user?.email || '—'}</span></div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-secondary)' }}>Teléfono:</span><span style={{ fontWeight: 600 }}>{receiptModal.billing_phone || receiptModal.user?.phone || '—'}</span></div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-secondary)' }}>Entrega:</span><span style={{ fontWeight: 700, color: 'var(--success-text)' }}>Retiro en Local</span></div>

@@ -67,22 +67,32 @@ export function NotificationProvider({ children }) {
         return result;
     }, []);
 
-    // Poll for new notifications every 30 seconds
     useEffect(() => {
-        if (user) {
-            fetchUnreadCount();
-            intervalRef.current = setInterval(fetchUnreadCount, 30000);
-        } else {
+        if (!user || !token) {
             setNotifications([]);
             setUnreadCount(0);
+            return undefined;
         }
+
+        fetchNotifications(true);
+        intervalRef.current = setInterval(() => fetchNotifications(true), 10000);
+        if (typeof window === 'undefined') {
+            return () => {
+                if (intervalRef.current) {
+                    clearInterval(intervalRef.current);
+                }
+            };
+        }
+        const handleWindowFocus = () => fetchNotifications(true);
+        window.addEventListener('focus', handleWindowFocus);
 
         return () => {
             if (intervalRef.current) {
                 clearInterval(intervalRef.current);
             }
+            window.removeEventListener('focus', handleWindowFocus);
         };
-    }, [user, fetchUnreadCount]);
+    }, [user, token, fetchNotifications]);
 
     return (
         <NotificationContext.Provider value={{
