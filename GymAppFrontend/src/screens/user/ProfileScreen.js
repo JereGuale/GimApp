@@ -1231,7 +1231,7 @@ export default function ProfileScreen() {
 
               <View style={styles.editField}>
                 <Text style={[styles.editLabel, { color: theme.colors.textSecondary }]}>Dirección de Domicilio</Text>
-                <TextInput style={[styles.editInput, { color: theme.colors.text, borderColor: theme.colors.border, height: 60, paddingTop: 8 }]} value={billingAddress} onChangeText={setBillingAddress} placeholder="Ej: Calle 15 y Av. 24" placeholderTextColor={theme.colors.textSecondary} multiline />
+                <TextInput style={[styles.editInput, { color: theme.colors.text, borderColor: theme.colors.border, height: 60, paddingTop: 8 }]} value={billingAddress} onChangeText={setBillingAddress} placeholder="Ej: Manta Calle 15 y Av. 14" placeholderTextColor={theme.colors.textSecondary} multiline />
               </View>
             </ScrollView>
 
