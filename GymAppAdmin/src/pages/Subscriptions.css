@@ -65,8 +65,22 @@
   background-color: rgba(37, 99, 235, 0.015);
 }
 
+.subs-table tbody tr.subscription-row--pending > td {
+  background-color: rgba(245, 158, 11, 0.10);
+  border-bottom-color: rgba(245, 158, 11, 0.22);
+}
+
+.subs-table tbody tr.subscription-row--pending:hover > td {
+  background-color: rgba(245, 158, 11, 0.16);
+}
+
 :root.dark .subs-table tbody tr:hover {
   background-color: rgba(59, 130, 246, 0.025);
+}
+
+:root.dark .subs-table tbody tr.subscription-row--pending > td {
+  background-color: rgba(245, 158, 11, 0.16);
+  border-bottom-color: rgba(245, 158, 11, 0.30);
 }
 
 /* User Profile Cell & Avatar circles */
@@ -236,6 +250,11 @@
 .sub-mobile-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 12px -2px rgba(0, 0, 0, 0.04), 0 2px 4px -2px rgba(0, 0, 0, 0.02);
+}
+
+.sub-mobile-card--pending {
+  background-color: rgba(245, 158, 11, 0.10);
+  border-color: rgba(245, 158, 11, 0.30);
 }
 
 .sub-mobile-card-details {
@@ -905,6 +924,24 @@
   background-color: var(--bg);
 }
 
+.actions-dropdown-section-label {
+  padding: 6px 10px 4px;
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.actions-dropdown-item--emphasis {
+  font-weight: 650;
+}
+
+.actions-dropdown-item--destructive {
+  margin-top: 2px;
+}
+
 .actions-dropdown-item--danger {
   color: var(--danger-text);
 }
@@ -1252,6 +1289,32 @@
 .btn-eye-action:hover {
   background-color: var(--primary-light);
   color: var(--primary);
+}
+
+.btn-eye-action--pending {
+  color: #b45309;
+  background-color: rgba(245, 158, 11, 0.14);
+  animation: pending-eye-pulse 1.8s ease-in-out infinite;
+}
+
+.btn-eye-action--pending:hover {
+  color: #92400e;
+  background-color: rgba(245, 158, 11, 0.24);
+}
+
+@keyframes pending-eye-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(245, 158, 11, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-eye-action--pending {
+    animation: none;
+  }
 }
 
 .actions-dropdown-item--danger {
@@ -2560,8 +2623,21 @@
   color: #16a34a;
 }
 
+.dropdown-item--emphasis {
+  font-weight: 650;
+}
+
 .dropdown-item--renew:hover {
   background: rgba(22, 163, 74, 0.1) !important;
+  color: #16a34a !important;
+}
+
+.dropdown-item--whatsapp {
+  color: #16a34a;
+}
+
+.dropdown-item--whatsapp:hover {
+  background: rgba(37, 211, 102, 0.1) !important;
   color: #16a34a !important;
 }
 
@@ -2572,6 +2648,175 @@
 .dropdown-item--danger:hover {
   background: rgba(239, 68, 68, 0.1) !important;
   color: #dc2626 !important;
+}
+
+.membership-actions-overlay {
+  z-index: 1200;
+}
+
+.membership-actions-modal {
+  width: min(520px, calc(100vw - 32px));
+  max-width: 520px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.membership-actions-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 22px;
+  border-bottom: 1px solid var(--border);
+}
+
+.membership-actions-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.membership-actions-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  color: var(--primary);
+  background: var(--primary-light);
+  border-radius: 12px;
+}
+
+.membership-actions-title h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 17px;
+}
+
+.membership-actions-title p {
+  margin: 3px 0 0;
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.membership-actions-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 18px 22px 22px;
+}
+
+.membership-actions-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.membership-actions-section-title {
+  margin: 0 0 2px;
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.membership-action-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  width: 100%;
+  min-height: 62px;
+  padding: 13px;
+  color: var(--text);
+  text-align: left;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+
+.membership-action-card:hover {
+  background: var(--card);
+  border-color: var(--primary);
+  transform: translateY(-1px);
+}
+
+.membership-action-card > svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--primary);
+}
+
+.membership-action-card span {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.membership-action-card strong {
+  font-size: 12.5px;
+  font-weight: 650;
+}
+
+.membership-action-card small {
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+.membership-action-card--success {
+  color: #16a34a;
+  border-color: rgba(22, 163, 74, 0.25);
+}
+
+.membership-action-card--success > svg,
+.membership-action-card--success small {
+  color: #16a34a;
+}
+
+.membership-action-card--whatsapp,
+.membership-action-card--whatsapp > svg {
+  color: #16a34a;
+}
+
+.membership-action-card--whatsapp {
+  border-color: rgba(37, 211, 102, 0.25);
+}
+
+.membership-action-card--danger,
+.membership-action-card--danger > svg {
+  color: #dc2626;
+}
+
+.membership-action-card--danger {
+  border-color: rgba(220, 38, 38, 0.25);
+}
+
+.membership-action-card--danger small {
+  color: #dc2626;
+}
+
+.membership-actions-divider {
+  height: 1px;
+  background: var(--border);
+}
+
+.membership-actions-section--danger {
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+@media (max-width: 520px) {
+  .membership-actions-grid {
+    gap: 16px;
+  }
 }
 
 .search-clear-btn {

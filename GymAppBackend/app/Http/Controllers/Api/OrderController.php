@@ -91,13 +91,6 @@ class OrderController extends Controller
 
         $order->load('user');
 
-        // Notify admins about new order
-        try {
-            Notification::notifyAdminsAboutOrder($order);
-        } catch (\Exception $e) {
-            Log::warning('Could not notify admins about new order: ' . $e->getMessage());
-        }
-
         return response()->json([
             'message' => 'Pedido creado. Suba su comprobante de pago para procesarlo.',
             'order' => $order,

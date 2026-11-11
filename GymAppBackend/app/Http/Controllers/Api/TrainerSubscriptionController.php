@@ -301,7 +301,8 @@ class TrainerSubscriptionController extends Controller
      */
     public function destroy($id)
     {
-        $subscription = Subscription::findOrFail($id);
+        $subscription = Subscription::with('plan')->findOrFail($id);
+        Notification::notifyUser($subscription, 'deleted');
         $subscription->delete();
 
         $this->invalidateSubscriptionCaches();

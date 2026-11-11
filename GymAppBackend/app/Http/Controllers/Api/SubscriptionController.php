@@ -121,12 +121,6 @@ class SubscriptionController extends Controller
         $subscription = Subscription::create($subscriptionData);
         $subscription->load(['plan', 'user']);
 
-        // Si es transferencia, notificar a los admins
-        if ($request->payment_method === 'transfer') {
-            $subscription->load(['plan', 'user']);
-            Notification::notifyAdmins($subscription);
-        }
-
         return response()->json([
             'message' => 'Suscripción creada. Suba su comprobante para activarla',
             'subscription' => $subscription

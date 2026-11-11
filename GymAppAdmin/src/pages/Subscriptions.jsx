@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { apiFetch, API_BASE_URL } from '../api/client';
 import {
   Check,
@@ -22,7 +22,7 @@ import {
   ZoomOut,
   RotateCw,
   RefreshCw,
-  MoreVertical,
+  Settings,
   XCircle,
   AlertCircle,
   ShieldAlert,
@@ -53,8 +53,6 @@ export default function Subscriptions() {
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
   const [activeDropdown, setActiveDropdown] = useState(null);
-  const [dropdownPos, setDropdownPos] = useState({ top: 0, right: 0 });
-  const dropdownRef = useRef(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   useEffect(() => {
@@ -626,25 +624,16 @@ export default function Subscriptions() {
     return () => window.clearTimeout(timeoutId);
   }, [error]);
 
-  // Close active dropdown when clicking outside
+  // Close the actions modal with Escape.
   useEffect(() => {
-    const handleOutsideClick = (e) => {
-      if (activeDropdown === null) return;
-      if (
-        !e.target.closest('.actions-dropdown-wrapper') &&
-        !e.target.closest('.fixed-dropdown-menu')
-      ) {
-        setActiveDropdown(null);
-      }
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setActiveDropdown(null);
     };
-    const handleScroll = () => setActiveDropdown(null);
-    document.addEventListener('click', handleOutsideClick);
-    document.addEventListener('scroll', handleScroll, true);
+    document.addEventListener('keydown', handleKeyDown);
     return () => {
-      document.removeEventListener('click', handleOutsideClick);
-      document.removeEventListener('scroll', handleScroll, true);
+      document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [activeDropdown]);
+  }, []);
 
   const pendingCount = subs.filter(s => s.status === 'pending').length;
   const expiredCount = subs.filter(s => isSubscriptionExpired(s)).length;
@@ -963,7 +952,7 @@ export default function Subscriptions() {
                   {paginatedItems.map((s, index) => {
                     const isLastRows = index >= paginatedItems.length - 2;
                     return (
-                      <tr key={s.id}>
+                      <tr key={s.id} className={s.status === 'pending' ? 'subscription-row--pending' : ''}>
                         <td style={{ minWidth: 220 }}>{renderUserCell(s.user, s)}</td>
                         <td>
                           <div className="plan-cell-content">
@@ -975,7 +964,7 @@ export default function Subscriptions() {
                             {s.notes && (
                               <div
                                 className="sub-note-badge"
-                                onClick={(e) => {
+                                onClick={() => {
                                   e.stopPropagation();
                                   setNoteModal({ sub: s, note: s.notes || '', saving: false });
                                 }}
@@ -1035,33 +1024,12 @@ export default function Subscriptions() {
                         </td>
                         <td style={{ textAlign: 'right' }}>
                           <div className="table-actions-container">
-                            {s.status === 'pending' && (
-                              <>
-                                <button type="button" className="btn-action-quick btn-action-approve" onClick={() => handleApprove(s.id)}>
-                                  <Check size={14} /> Aprobar
-                                </button>
-                                <button type="button" className="btn-action-quick btn-action-reject" onClick={() => handleReject(s.id)}>
-                                  <X size={14} /> Rechazar
-                                </button>
-                              </>
-                            )}
-                            {/* WhatsApp Direct Action Button */}
-                            <button
-                              type="button"
-                              className="btn-action-quick btn-action-whatsapp"
-                              onClick={() => handleOpenWhatsAppReminder(s)}
-                              title="Contactar por WhatsApp"
-                              aria-label="Contactar por WhatsApp"
-                            >
-                              <WhatsAppIcon size={16} />
-                            </button>
-
                             {/* View Receipt Button */}
                             {getReceiptUrl(s) && (
                               <div className="subscription-action-wrapper">
                                 <button
                                   type="button"
-                                  className="btn-action-icon btn-eye-action"
+                                  className={`btn-action-icon btn-eye-action ${s.status === 'pending' ? 'btn-eye-action--pending' : ''}`}
                                   onClick={() => handleOpenReceiptModal(s)}
                                   aria-label="Ver comprobante"
                                 >
@@ -1081,16 +1049,6 @@ export default function Subscriptions() {
                                     setActiveDropdown(null);
                                     return;
                                   }
-                                  const rect = e.currentTarget.getBoundingClientRect();
-                                  const dropdownHeight = 240;
-                                  const spaceBelow = window.innerHeight - rect.bottom;
-                                  const openUp = spaceBelow < dropdownHeight && rect.top > dropdownHeight;
-                                  setDropdownPos({
-                                    top: openUp
-                                      ? Math.max(10, rect.top - dropdownHeight - 6)
-                                      : Math.min(rect.bottom + 6, window.innerHeight - dropdownHeight - 10),
-                                    right: Math.max(10, window.innerWidth - rect.right),
-                                  });
                                   setActiveDropdown(s.id);
                                 }}
                                 title="Más opciones"
@@ -1099,7 +1057,7 @@ export default function Subscriptions() {
                                 {actionLoading === s.id + '_approve' || actionLoading === s.id + '_reject' || actionLoading === s.id + '_renew' || actionLoading === s.id + '_delete' ? (
                                   <Loader2 className="spin" size={15} />
                                 ) : (
-                                  <MoreVertical size={16} />
+                                  <Settings size={16} />
                                 )}
                               </button>
                             </div>
@@ -1117,7 +1075,7 @@ export default function Subscriptions() {
           <div className="subs-mobile-view">
             <div className="mobile-subs-grid">
               {paginatedItems.map(s => (
-                <div className="sub-mobile-card" key={s.id}>
+                <div className={`sub-mobile-card ${s.status === 'pending' ? 'sub-mobile-card--pending' : ''}`} key={s.id}>
                   {/* Card Header with User Profile */}
                   <div style={{ borderBottom: '1px solid var(--border)', paddingBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     {renderUserCell(s.user)}
@@ -1130,115 +1088,8 @@ export default function Subscriptions() {
                         onClick={() => setActiveDropdown(activeDropdown === s.id ? null : s.id)}
                         title="Acciones"
                       >
-                        <MoreVertical size={18} />
+                        <Settings size={18} />
                       </button>
-                      {activeDropdown === s.id && (
-                        <div className="actions-dropdown-menu">
-                          {s.status === 'pending' ? (
-                            <>
-                              <button
-                                type="button"
-                                className="actions-dropdown-item"
-                                onClick={() => {
-                                  handleApprove(s.id);
-                                  setActiveDropdown(null);
-                                }}
-                              >
-                                <Check size={14} style={{ color: '#16a34a' }} />
-                                <span style={{ color: '#16a34a', fontWeight: 600 }}>Aprobar pago</span>
-                              </button>
-
-                              <button
-                                type="button"
-                                className="actions-dropdown-item actions-dropdown-item--danger"
-                                onClick={() => {
-                                  handleReject(s.id);
-                                  setActiveDropdown(null);
-                                }}
-                              >
-                                <X size={14} style={{ color: '#dc2626' }} />
-                                <span style={{ color: '#dc2626', fontWeight: 600 }}>Rechazar pago</span>
-                              </button>
-                            </>
-                          ) : (
-                            <>
-                              <button
-                                type="button"
-                                className="actions-dropdown-item"
-                                onClick={() => {
-                                  handleRenew(s.id);
-                                  setActiveDropdown(null);
-                                }}
-                              >
-                                <RefreshCw size={14} style={{ color: '#16a34a' }} />
-                                <span style={{ color: '#16a34a', fontWeight: 600 }}>Renovar suscripción</span>
-                              </button>
-                              {(() => {
-                                const expState = getSubscriptionExpirationState(s);
-                                if (!expState.eligible) return null;
-                                return (
-                                  <button
-                                    type="button"
-                                    className="actions-dropdown-item"
-                                    onClick={() => {
-                                      handleOpenWhatsAppReminder(s);
-                                      setActiveDropdown(null);
-                                    }}
-                                  >
-                                    <WhatsAppIcon size={15} />
-                                    <span style={{ color: expState.isExpired ? '#dc2626' : '#16a34a', fontWeight: 600 }}>
-                                      {expState.label}
-                                    </span>
-                                  </button>
-                                );
-                              })()}
-                              {getReceiptUrl(s) && (
-                                <button
-                                  type="button"
-                                  className="actions-dropdown-item"
-                                  onClick={() => {
-                                    handleOpenReceiptModal(s);
-                                    setActiveDropdown(null);
-                                  }}
-                                >
-                                  <Eye size={14} style={{ color: '#2563eb' }} />
-                                  <span>Ver comprobante</span>
-                                </button>
-                              )}
-                              <button
-                                type="button"
-                                className="actions-dropdown-item"
-                                onClick={() => {
-                                  handleOpenEditClient(s);
-                                  setActiveDropdown(null);
-                                }}
-                              >
-                                <User size={14} style={{ color: 'var(--primary)' }} />
-                                <span>Editar datos del cliente</span>
-                              </button>
-                              <button
-                                type="button"
-                                className="actions-dropdown-item"
-                                onClick={() => {
-                                  setNoteModal({ sub: s, note: s.notes || '', saving: false });
-                                  setActiveDropdown(null);
-                                }}
-                              >
-                                <FileText size={14} style={{ color: '#d97706' }} />
-                                <span>{s.notes ? 'Editar nota' : 'Agregar nota'}</span>
-                              </button>
-                              <button
-                                type="button"
-                                className="actions-dropdown-item actions-dropdown-item--danger"
-                                onClick={() => handleDelete(s)}
-                              >
-                                <Trash2 size={14} />
-                                <span>Eliminar suscripción</span>
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      )}
                     </div>
                   </div>
 
@@ -2338,87 +2189,71 @@ Estamos validando tu comprobante de pago para activar tu membresía de inmediato
           </div>
         </div>
       )}
-      {/* ═══════════════════════════════════════════════════════════
-          DROPDOWN FLOTANTE — position:fixed, nunca cortado por overflow
-      ═══════════════════════════════════════════════════════════ */}
+      {/* Modal de acciones de membresía */}
       {activeDropdown !== null && (() => {
         const s = subs.find(sub => sub.id === activeDropdown);
         if (!s) return null;
         return (
-          <div
-            className="fixed-dropdown-menu actions-dropdown-menu"
-            style={{
-              position: 'fixed',
-              top: dropdownPos.top,
-              right: dropdownPos.right,
-              zIndex: 9999,
-              minWidth: 190,
-              maxHeight: 'calc(100vh - 30px)',
-              overflowY: 'auto',
-            }}
-          >
-            {s.status === 'pending' ? (
-              <>
-                <button
-                  type="button"
-                  className="dropdown-item dropdown-item--approve"
-                  onClick={() => { setActiveDropdown(null); handleApprove(s.id); }}
-                >
-                  <Check size={14} /> <span>Aprobar pago</span>
+          <div className="modal-overlay membership-actions-overlay" onClick={() => setActiveDropdown(null)}>
+            <div className="modal membership-actions-modal" onClick={e => e.stopPropagation()}>
+              <div className="membership-actions-header">
+                <div className="membership-actions-title">
+                  <div className="membership-actions-icon"><Settings size={19} /></div>
+                  <div>
+                    <h3>Acciones de membresía</h3>
+                    <p>{s.user?.name || s.billing_name || 'Cliente'}</p>
+                  </div>
+                </div>
+                <button type="button" className="btn-action-circle" onClick={() => setActiveDropdown(null)} aria-label="Cerrar">
+                  <X size={16} />
                 </button>
-                <button
-                  type="button"
-                  className="dropdown-item dropdown-item--danger"
-                  onClick={() => { setActiveDropdown(null); handleReject(s.id); }}
-                >
-                  <X size={14} /> <span>Rechazar pago</span>
-                </button>
-              </>
-            ) : (
-              <button
-                type="button"
-                className="dropdown-item dropdown-item--renew"
-                onClick={() => { setActiveDropdown(null); handleRenew(s.id); }}
-              >
-                <RefreshCw size={14} /> <span>Renovar membresía</span>
-              </button>
-            )}
-            {getReceiptUrl(s) && (
-              <button
-                type="button"
-                className="dropdown-item"
-                onClick={() => {
-                  setActiveDropdown(null);
-                  handleOpenReceiptModal(s);
-                }}
-              >
-                <Eye size={14} /> <span>Ver comprobante</span>
-              </button>
-            )}
-            <button
-              type="button"
-              className="dropdown-item"
-              onClick={() => {
-                setActiveDropdown(null);
-                handleOpenEditClient(s);
-              }}
-            >
-              <User size={14} /> <span>Detalles del cliente</span>
-            </button>
-            <button
-              type="button"
-              className="dropdown-item"
-              onClick={() => { setActiveDropdown(null); setNoteModal({ sub: s, note: s.notes || '', saving: false }); }}
-            >
-              <FileText size={14} /> <span>{s.notes ? 'Editar nota' : 'Añadir nota'}</span>
-            </button>
-            <button
-              type="button"
-              className="dropdown-item dropdown-item--danger"
-              onClick={() => { setActiveDropdown(null); handleDelete(s); }}
-            >
-              <Trash2 size={14} /> <span>Eliminar registro</span>
-            </button>
+              </div>
+
+              <div className="membership-actions-grid">
+                {s.status === 'pending' ? (
+                  <section className="membership-actions-section">
+                    <h4 className="membership-actions-section-title">Revisión de pago</h4>
+                    <button type="button" className="membership-action-card membership-action-card--success" onClick={() => { setActiveDropdown(null); handleApprove(s.id); }}>
+                      <Check size={18} /><span><strong>Aprobar pago</strong><small>Activar esta membresía</small></span>
+                    </button>
+                    <button type="button" className="membership-action-card membership-action-card--danger" onClick={() => { setActiveDropdown(null); handleReject(s.id); }}>
+                      <X size={18} /><span><strong>Rechazar pago</strong><small>Marcar comprobante como rechazado</small></span>
+                    </button>
+                    <button type="button" className="membership-action-card membership-action-card--danger" onClick={() => { setActiveDropdown(null); handleDelete(s); }}>
+                      <Trash2 size={18} /><span><strong>Eliminar suscripción</strong><small>Eliminar suscripción y registro</small></span>
+                    </button>
+                  </section>
+                ) : (
+                  <section className="membership-actions-section">
+                    <h4 className="membership-actions-section-title">Gestionar membresía</h4>
+                    <button type="button" className="membership-action-card membership-action-card--success" onClick={() => { setActiveDropdown(null); handleRenew(s.id); }}>
+                      <RefreshCw size={18} /><span><strong>Renovar membresía</strong><small>Extender la vigencia del plan</small></span>
+                    </button>
+                    <button type="button" className="membership-action-card membership-action-card--danger" onClick={() => { setActiveDropdown(null); handleDelete(s); }}>
+                      <Trash2 size={18} /><span><strong>Eliminar suscripción</strong><small>Eliminar suscripción y registro</small></span>
+                    </button>
+                  </section>
+                )}
+
+                <section className="membership-actions-section">
+                  <h4 className="membership-actions-section-title">Comunicación</h4>
+                  <button type="button" className="membership-action-card membership-action-card--whatsapp" onClick={() => { setActiveDropdown(null); handleOpenWhatsAppReminder(s); }}>
+                    <WhatsAppIcon size={18} /><span><strong>Contactar por WhatsApp</strong><small>Enviar recordatorio al cliente</small></span>
+                  </button>
+                </section>
+
+                <section className="membership-actions-section">
+                  <h4 className="membership-actions-section-title">Información del cliente</h4>
+                  <button type="button" className="membership-action-card" onClick={() => { setActiveDropdown(null); handleOpenEditClient(s); }}>
+                    <User size={18} /><span><strong>Detalles del cliente</strong><small>Editar los datos registrados</small></span>
+                  </button>
+                  <button type="button" className="membership-action-card" onClick={() => { setActiveDropdown(null); setNoteModal({ sub: s, note: s.notes || '', saving: false }); }}>
+                    <FileText size={18} /><span><strong>{s.notes ? 'Editar nota' : 'Añadir nota'}</strong><small>Agregar observaciones internas</small></span>
+                  </button>
+                </section>
+
+              </div>
+            </div>
           </div>
         );
       })()}

@@ -80,17 +80,25 @@ class Notification extends Model
     public static function notifyUser($subscription, $status)
     {
         try {
-            $title = $status === 'active'
-                ? 'Suscripción aprobada'
-                : 'Suscripción rechazada';
+            $title = match ($status) {
+                'active' => 'Suscripción aprobada',
+                'deleted' => 'Suscripción eliminada',
+                default => 'Suscripción rechazada',
+            };
 
-            $message = $status === 'active'
-                ? "Tu suscripción al {$subscription->plan->name} ha sido aprobada. ¡Bienvenido!"
-                : "Tu solicitud de suscripción al {$subscription->plan->name} fue rechazada. Motivo: {$subscription->rejection_reason}";
+            $message = match ($status) {
+                'active' => "Tu suscripción al {$subscription->plan->name} ha sido aprobada. ¡Bienvenido!",
+                'deleted' => "Tu suscripción al {$subscription->plan->name} fue eliminada por el administrador.",
+                default => "Tu solicitud de suscripción al {$subscription->plan->name} fue rechazada. Motivo: {$subscription->rejection_reason}",
+            };
 
             self::create([
                 'user_id' => $subscription->user_id,
-                'type' => $status === 'active' ? 'subscription_approved' : 'subscription_rejected',
+                'type' => match ($status) {
+                    'active' => 'subscription_approved',
+                    'deleted' => 'subscription_deleted',
+                    default => 'subscription_rejected',
+                },
                 'title' => $title,
                 'message' => $message,
                 'data' => [

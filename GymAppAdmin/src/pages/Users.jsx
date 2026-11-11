@@ -6,12 +6,12 @@ import {
   UserCheck, Users as UsersIcon,
   UserCircle, Calendar, Lock, ShieldOff, UserX, ShieldCheck,
   ChevronDown, ChevronUp, CreditCard, ShoppingBag,
-  ZoomIn, ZoomOut, RotateCw, ExternalLink
+  ZoomIn, ZoomOut, RotateCw, ExternalLink, Settings
 } from 'lucide-react';
 import '../components/Layout.css';
 import './Users.css';
 
-const MODAL = { VIEW: 'view', STATUS: 'status' };
+const MODAL = { VIEW: 'view', STATUS: 'status', ACTIONS: 'actions' };
 
 // ─── Confirmation Alert Step ─────────────────────────────────────────────────
 // type: 'danger' | 'warning'
@@ -370,32 +370,14 @@ export default function Users() {
                         </td>
                         <td className="actions-inline-cell">
                           <div className="actions-inline-group">
-                            {/* Ver perfil */}
-                            <div className="action-btn-wrapper">
-                              <button
-                                className="action-btn action-btn--view"
-                                onClick={() => openModal(MODAL.VIEW, u)}
-                                aria-label="Ver perfil"
-                              >
-                                <Eye size={15} />
-                              </button>
-                              <span className="action-btn-tooltip">Ver perfil</span>
-                            </div>
-
-                            {/* Activar / Suspender */}
-                            <div className="action-btn-wrapper">
-                              <button
-                                className={`action-btn ${!active && !tempSusp ? 'action-btn--activate' : 'action-btn--suspend'}`}
-                                onClick={() => openModal(MODAL.STATUS, u)}
-                                aria-label={!active && !tempSusp ? 'Activar cuenta' : 'Suspender / Bloquear'}
-                              >
-                                {!active && !tempSusp ? <ShieldCheck size={15} /> : <UserX size={15} />}
-                              </button>
-                              <span className="action-btn-tooltip">
-                                {!active && !tempSusp ? 'Activar cuenta' : 'Suspender'}
-                              </span>
-                            </div>
-
+                            <button
+                              className="users-settings-trigger"
+                              onClick={() => openModal(MODAL.ACTIONS, u)}
+                              aria-label="Acciones del usuario"
+                              title="Acciones"
+                            >
+                              <Settings size={16} />
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -414,6 +396,42 @@ export default function Users() {
             </div>
           )}
         </>
+      )}
+
+      {/* ════════════════════════════════════════════════════════
+          MODAL: ACCIONES DEL USUARIO
+      ════════════════════════════════════════════════════════ */}
+      {modalType === MODAL.ACTIONS && targetUser && (
+        <div className="modal-overlay" onClick={closeModal}>
+          <div className="modal users-actions-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="users-actions-title">
+                <div className="users-actions-icon"><Settings size={19} /></div>
+                <div>
+                  <h3>Acciones del usuario</h3>
+                  <p>{targetUser.name}</p>
+                </div>
+              </div>
+              <button className="modal-close-btn" onClick={closeModal}><X size={18} /></button>
+            </div>
+            <div className="users-actions-section">
+              <span className="users-actions-section-label">Perfil y acceso</span>
+              <button className="users-action-card" onClick={() => openModal(MODAL.VIEW, targetUser)}>
+                <Eye size={18} /><span><strong>Ver perfil</strong><small>Consultar datos e historial del usuario</small></span>
+              </button>
+              <button
+                className={`users-action-card ${!isUserActive(targetUser) && !isUserTempSusp(targetUser) ? 'users-action-card--success' : 'users-action-card--warning'}`}
+                onClick={() => openModal(MODAL.STATUS, targetUser)}
+              >
+                {!isUserActive(targetUser) && !isUserTempSusp(targetUser) ? <ShieldCheck size={18} /> : <UserX size={18} />}
+                <span>
+                  <strong>{!isUserActive(targetUser) && !isUserTempSusp(targetUser) ? 'Activar cuenta' : 'Suspender cuenta'}</strong>
+                  <small>{!isUserActive(targetUser) && !isUserTempSusp(targetUser) ? 'Restaurar el acceso del usuario' : 'Gestionar el acceso temporal o permanente'}</small>
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ════════════════════════════════════════════════════════

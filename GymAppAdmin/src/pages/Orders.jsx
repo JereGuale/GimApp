@@ -12,7 +12,7 @@ import {
   ExternalLink,
   Package,
   Trash2,
-  MoreVertical,
+  Settings,
   Search,
   ShoppingBag,
   Clock,
@@ -178,7 +178,7 @@ export default function Orders() {
   useEffect(() => {
     const handleOutsideClick = (e) => {
       if (activeDropdown === null) return;
-      if (!e.target.closest('.actions-dropdown-wrapper')) {
+      if (!e.target.closest('.actions-dropdown-wrapper') && !e.target.closest('.order-actions-modal')) {
         setActiveDropdown(null);
       }
     };
@@ -477,10 +477,9 @@ export default function Orders() {
                   </tr>
                 </thead>
                 <tbody>
-                  {paginatedOrders.map((o, index) => {
-                    const isLastRows = index >= paginatedOrders.length - 2;
+                  {paginatedOrders.map((o) => {
                     return (
-                      <tr key={o.id}>
+                      <tr key={o.id} className={o.status === 'pending' ? 'order-row--pending' : ''}>
                       <td style={{ minWidth: 200 }}>{renderUserCell(o.user)}</td>
                       <td>
                         <div style={{ maxHeight: 110, overflowY: 'auto', fontSize: 13, display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -573,7 +572,7 @@ export default function Orders() {
                             {getReceiptUrl(o) && (
                               <button
                                 type="button"
-                                className="btn-eye-action"
+                                className={`btn-eye-action ${o.status === 'pending' ? 'btn-eye-action--pending' : ''}`}
                                 onClick={() => handleOpenReceiptModal(o)}
                                 title="Ver comprobante"
                               >
@@ -595,76 +594,9 @@ export default function Orders() {
                                   {actionLoading === o.id + '_approve' || actionLoading === o.id + '_reject' || actionLoading === o.id + '_delete' || actionLoading === o.id + '_status' ? (
                                     <Loader2 className="spin" size={16} />
                                   ) : (
-                                    <MoreVertical size={18} />
+                                    <Settings size={18} />
                                   )}
                                 </button>
-                                {activeDropdown === o.id && (
-                                  <div className={`actions-dropdown-menu ${isLastRows ? 'open-up' : ''}`}>
-                                    {o.status === 'pending' && (
-                                      <>
-                                        <button 
-                                          type="button"
-                                          className="actions-dropdown-item"
-                                          onClick={() => {
-                                            handleApprove(o.id);
-                                            setActiveDropdown(null);
-                                          }}
-                                        >
-                                          <Check size={14} style={{ color: '#16a34a' }} />
-                                          <span style={{ color: '#16a34a', fontWeight: 600 }}>Aprobar pedido</span>
-                                        </button>
-                                        <button 
-                                          type="button"
-                                          className="actions-dropdown-item"
-                                          onClick={() => {
-                                            handleRejectClick(o.id);
-                                            setActiveDropdown(null);
-                                          }}
-                                        >
-                                          <X size={14} style={{ color: '#dc2626' }} />
-                                          <span style={{ color: '#dc2626', fontWeight: 600 }}>Rechazar pedido</span>
-                                        </button>
-                                      </>
-                                    )}
-                                    {(o.status === 'approved' || o.status === 'processing' || o.status === 'shipped') && (
-                                      <button 
-                                        type="button"
-                                        className="actions-dropdown-item"
-                                        onClick={() => {
-                                          handleUpdateStatus(o.id, 'completed');
-                                          setActiveDropdown(null);
-                                        }}
-                                      >
-                                        <CheckCircle2 size={14} style={{ color: '#16a34a' }} />
-                                        <span style={{ color: '#16a34a', fontWeight: 600 }}>Marcar como Retirado</span>
-                                      </button>
-                                    )}
-                                    {o.status === 'rejected' && o.rejection_reason && (
-                                      <button
-                                        type="button"
-                                        className="actions-dropdown-item"
-                                        onClick={() => {
-                                          setRejectionReasonModal(o);
-                                          setActiveDropdown(null);
-                                        }}
-                                      >
-                                        <AlertCircle size={14} style={{ color: '#dc2626' }} />
-                                        <span style={{ color: '#dc2626', fontWeight: 600 }}>Ver motivo del rechazo</span>
-                                      </button>
-                                    )}
-                                    <button
-                                      type="button"
-                                      className="actions-dropdown-item actions-dropdown-item--danger"
-                                      onClick={() => {
-                                        handleDeleteClick(o.id);
-                                        setActiveDropdown(null);
-                                      }}
-                                    >
-                                      <Trash2 size={14} />
-                                      <span>Eliminar registro</span>
-                                    </button>
-                                  </div>
-                                )}
                               </div>
                           </div>
                         </div>
@@ -681,7 +613,7 @@ export default function Orders() {
           <div className="orders-mobile-view">
             <div className="order-mobile-grid">
               {paginatedOrders.map(o => (
-                <div className="order-mobile-card" key={o.id}>
+                <div className={`order-mobile-card ${o.status === 'pending' ? 'order-mobile-card--pending' : ''}`} key={o.id}>
                   <div style={{ borderBottom: '1px solid var(--border)', paddingBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     {renderUserCell(o.user)}
                     
@@ -692,90 +624,8 @@ export default function Orders() {
                         onClick={() => setActiveDropdown(activeDropdown === o.id ? null : o.id)}
                         title="Acciones"
                       >
-                        <MoreVertical size={18} />
+                        <Settings size={18} />
                       </button>
-                      {activeDropdown === o.id && (
-                        <div className="actions-dropdown-menu">
-                          {o.status === 'pending' && (
-                            <>
-                              <button 
-                                type="button"
-                                className="actions-dropdown-item"
-                                onClick={() => {
-                                  handleApprove(o.id);
-                                  setActiveDropdown(null);
-                                }}
-                              >
-                                <Check size={14} style={{ color: '#16a34a' }} />
-                                <span style={{ color: '#16a34a', fontWeight: 600 }}>Aprobar pedido</span>
-                              </button>
-                              
-                              <button 
-                                type="button"
-                                className="actions-dropdown-item"
-                                onClick={() => {
-                                  handleRejectClick(o.id);
-                                  setActiveDropdown(null);
-                                }}
-                              >
-                                <X size={14} style={{ color: '#dc2626' }} />
-                                <span style={{ color: '#dc2626', fontWeight: 600 }}>Rechazar pedido</span>
-                              </button>
-                            </>
-                          )}
-                          {(o.status === 'approved' || o.status === 'processing' || o.status === 'shipped') && (
-                            <button 
-                              type="button"
-                              className="actions-dropdown-item"
-                              onClick={() => {
-                                handleUpdateStatus(o.id, 'completed');
-                                setActiveDropdown(null);
-                              }}
-                            >
-                              <CheckCircle2 size={14} style={{ color: '#16a34a' }} />
-                              <span style={{ color: '#16a34a', fontWeight: 600 }}>Marcar como Retirado</span>
-                            </button>
-                          )}
-                          {getReceiptUrl(o) && (
-                            <button 
-                              type="button"
-                              className="actions-dropdown-item"
-                              onClick={() => {
-                                handleOpenReceiptModal(o);
-                                setActiveDropdown(null);
-                              }}
-                            >
-                              <Eye size={14} />
-                              <span>Ver comprobante</span>
-                            </button>
-                          )}
-                          
-                          {o.status === 'rejected' && o.rejection_reason && (
-                            <button
-                              type="button"
-                              className="actions-dropdown-item"
-                              onClick={() => {
-                                setRejectionReasonModal(o);
-                                setActiveDropdown(null);
-                              }}
-                            >
-                              <AlertCircle size={14} style={{ color: '#dc2626' }} />
-                              <span style={{ color: '#dc2626', fontWeight: 600 }}>Ver motivo del rechazo</span>
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            className="actions-dropdown-item actions-dropdown-item--danger"
-                            onClick={() => {
-                              handleDeleteClick(o.id);
-                              setActiveDropdown(null);
-                            }}
-                          >
-                            <Trash2 size={14} />
-                            <span>Eliminar registro</span>
-                          </button>
-                        </div>
-                      )}
                     </div>
                   </div>
 
@@ -1083,6 +933,65 @@ Estamos validando tu pago y nos comunicaremos contigo de inmediato. ¡Gracias po
           </div>
         </div>
       )}
+
+      {activeDropdown !== null && (() => {
+        const order = orders.find(item => item.id === activeDropdown);
+        if (!order) return null;
+        const canComplete = ['approved', 'processing', 'shipped'].includes(order.status);
+        return (
+          <div className="modal-overlay order-actions-overlay" onClick={() => setActiveDropdown(null)}>
+            <div className="modal order-actions-modal" onClick={e => e.stopPropagation()}>
+              <div className="order-actions-header">
+                <div className="order-actions-title">
+                  <div className="order-actions-icon"><Settings size={19} /></div>
+                  <div>
+                    <h3>Acciones del pedido</h3>
+                    <p>Pedido · {order.user?.name || 'Cliente'}</p>
+                  </div>
+                </div>
+                <button type="button" className="btn-action-circle" onClick={() => setActiveDropdown(null)} aria-label="Cerrar">
+                  <X size={16} />
+                </button>
+              </div>
+              <div className="order-actions-content">
+                {order.status === 'pending' && (
+                  <section className="order-actions-section">
+                    <h4>Revisión del pedido</h4>
+                    <button type="button" className="order-action-card order-action-card--success" onClick={() => { setActiveDropdown(null); handleApprove(order.id); }}>
+                      <Check size={18} /><span><strong>Aprobar pedido</strong><small>Confirmar el pago y preparar el pedido</small></span>
+                    </button>
+                    <button type="button" className="order-action-card order-action-card--danger" onClick={() => { setActiveDropdown(null); handleRejectClick(order.id); }}>
+                      <X size={18} /><span><strong>Rechazar pedido</strong><small>Indicar el motivo del rechazo</small></span>
+                    </button>
+                  </section>
+                )}
+                {canComplete && (
+                  <section className="order-actions-section">
+                    <h4>Entrega</h4>
+                    <button type="button" className="order-action-card order-action-card--success" onClick={() => { setActiveDropdown(null); handleUpdateStatus(order.id, 'completed'); }}>
+                      <CheckCircle2 size={18} /><span><strong>Marcar como retirado</strong><small>Registrar que el cliente recibió su pedido</small></span>
+                    </button>
+                  </section>
+                )}
+                {order.status === 'rejected' && order.rejection_reason && (
+                  <section className="order-actions-section">
+                    <h4>Información</h4>
+                    <button type="button" className="order-action-card order-action-card--danger" onClick={() => { setActiveDropdown(null); setRejectionReasonModal(order); }}>
+                      <AlertCircle size={18} /><span><strong>Ver motivo del rechazo</strong><small>Consultar la observación registrada</small></span>
+                    </button>
+                  </section>
+                )}
+                <section className="order-actions-section order-actions-section--danger">
+                  <h4>Eliminar</h4>
+                  <button type="button" className="order-action-card order-action-card--danger" onClick={() => { setActiveDropdown(null); handleDeleteClick(order.id); }}>
+                    <Trash2 size={18} /><span><strong>Eliminar registro</strong><small>Esta acción requiere confirmación</small></span>
+                  </button>
+                </section>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Custom Prompt Modal for Rejecting Orders */}
       {rejectModal && (

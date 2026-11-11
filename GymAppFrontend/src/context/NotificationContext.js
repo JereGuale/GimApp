@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { AppState } from 'react-native';
 import { NotificationAPI } from '../services/notificationService';
 import { useAuth } from './AuthContext';
 
@@ -76,11 +77,17 @@ export function NotificationProvider({ children }) {
 
         fetchNotifications(true);
         intervalRef.current = setInterval(() => fetchNotifications(true), 10000);
+        const appStateSubscription = AppState.addEventListener('change', nextState => {
+            if (nextState === 'active') {
+                fetchNotifications(true);
+            }
+        });
         if (typeof window === 'undefined') {
             return () => {
                 if (intervalRef.current) {
                     clearInterval(intervalRef.current);
                 }
+                appStateSubscription.remove();
             };
         }
         const handleWindowFocus = () => fetchNotifications(true);
@@ -90,6 +97,7 @@ export function NotificationProvider({ children }) {
             if (intervalRef.current) {
                 clearInterval(intervalRef.current);
             }
+            appStateSubscription.remove();
             window.removeEventListener('focus', handleWindowFocus);
         };
     }, [user, token, fetchNotifications]);

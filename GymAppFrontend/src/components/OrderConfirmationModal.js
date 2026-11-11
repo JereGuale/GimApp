@@ -53,12 +53,13 @@ export default function OrderConfirmationModal({
 
     const isSubscription = type === "subscription";
 
-    const title   = isSubscription ? "¡Suscripción enviada!" : "¡Compra pendiente!";
+    const title   = isSubscription ? "¡Suscripción enviada!" : "¡Compra enviada!";
     const mainMsg = isSubscription
         ? "Tu comprobante de pago fue enviado exitosamente."
-        : "Tu comprobante fue enviado y está pendiente de aprobación.";
-    const subMsg =
-        "Pronto te enviaremos más detalles a tu WhatsApp una vez que el administrador lo revise y apruebe. ¡Gracias por tu preferencia!";
+        : "Tu comprobante de pago fue enviado exitosamente.";
+    const notificationMsg = isSubscription
+        ? "Te avisaremos mediante las notificaciones de la aplicación cuando el administrador revise y apruebe tu pago."
+        : "Te avisaremos mediante las notificaciones de la aplicación cuando el administrador revise y apruebe tu pedido.";
     const btnLabel = isSubscription ? "Ver mi suscripción" : "Ver mis compras";
     const btnIcon  = isSubscription ? "card-outline" : "bag-handle-outline";
 
@@ -130,27 +131,19 @@ export default function OrderConfirmationModal({
                         <Text style={[styles.title, { color: textPri }]}>{title}</Text>
                         <Text style={[styles.mainMsg, { color: textSec }]}>{mainMsg}</Text>
 
-                        {/* ── WhatsApp notice ── */}
-                        <View style={[styles.waBox, { backgroundColor: surface, borderColor: border }]}>
-                            <View style={styles.whatsappLogoCircle}>
-                                <Ionicons name="logo-whatsapp" size={15} color="#FFFFFF" />
+                        {/* ── In-app notification notice ── */}
+                        <View style={[styles.notificationBox, { backgroundColor: surface, borderColor: border }]}>
+                            <View style={styles.notificationIconCircle}>
+                                <Ionicons name="notifications" size={16} color="#FFFFFF" />
                             </View>
-                            <Text style={[styles.waText, { color: textSec }]}>{subMsg}</Text>
+                            <Text style={[styles.notificationText, { color: textSec }]}>{notificationMsg}</Text>
                         </View>
 
-                        {/* ── Current status ── */}
-                        <View style={[styles.stepsCard, { backgroundColor: surface, borderColor: border }]}>
-                            <View style={[styles.stepIcon, { backgroundColor: "rgba(245,158,11,0.12)", borderColor: "#F59E0B" }]}>
-                                <Ionicons name="time-outline" size={18} color="#F59E0B" />
-                            </View>
-                            <View style={{ flex: 1 }}>
-                                <Text style={[styles.stepLabel, { color: textPri, fontWeight: "800" }]}>
-                                    {isSubscription ? "Suscripción pendiente" : "Pendiente de aprobación"}
-                                </Text>
-                                <Text style={[styles.statusDescription, { color: textSec }]}>
-                                    Te avisaremos cuando el pago sea aprobado.
-                                </Text>
-                            </View>
+                        <View style={[styles.whatsappBox, { backgroundColor: bg, borderColor: border }]}>
+                            <Ionicons name="logo-whatsapp" size={17} color="#25D366" />
+                            <Text style={[styles.whatsappText, { color: textSec }]}>
+                                También podrías recibir información por WhatsApp si el administrador necesita contactarte.
+                            </Text>
                         </View>
 
                         {/* ── Buttons ── */}
@@ -263,8 +256,8 @@ const styles = StyleSheet.create({
         fontWeight: "500",
     },
 
-    // WhatsApp box
-    waBox: {
+    // In-app notification box
+    notificationBox: {
         flexDirection: "row",
         alignItems: "flex-start",
         gap: 10,
@@ -274,72 +267,38 @@ const styles = StyleSheet.create({
         marginBottom: 16,
         width: "100%",
     },
-    whatsappLogoCircle: {
+    notificationIconCircle: {
         width: 25,
         height: 25,
         borderRadius: 13,
-        backgroundColor: "#25D366",
+        backgroundColor: "#F59E0B",
         alignItems: "center",
         justifyContent: "center",
         flexShrink: 0,
     },
-    waText: {
+    notificationText: {
         flex: 1,
         fontSize: 12,
         lineHeight: 17,
         fontWeight: "500",
     },
-
-    // Steps
-    stepsCard: {
+    whatsappBox: {
         flexDirection: "row",
         alignItems: "center",
-        justifyContent: "center",
-        borderWidth: 1,
-        borderRadius: 16,
-        paddingVertical: 14,
-        paddingHorizontal: 10,
-        marginBottom: 20,
+        gap: 10,
         width: "100%",
-        paddingHorizontal: 8,
-    },
-    step: { alignItems: "center", gap: 6, flex: 1 },
-    stepIcon: {
-        width: 36,
-        height: 36,
-        borderRadius: 11,
-        borderWidth: 1.5,
-        alignItems: "center",
-        justifyContent: "center",
-        position: "relative",
-    },
-    stepCheckBadge: {
-        position: "absolute",
-        bottom: -2,
-        right: -2,
-        width: 14,
-        height: 14,
-        borderRadius: 7,
-        backgroundColor: "#E11D48",
-        alignItems: "center",
-        justifyContent: "center",
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        marginBottom: 16,
         borderWidth: 1,
-        borderColor: "#FFFFFF",
+        borderRadius: 14,
     },
-    stepLabel: {
-        fontSize: 9,
-        textAlign: "center",
-        lineHeight: 13,
-    },
-    statusDescription: {
+    whatsappText: {
+        flex: 1,
         fontSize: 11,
-        lineHeight: 15,
-        marginTop: 3,
-    },
-    stepLine: {
-        height: 1.5,
-        width: 22,
-        marginBottom: 18,
+        lineHeight: 16,
+        textAlign: "center",
+        fontWeight: "500",
     },
 
     // Buttons

@@ -1,5 +1,19 @@
 /* Orders SaaS Premium Stylesheet */
 
+.subs-table tbody tr.order-row--pending > td {
+  background-color: rgba(245, 158, 11, 0.10);
+  border-bottom-color: rgba(245, 158, 11, 0.22);
+}
+
+.subs-table tbody tr.order-row--pending:hover > td {
+  background-color: rgba(245, 158, 11, 0.16);
+}
+
+:root.dark .subs-table tbody tr.order-row--pending > td {
+  background-color: rgba(245, 158, 11, 0.16);
+  border-bottom-color: rgba(245, 158, 11, 0.30);
+}
+
 .orders-stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -542,6 +556,11 @@
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.01);
   }
 
+  .order-mobile-card--pending {
+    background-color: rgba(245, 158, 11, 0.10);
+    border-color: rgba(245, 158, 11, 0.30);
+  }
+
   .order-mobile-card-details {
     display: flex;
     flex-direction: column;
@@ -625,6 +644,146 @@
   border-color: rgba(37, 99, 235, 0.1);
 }
 
+.order-actions-overlay {
+  z-index: 1200;
+}
+
+.order-actions-modal {
+  width: min(460px, calc(100vw - 32px));
+  max-width: 460px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.order-actions-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 22px;
+  border-bottom: 1px solid var(--border);
+}
+
+.order-actions-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.order-actions-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  color: var(--primary);
+  background: var(--primary-light);
+  border-radius: 12px;
+}
+
+.order-actions-title h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 17px;
+}
+
+.order-actions-title p {
+  margin: 3px 0 0;
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.order-actions-content {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 18px 22px 22px;
+}
+
+.order-actions-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.order-actions-section h4 {
+  margin: 0 0 2px;
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.order-action-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  width: 100%;
+  min-height: 62px;
+  padding: 13px;
+  color: var(--text);
+  text-align: left;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+
+.order-action-card:hover {
+  background: var(--card);
+  border-color: var(--primary);
+  transform: translateY(-1px);
+}
+
+.order-action-card > svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--primary);
+}
+
+.order-action-card span {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.order-action-card strong {
+  font-size: 12.5px;
+}
+
+.order-action-card small {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.order-action-card--success,
+.order-action-card--success > svg {
+  color: #16a34a;
+  border-color: rgba(22, 163, 74, 0.25);
+}
+
+.order-action-card--danger,
+.order-action-card--danger > svg {
+  color: #dc2626;
+  border-color: rgba(220, 38, 38, 0.25);
+}
+
+.order-action-card--danger small {
+  color: #dc2626;
+}
+
+.order-actions-section--danger {
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
 .actions-dropdown-menu {
   position: absolute;
   right: 0;
@@ -701,6 +860,32 @@
 .btn-eye-action:hover {
   background-color: var(--primary-light);
   color: var(--primary);
+}
+
+.btn-eye-action--pending {
+  color: #b45309;
+  background-color: rgba(245, 158, 11, 0.14);
+  animation: pending-eye-pulse 1.8s ease-in-out infinite;
+}
+
+.btn-eye-action--pending:hover {
+  color: #92400e;
+  background-color: rgba(245, 158, 11, 0.24);
+}
+
+@keyframes pending-eye-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(245, 158, 11, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-eye-action--pending {
+    animation: none;
+  }
 }
 
 .actions-dropdown-menu.open-up {

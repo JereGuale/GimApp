@@ -1257,7 +1257,7 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 20, fontWeight: '800', letterSpacing: -0.5, marginBottom: 16, marginTop: 8 },
 
   loadingCard: { height: 200, borderRadius: 28, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  noSubCard: { padding: 32, borderRadius: 28, borderWidth: 1, alignItems: 'center', textAlign: 'center' },
+  noSubCard: { padding: 32, borderRadius: 28, borderWidth: 1, alignItems: 'center', textAlign: 'center', marginBottom: 24 },
   noSubTitle: { fontSize: 18, fontWeight: '800', marginBottom: 8 },
   noSubDesc: { fontSize: 14, textAlign: 'center', lineHeight: 20, marginBottom: 24 },
   primaryActionButton: { backgroundColor: '#5B3DF5', height: 52, borderRadius: 16, width: '100%', alignItems: 'center', justifyContent: 'center' },

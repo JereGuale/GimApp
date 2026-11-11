@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { NavLink, useLocation, Outlet } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { 
@@ -66,11 +66,13 @@ export default function Layout({ children }) {
   const { user, logout } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const location = useLocation();
+  const navigate = useNavigate();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isTabletExpanded, setIsTabletExpanded] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notificationFilter, setNotificationFilter] = useState('all');
   const notificationPopoverRef = useRef(null);
 
   const currentItem = allNavItems.find(n => n.to === location.pathname);
@@ -164,6 +166,32 @@ export default function Layout({ children }) {
       return { icon: '📋', color: '#8b5cf6' };
     }
     return { icon: '🔔', color: '#f59e0b' };
+  };
+
+  const getNotificationDestination = (notification) => (
+    notification.type === 'order_request' ? '/pedidos' : '/suscripciones'
+  );
+
+  const handleNotificationClick = async (notification) => {
+    if (!notification.read_at) {
+      await markNotificationAsRead(notification.id);
+    }
+    setNotificationsOpen(false);
+    navigate(getNotificationDestination(notification));
+  };
+
+  const removeNotification = async (id) => {
+    const previous = notifications;
+    setNotifications(current => current.filter(notification => notification.id !== id));
+    setUnreadCount(current => Math.max(0, current - (previous.find(notification => notification.id === id)?.read_at ? 0 : 1)));
+
+    try {
+      await apiFetch(`/notifications/${id}`, { method: 'DELETE' });
+    } catch (error) {
+      setNotifications(previous);
+      setUnreadCount(previous.filter(notification => !notification.read_at).length);
+      console.error('No se pudo eliminar la notificación:', error);
+    }
   };
 
   const handleMenuToggle = () => {
@@ -297,19 +325,46 @@ export default function Layout({ children }) {
                     </button>
                   )}
                 </div>
+                <div className="admin-notification-filters" role="tablist" aria-label="Filtrar notificaciones">
+                  <button
+                    type="button"
+                    className={notificationFilter === 'all' ? 'is-active' : ''}
+                    onClick={() => setNotificationFilter('all')}
+                  >
+                    Todas <span>{notifications.length}</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={notificationFilter === 'unread' ? 'is-active' : ''}
+                    onClick={() => setNotificationFilter('unread')}
+                  >
+                    No leídas <span>{unreadCount}</span>
+                  </button>
+                </div>
                 <div className="admin-notification-list">
-                  {notifications.length === 0 ? (
+                  {notifications.filter(notification => notificationFilter === 'all' || !notification.read_at).length === 0 ? (
                     <div className="admin-notification-empty">
                       <Bell size={24} />
-                      <span>No tienes notificaciones</span>
+                      <span>{notificationFilter === 'unread' ? 'No tienes notificaciones pendientes' : 'No tienes notificaciones'}</span>
                     </div>
-                  ) : notifications.map(notification => {
+                  ) : notifications
+                    .filter(notification => notificationFilter === 'all' || !notification.read_at)
+                    .map(notification => {
                     const presentation = getNotificationPresentation(notification);
                     return (
                       <div
                         key={notification.id}
                         className={`admin-notification-item ${notification.read_at ? 'admin-notification-item--read' : ''}`}
                         style={{ '--notification-accent': presentation.color }}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => handleNotificationClick(notification)}
+                        onKeyDown={event => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            handleNotificationClick(notification);
+                          }
+                        }}
                       >
                         <div className="admin-notification-icon">{presentation.icon}</div>
                         <div className="admin-notification-content">
@@ -319,11 +374,21 @@ export default function Layout({ children }) {
                           </div>
                           <p>{notification.message}</p>
                           <small>{notification.created_at ? new Date(notification.created_at).toLocaleString('es-MX') : ''}</small>
-                          {!notification.read_at && (
-                            <button type="button" onClick={() => markNotificationAsRead(notification.id)}>
-                              Marcar como vista
+                          <div className="admin-notification-actions">
+                            {!notification.read_at && (
+                              <button type="button" onClick={event => { event.stopPropagation(); markNotificationAsRead(notification.id); }}>
+                                Marcar como vista
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              className="admin-notification-dismiss"
+                              aria-label="Eliminar notificación"
+                              onClick={event => { event.stopPropagation(); removeNotification(notification.id); }}
+                            >
+                              ×
                             </button>
-                          )}
+                          </div>
                         </div>
                       </div>
                     );
